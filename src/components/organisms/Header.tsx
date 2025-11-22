@@ -38,9 +38,11 @@ export const Header: React.FC = () => {
                         <a href="#features" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Funcionalidades</a>
                         <a href="#ai-demo" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">IA de Plantão</a>
                         <a href="#testimonials" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Depoimentos</a>
-                        <Link href="/empresas/cadastro" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-full font-medium transition-all transform hover:scale-105 shadow-lg shadow-blue-500/30">
-                            Para Empresas
-                        </Link>
+                        {!user && (
+                            <Link href="/empresas/cadastro" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-full font-medium transition-all transform hover:scale-105 shadow-lg shadow-blue-500/30">
+                                Para Empresas
+                            </Link>
+                        )}
                         {!loading && user ? (
                             <UserMenu user={user} onSignOut={signOut} />
                         ) : (

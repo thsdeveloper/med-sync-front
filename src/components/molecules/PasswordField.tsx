@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { UseFormRegisterReturn } from 'react-hook-form';
 import { Label } from '../atoms/Label';
 import { Input } from '../atoms/Input';
@@ -61,13 +61,7 @@ export const PasswordField: React.FC<PasswordFieldProps> = ({
     ...props
 }) => {
     const [showPassword, setShowPassword] = useState(false);
-    const [internalValue, setInternalValue] = useState<string>((value as string) || '');
-
-    useEffect(() => {
-        if (typeof value !== 'undefined') {
-            setInternalValue(value as string);
-        }
-    }, [value]);
+    const [internalValue, setInternalValue] = useState<string>('');
 
     const hasError = isTouched && !!error;
     const resolvedValue = typeof value !== 'undefined' ? value : internalValue;

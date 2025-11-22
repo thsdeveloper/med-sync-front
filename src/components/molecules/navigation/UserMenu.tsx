@@ -72,7 +72,7 @@ export const UserMenu = ({ user, onSignOut }: UserMenuProps) => {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link href="/" className="w-full">
+            <Link href="/dashboard" className="w-full">
               Dashboard
             </Link>
           </DropdownMenuItem>
