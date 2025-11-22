@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { UseFormRegisterReturn } from 'react-hook-form';
 import { Label } from '../atoms/Label';
 import { Input } from '../atoms/Input';
@@ -61,10 +61,24 @@ export const PasswordField: React.FC<PasswordFieldProps> = ({
     ...props
 }) => {
     const [showPassword, setShowPassword] = useState(false);
+    const [internalValue, setInternalValue] = useState<string>((value as string) || '');
+
+    useEffect(() => {
+        if (typeof value !== 'undefined') {
+            setInternalValue(value as string);
+        }
+    }, [value]);
+
     const hasError = isTouched && !!error;
-    const fieldValue = register?.value || value;
-    const showValid = isTouched && !error && isValid && fieldValue;
-    const passwordStrength = getPasswordStrength(fieldValue as string || '');
+    const resolvedValue = typeof value !== 'undefined' ? value : internalValue;
+    const fieldValue =
+        typeof resolvedValue === 'string'
+            ? resolvedValue
+            : Array.isArray(resolvedValue)
+                ? resolvedValue.join('')
+                : resolvedValue?.toString() || '';
+    const showValid = Boolean(isTouched && !error && isValid && fieldValue);
+    const passwordStrength = getPasswordStrength(fieldValue || '');
     const fieldName = register?.name || name;
     const fieldId = id || fieldName;
 
@@ -91,11 +105,12 @@ export const PasswordField: React.FC<PasswordFieldProps> = ({
                 {...register}
                 {...props}
                 onChange={(e) => {
-                    register?.onChange(e);
+                    setInternalValue(e.target.value);
+                    register?.onChange?.(e);
                     onChange?.(e);
                 }}
                 onBlur={(e) => {
-                    register?.onBlur(e);
+                    register?.onBlur?.(e);
                     onBlur?.(e);
                 }}
             />

@@ -14,10 +14,12 @@ import { useToastMessage } from "@/hooks/useToastMessage";
 
 const loginSchema = z.object({
     email: z
-        .string({ required_error: "Informe seu e-mail." })
+        .string()
+        .min(1, "Informe seu e-mail.")
         .email("E-mail inválido."),
     password: z
-        .string({ required_error: "Informe sua senha." })
+        .string()
+        .min(1, "Informe sua senha.")
         .min(6, "A senha deve ter ao menos 6 caracteres."),
 });
 

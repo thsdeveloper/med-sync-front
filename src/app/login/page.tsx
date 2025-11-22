@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useMemo } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 import { LoginCard } from "@/components/organisms/auth/LoginCard";
 import { useSupabaseAuth } from "@/providers/SupabaseAuthProvider";
 
-export default function LoginPage() {
+const LoginPageContent = () => {
     const router = useRouter();
     const searchParams = useSearchParams();
     const redirectTo = useMemo(
@@ -62,6 +62,20 @@ export default function LoginPage() {
                 </p>
             </div>
         </main>
+    );
+};
+
+const LoginPageFallback = () => (
+    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6">
+        <p className="text-sm text-slate-600">Carregando o portal de login...</p>
+    </main>
+);
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<LoginPageFallback />}>
+            <LoginPageContent />
+        </Suspense>
     );
 }
 
