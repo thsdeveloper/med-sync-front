@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Settings,
   Users2,
+  Building2,
 } from "lucide-react";
 
 import {
@@ -51,6 +52,11 @@ const mainNavItems = [
 ];
 
 const configNavItems = [
+  {
+    title: "Organização",
+    url: "/dashboard/organizacao",
+    icon: Building2,
+  },
   {
     title: "Configurações",
     url: "/dashboard/configuracoes",

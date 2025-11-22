@@ -1,3 +1,7 @@
+'use client';
+
+import { useSelectedLayoutSegment } from "next/navigation";
+
 import { AppSidebar } from "@/components/organisms/dashboard/AppSidebar";
 import {
   Breadcrumb,
@@ -14,11 +18,24 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 
+const SEGMENT_TITLES: Record<string, string> = {
+  escalas: "Escalas",
+  equipe: "Corpo Clínico",
+  relatorios: "Relatórios",
+  configuracoes: "Configurações",
+  organizacao: "Organização",
+};
+
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const segment = useSelectedLayoutSegment();
+  const currentBreadcrumb = segment
+    ? SEGMENT_TITLES[segment] ?? "Visão Geral"
+    : "Visão Geral";
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -33,7 +50,7 @@ export default function DashboardLayout({
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
               <BreadcrumbItem>
-                <BreadcrumbPage>Visão Geral</BreadcrumbPage>
+                <BreadcrumbPage>{currentBreadcrumb}</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
