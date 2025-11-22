@@ -1,51 +1,36 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import {
-    Email,
-    Lock,
-    Briefcase,
-    FileText,
-    Phone,
-    MapPin,
-    CheckCircle,
-    XCircle
-} from '@deemlol/next-icons';
+import { CheckCircle, ArrowRight, ArrowLeft } from '@deemlol/next-icons';
+import { useToastMessage } from '@/hooks/useToastMessage';
 
 // Schema
 import { companyRegistrationSchema, CompanyRegistrationFormData } from '@/schemas/companyRegistration.schema';
 
 // Atoms
-import { Alert } from '../atoms/Alert';
 import { ProgressBar } from '../atoms/ProgressBar';
 
-// Molecules
-import { InputField } from '../molecules/InputField';
-import { PasswordField } from '../molecules/PasswordField';
-import { TextareaField } from '../molecules/TextareaField';
-import { FormSection } from '../molecules/FormSection';
+// Steps
+import { Step1User } from './company-registration/Step1User';
+import { Step2Company } from './company-registration/Step2Company';
 
 export const CompanyRegistrationForm: React.FC = () => {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
+    const { notifyError, notifySuccess } = useToastMessage();
 
-    const {
-        register,
-        handleSubmit,
-        formState: { errors, touchedFields, isValid },
-        watch,
-        setValue
-    } = useForm<CompanyRegistrationFormData>({
+    const methods = useForm<CompanyRegistrationFormData>({
         resolver: zodResolver(companyRegistrationSchema),
         mode: 'onBlur',
         defaultValues: {
+            fullName: '',
+            personalPhone: '',
             email: '',
             password: '',
             companyName: '',
@@ -55,36 +40,9 @@ export const CompanyRegistrationForm: React.FC = () => {
         }
     });
 
-    // Watch values for password strength and field validation
-    const watchedValues = watch();
-
-    // Aplicar máscaras nos campos
-    const applyMask = (name: 'cnpj' | 'phone', value: string) => {
-        if (name === 'cnpj') {
-            const cleanValue = value.replace(/\D/g, '');
-            if (cleanValue.length <= 14) {
-                const masked = cleanValue
-                    .replace(/\D/g, '')
-                    .replace(/^(\d{2})(\d)/, '$1.$2')
-                    .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
-                    .replace(/\.(\d{3})(\d)/, '.$1/$2')
-                    .replace(/(\d{4})(\d)/, '$1-$2');
-                setValue('cnpj', masked, { shouldValidate: true });
-            }
-        } else if (name === 'phone') {
-            const cleanValue = value.replace(/\D/g, '');
-            if (cleanValue.length <= 11) {
-                const masked = cleanValue
-                    .replace(/\D/g, '')
-                    .replace(/^(\d{2})(\d)/, '($1) $2')
-                    .replace(/(\d{4,5})(\d{4})$/, '$1-$2');
-                setValue('phone', masked, { shouldValidate: true });
-            }
-        }
-    };
+    const { handleSubmit, trigger } = methods;
 
     const onSubmit = async (data: CompanyRegistrationFormData) => {
-        setError(null);
         setSuccess(false);
         setLoading(true);
 
@@ -96,6 +54,8 @@ export const CompanyRegistrationForm: React.FC = () => {
                 options: {
                     data: {
                         role: 'company_admin',
+                        full_name: data.fullName,
+                        phone: data.personalPhone,
                     },
                 },
             });
@@ -121,192 +81,110 @@ export const CompanyRegistrationForm: React.FC = () => {
             }
 
             setSuccess(true);
+            notifySuccess('Cadastro realizado com sucesso!', {
+                description: 'Verifique seu e-mail para confirmar a conta. Redirecionando...',
+            });
             setTimeout(() => {
                 router.push('/');
             }, 2000);
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Registration error:', err);
-            setError(err.message || 'Ocorreu um erro durante o cadastro.');
+            const message = err instanceof Error ? err.message : 'Ocorreu um erro durante o cadastro.';
+            notifyError('Erro no cadastro', {
+                description: message,
+            });
         } finally {
             setLoading(false);
         }
     };
 
-    const isFieldValid = (fieldName: keyof CompanyRegistrationFormData): boolean => {
-        return !!(touchedFields[fieldName] && !errors[fieldName] && watchedValues[fieldName]);
+    const nextStep = async () => {
+        const fieldsStep1: (keyof CompanyRegistrationFormData)[] = ['fullName', 'personalPhone', 'email', 'password'];
+        const isValid = await trigger(fieldsStep1);
+        
+        if (isValid) {
+            setCurrentStep(2);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
+    const prevStep = () => {
+        setCurrentStep(1);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const getStepLabel = () => {
-        return currentStep === 1 ? 'Credenciais' : 'Dados da Empresa';
+        return currentStep === 1 ? 'Dados do Responsável' : 'Dados da Empresa';
     };
 
     return (
-        <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-            {/* Success Message */}
-            {success && (
-                <Alert
-                    type="success"
-                    title="Cadastro realizado com sucesso!"
-                    message="Verifique seu email para confirmar sua conta. Redirecionando..."
-                    icon={<CheckCircle className="w-5 h-5" />}
-                />
-            )}
-
-            {/* Error Message */}
-            {error && (
-                <Alert
-                    type="error"
-                    title="Erro"
-                    message={error}
-                    icon={<XCircle className="w-5 h-5" />}
-                />
-            )}
-
-            {/* Progress Indicator */}
-            <ProgressBar
-                current={currentStep}
-                total={2}
-                labels={{
-                    current: `Passo ${currentStep} de 2`,
-                    step: getStepLabel()
-                }}
-            />
-
-            {/* Seção 1: Credenciais */}
-            <FormSection
-                title="Credenciais de Acesso"
-                description="Crie sua conta de administrador"
-                icon={<Lock className="w-5 h-5" />}
-            >
-                <InputField
-                    label="Email do Administrador"
-                    icon={<Email className="h-5 w-5 text-slate-400" />}
-                    placeholder="seu@email.com"
-                    type="email"
-                    required
-                    register={register('email')}
-                    error={errors.email?.message}
-                    isValid={isFieldValid('email')}
-                    isTouched={!!touchedFields.email}
-                    onFocus={() => setCurrentStep(1)}
-                    autoComplete="email"
+        <FormProvider {...methods}>
+            <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+                {/* Progress Indicator */}
+                <ProgressBar
+                    current={currentStep}
+                    total={2}
+                    labels={{
+                        current: `Passo ${currentStep} de 2`,
+                        step: getStepLabel()
+                    }}
                 />
 
-                <PasswordField
-                    label="Senha"
-                    icon={<Lock className="h-5 w-5 text-slate-400" />}
-                    placeholder="Mínimo 6 caracteres"
-                    required
-                    register={register('password')}
-                    error={errors.password?.message}
-                    isValid={isFieldValid('password')}
-                    isTouched={!!touchedFields.password}
-                    onFocus={() => setCurrentStep(1)}
-                    showStrengthIndicator
-                    autoComplete="new-password"
-                />
-            </FormSection>
+                {/* Step Content */}
+                <div className="mt-8">
+                    {currentStep === 1 && <Step1User />}
+                    {currentStep === 2 && <Step2Company />}
+                </div>
 
-            {/* Seção 2: Dados da Empresa */}
-            <FormSection
-                title="Dados da Empresa"
-                description="Informações da sua clínica ou hospital"
-                icon={<Briefcase className="w-5 h-5" />}
-                className="pt-6 border-t border-slate-200"
-            >
-                <InputField
-                    label="Nome da Empresa"
-                    icon={<Briefcase className="h-5 w-5 text-slate-400" />}
-                    placeholder="Ex: Hospital São Paulo"
-                    type="text"
-                    required
-                    register={register('companyName')}
-                    error={errors.companyName?.message}
-                    isValid={isFieldValid('companyName')}
-                    isTouched={!!touchedFields.companyName}
-                    onFocus={() => setCurrentStep(2)}
-                />
-
-                <InputField
-                    label="CNPJ"
-                    icon={<FileText className="h-5 w-5 text-slate-400" />}
-                    placeholder="00.000.000/0000-00"
-                    type="text"
-                    required
-                    maxLength={18}
-                    register={register('cnpj', {
-                        onChange: (e) => {
-                            applyMask('cnpj', e.target.value);
-                        }
-                    })}
-                    error={errors.cnpj?.message}
-                    isValid={isFieldValid('cnpj')}
-                    isTouched={!!touchedFields.cnpj}
-                    onFocus={() => setCurrentStep(2)}
-                />
-
-                <InputField
-                    label={
-                        <>
-                            Telefone <span className="text-slate-400 font-normal">(opcional)</span>
-                        </>
-                    }
-                    icon={<Phone className="h-5 w-5 text-slate-400" />}
-                    placeholder="(00) 00000-0000"
-                    type="text"
-                    maxLength={15}
-                    register={register('phone', {
-                        onChange: (e) => {
-                            applyMask('phone', e.target.value);
-                        }
-                    })}
-                    error={errors.phone?.message}
-                    isValid={watchedValues.phone ? isFieldValid('phone') : false}
-                    isTouched={!!touchedFields.phone}
-                    onFocus={() => setCurrentStep(2)}
-                />
-
-                <TextareaField
-                    label={
-                        <>
-                            Endereço <span className="text-slate-400 font-normal">(opcional)</span>
-                        </>
-                    }
-                    icon={<MapPin className="h-5 w-5 text-slate-400" />}
-                    placeholder="Rua, número, bairro, cidade - UF"
-                    rows={3}
-                    register={register('address')}
-                    error={errors.address?.message}
-                    isTouched={!!touchedFields.address}
-                    onFocus={() => setCurrentStep(2)}
-                />
-            </FormSection>
-
-            {/* Submit Button */}
-            <div className="pt-4">
-                <button
-                    type="submit"
-                    disabled={loading || success}
-                    className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-lg shadow-lg text-base font-semibold text-white bg-gradient-to-r from-blue-600 to-teal-400 hover:from-blue-700 hover:to-teal-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02] active:scale-[0.98]"
-                >
-                    {loading ? (
-                        <>
-                            <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Cadastrando...
-                        </>
-                    ) : success ? (
-                        <>
-                            <CheckCircle className="w-5 h-5 mr-2" />
-                            Cadastro Realizado!
-                        </>
-                    ) : (
-                        'Cadastrar Empresa'
+                {/* Navigation Buttons */}
+                <div className="pt-6 flex gap-4 justify-between">
+                    {currentStep === 2 && (
+                        <button
+                            type="button"
+                            onClick={prevStep}
+                            disabled={loading || success}
+                            className="flex items-center justify-center gap-2 py-3 px-6 border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
+                        >
+                            <ArrowLeft className="w-4 h-4" />
+                            Voltar
+                        </button>
                     )}
-                </button>
-            </div>
-        </form>
+
+                    {currentStep === 1 ? (
+                        <button
+                            type="button"
+                            onClick={nextStep}
+                            className="w-full md:w-auto md:ml-auto flex items-center justify-center gap-2 py-3 px-8 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all shadow-md hover:shadow-lg"
+                        >
+                            Próximo
+                            <ArrowRight className="w-4 h-4" />
+                        </button>
+                    ) : (
+                        <button
+                            type="submit"
+                            disabled={loading || success}
+                            className="flex-1 md:flex-none md:w-auto flex justify-center items-center gap-2 py-3 px-8 border border-transparent rounded-lg shadow-lg text-base font-semibold text-white bg-gradient-to-r from-blue-600 to-teal-400 hover:from-blue-700 hover:to-teal-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+                        >
+                            {loading ? (
+                                <>
+                                    <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Cadastrando...
+                                </>
+                            ) : success ? (
+                                <>
+                                    <CheckCircle className="w-5 h-5 mr-2" />
+                                    Cadastro Realizado!
+                                </>
+                            ) : (
+                                'Finalizar Cadastro'
+                            )}
+                        </button>
+                    )}
+                </div>
+            </form>
+        </FormProvider>
     );
 };

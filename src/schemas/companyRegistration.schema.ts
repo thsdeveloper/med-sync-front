@@ -14,6 +14,20 @@ const validatePhone = (phone: string): boolean => {
 };
 
 export const companyRegistrationSchema = z.object({
+    fullName: z
+        .string()
+        .min(1, 'Nome completo é obrigatório')
+        .min(3, 'Nome completo deve ter no mínimo 3 caracteres')
+        .max(100, 'Nome completo muito longo'),
+    personalPhone: z
+        .string()
+        .min(1, 'Telefone pessoal é obrigatório')
+        .refine((val) => {
+            const cleanPhone = val.replace(/\D/g, '');
+            return cleanPhone.length >= 10;
+        }, {
+            message: 'Telefone pessoal inválido'
+        }),
     email: z
         .string()
         .min(1, 'Email é obrigatório')

@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## MedSync Front
 
-## Getting Started
+Aplicação Next.js 16 que segue Atomic Design para entregar a landing page e o fluxo autenticado das empresas. Utilizamos Supabase para autenticação, Tailwind CSS v4 para estilos e o kit de componentes do [shadcn/ui](https://ui.shadcn.com/).
 
-First, run the development server:
+### Requisitos
+
+- Node 20+
+- pnpm (recomendado) ou npm / bun
+- Conta Supabase com o projeto configurado
+
+### Configuração
+
+1. Instale as dependências:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Crie um arquivo `.env.local` com as credenciais públicas do Supabase:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=chave-anon
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. Rode o servidor de desenvolvimento:
 
-## Learn More
+```bash
+pnpm dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+A página de login está disponível em [`/login`](http://localhost:3000/login). Usuários autenticados enxergam o avatar com menu no header e são redirecionados caso tentem acessar o login novamente.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### shadcn/ui
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+O projeto já está inicializado com `components.json`, tokens no `globals.css` e utilitários em `src/lib/utils.ts`. Para adicionar novos componentes basta executar, por exemplo:
 
-## Deploy on Vercel
+```bash
+pnpm dlx shadcn@latest add badge
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Os componentes gerados em `src/components/ui` podem ser reexportados/encapsulados em `src/components/atoms` conforme o padrão atômico.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Sistema de notificações
+
+- A camada global (`src/app/providers.tsx`) renderiza o `Toaster` do shadcn/sonner.
+- Utilize o hook `useToastMessage` (`src/hooks/useToastMessage.ts`) para exibir mensagens padronizadas de sucesso, erro ou informação:
+
+```ts
+const { notifyError, notifySuccess } = useToastMessage();
+notifyError("Erro ao entrar", { description: "Credenciais inválidas." });
+```
+
+Isso garante consistência visual e centraliza ajustes futuros (posição, duração, etc.).
+
+### Testes manuais recomendados
+
+- `pnpm lint` para garantir qualidade estática.
+- Fluxo de login (credenciais válidas e inválidas).
+- Logout pelo menu do usuário e retorno do botão “Login” no header.
