@@ -28,6 +28,7 @@ import { Input } from '@/components/atoms/Input';
 import { Button } from '@/components/ui/button';
 
 import { sectorSchema, SectorFormData, Sector } from '@/schemas/shifts.schema';
+import { ColorPicker } from '@/components/molecules/ColorPicker';
 
 interface SectorsDialogProps {
     organizationId: string;
@@ -129,35 +130,41 @@ export function SectorsDialog({
                     <div className="border-t pt-4">
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                                <div className="flex gap-2">
-                                    <FormField
-                                        control={form.control}
-                                        name="name"
-                                        render={({ field }) => (
-                                            <FormItem className="flex-1">
-                                                <FormControl>
-                                                    <Input placeholder="Novo Setor (ex: UTI)" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="color"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormControl>
-                                                    <Input type="color" className="w-12 p-1 cursor-pointer" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <Button type="submit" disabled={form.formState.isSubmitting}>
-                                        <Plus className="w-4 h-4" />
-                                    </Button>
-                                </div>
+                                <FormField
+                                    control={form.control}
+                                    name="name"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormControl>
+                                                <Input placeholder="Novo Setor (ex: UTI)" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="color"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Cor do setor</FormLabel>
+                                            <FormControl>
+                                                <ColorPicker value={field.value} onChange={field.onChange} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                                    {form.formState.isSubmitting ? (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <Plus className="mr-2 h-4 w-4" />
+                                    )}
+                                    Adicionar setor
+                                </Button>
                             </form>
                         </Form>
                     </div>
