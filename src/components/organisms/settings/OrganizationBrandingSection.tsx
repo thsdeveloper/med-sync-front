@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { Building2, Globe, Palette } from 'lucide-react';
+import { Building2, Globe } from 'lucide-react';
 
 import {
     Card,
@@ -27,6 +27,7 @@ import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { ColorPicker } from '@/components/molecules/ColorPicker';
 
 const organizationBrandingSchema = z.object({
     legalName: z.string().min(1, 'Informe a razão social'),
@@ -229,17 +230,9 @@ export function OrganizationBrandingSection() {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Cor primária</FormLabel>
-                                            <div className="flex items-center gap-3 rounded-lg border p-3">
-                                                <Palette className="h-4 w-4 text-muted-foreground" />
-                                                <FormControl>
-                                                    <Input
-                                                        type="color"
-                                                        className="h-10 w-16 cursor-pointer p-1"
-                                                        {...field}
-                                                    />
-                                                </FormControl>
-                                                <span className="text-sm text-muted-foreground">{field.value}</span>
-                                            </div>
+                                            <FormControl>
+                                                <ColorPicker value={field.value} onChange={field.onChange} />
+                                            </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}

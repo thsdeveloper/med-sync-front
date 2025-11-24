@@ -26,6 +26,7 @@ import { Input } from '@/components/atoms/Input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Select } from '@/components/atoms/Select';
+import { ColorPicker } from '@/components/molecules/ColorPicker';
 
 import { medicalStaffSchema, MedicalStaffFormData, ROLES, MedicalStaff } from '@/schemas/medical-staff.schema';
 
@@ -164,7 +165,7 @@ export function MedicalStaffSheet({
                             )}
                         />
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-4 sm:grid-cols-2">
                             <FormField
                                 control={form.control}
                                 name="role"
@@ -189,14 +190,11 @@ export function MedicalStaffSheet({
                                 control={form.control}
                                 name="color"
                                 render={({ field }) => (
-                                    <FormItem>
+                                    <FormItem className="sm:col-span-2">
                                         <FormLabel>Cor na Escala</FormLabel>
-                                        <div className="flex gap-2 items-center">
-                                            <FormControl>
-                                                <Input type="color" className="w-12 h-10 p-1 cursor-pointer" {...field} />
-                                            </FormControl>
-                                            <span className="text-sm text-muted-foreground">{field.value}</span>
-                                        </div>
+                                        <FormControl>
+                                            <ColorPicker value={field.value} onChange={field.onChange} />
+                                        </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
