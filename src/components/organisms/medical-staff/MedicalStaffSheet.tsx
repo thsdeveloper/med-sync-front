@@ -25,6 +25,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Select } from '@/components/atoms/Select';
 
 import { medicalStaffSchema, MedicalStaffFormData, ROLES, MedicalStaff } from '@/schemas/medical-staff.schema';
 
@@ -170,18 +171,15 @@ export function MedicalStaffSheet({
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Função</FormLabel>
-                                        <div className="relative">
-                                            <select
-                                                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                                {...field}
-                                            >
-                                                {ROLES.map((role) => (
-                                                    <option key={role} value={role}>
-                                                        {role}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
+                                        <Select
+                                            value={field.value}
+                                            onValueChange={field.onChange}
+                                            placeholder="Selecione a função"
+                                            options={ROLES.map((role) => ({
+                                                value: role,
+                                                label: role,
+                                            }))}
+                                        />
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -263,7 +261,7 @@ export function MedicalStaffSheet({
                             )}
                         />
 
-                         <FormField
+                        <FormField
                             control={form.control}
                             name="active"
                             render={({ field }) => (

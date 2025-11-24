@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
+import { Select } from '@/components/atoms/Select';
 
 import { shiftSchema, ShiftFormData, Shift, Sector } from '@/schemas/shifts.schema';
 import { MedicalStaff } from '@/schemas/medical-staff.schema';
@@ -204,15 +205,16 @@ export function ShiftDialog({
                                     <FormItem>
                                         <FormLabel>Setor</FormLabel>
                                         <FormControl>
-                                            <select
-                                                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                                {...field}
-                                            >
-                                                <option value="" disabled>Selecione...</option>
-                                                {sectors.map((s) => (
-                                                    <option key={s.id} value={s.id}>{s.name}</option>
-                                                ))}
-                                            </select>
+                                            <Select
+                                                value={field.value}
+                                                onValueChange={field.onChange}
+                                                disabled={sectors.length === 0}
+                                                placeholder="Selecione o setor"
+                                                options={sectors.map((s) => ({
+                                                    value: s.id,
+                                                    label: s.name,
+                                                }))}
+                                            />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -256,17 +258,18 @@ export function ShiftDialog({
                                 <FormItem>
                                     <FormLabel>Profissional</FormLabel>
                                     <FormControl>
-                                        <select
-                                            className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            {...field}
-                                        >
-                                            <option value="open">-- Em Aberto --</option>
-                                            {staff.map((s) => (
-                                                <option key={s.id} value={s.id}>
-                                                    {s.name} ({s.role})
-                                                </option>
-                                            ))}
-                                        </select>
+                                        <Select
+                                            value={field.value}
+                                            onValueChange={field.onChange}
+                                            placeholder="Selecione o profissional"
+                                            options={[
+                                                { value: 'open', label: '-- Em Aberto --' },
+                                                ...staff.map((s) => ({
+                                                    value: s.id,
+                                                    label: `${s.name} (${s.role})`,
+                                                })),
+                                            ]}
+                                        />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
