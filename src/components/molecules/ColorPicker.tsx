@@ -53,7 +53,11 @@ export const ColorPicker = forwardRef<HTMLInputElement | null, ColorPickerProps>
         const hiddenInputRef = useRef<HTMLInputElement>(null);
         const [isOpen, setIsOpen] = useState(false);
 
-        useImperativeHandle(ref, () => hiddenInputRef.current);
+        useImperativeHandle<HTMLInputElement | null, HTMLInputElement | null>(
+            ref,
+            () => hiddenInputRef.current,
+            [],
+        );
 
         const handleSelectColor = useCallback(
             (color: string) => {
