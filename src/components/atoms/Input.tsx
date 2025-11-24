@@ -1,48 +1,63 @@
 import React from 'react';
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+import { Input as UIInput } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+
+interface InputProps extends React.ComponentProps<typeof UIInput> {
     hasError?: boolean;
     isValid?: boolean;
     icon?: React.ReactNode;
     rightIcon?: React.ReactNode;
 }
 
-export const Input: React.FC<InputProps> = ({
-    hasError = false,
-    isValid = false,
-    icon,
-    rightIcon,
-    className = '',
-    ...props
-}) => {
-    const baseStyles = 'block w-full py-3 border rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-offset-0 transition-all';
-    
-    const stateStyles = hasError
-        ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-        : isValid
-        ? 'border-green-300 focus:border-green-500 focus:ring-green-500'
-        : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500';
+export const Input = React.forwardRef<HTMLInputElement, InputProps>(
+    (
+        {
+            hasError = false,
+            isValid = false,
+            icon,
+            rightIcon,
+            className,
+            disabled,
+            ...props
+        },
+        ref
+    ) => {
+        const stateStyles = hasError
+            ? 'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/40'
+            : isValid
+                ? 'border-emerald-500 focus-visible:border-emerald-500 focus-visible:ring-emerald-400/40'
+                : undefined;
 
-    const paddingLeft = icon ? 'pl-10' : 'pl-3';
-    const paddingRight = rightIcon ? 'pr-10' : 'pr-3';
+        return (
+            <div className={cn('relative', disabled && 'opacity-80')}>
+                {icon && (
+                    <div className="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center text-muted-foreground">
+                        {icon}
+                    </div>
+                )}
+                <UIInput
+                    ref={ref}
+                    aria-invalid={hasError || undefined}
+                    data-valid={isValid ? 'true' : undefined}
+                    disabled={disabled}
+                    className={cn(
+                        'h-11',
+                        icon && 'pl-10',
+                        rightIcon && 'pr-10',
+                        stateStyles,
+                        className
+                    )}
+                    {...props}
+                />
+                {rightIcon && (
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                        {rightIcon}
+                    </div>
+                )}
+            </div>
+        );
+    }
+);
 
-    return (
-        <div className="relative">
-            {icon && (
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    {icon}
-                </div>
-            )}
-            <input
-                className={`${baseStyles} ${stateStyles} ${paddingLeft} ${paddingRight} ${className}`}
-                {...props}
-            />
-            {rightIcon && (
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                    {rightIcon}
-                </div>
-            )}
-        </div>
-    );
-};
-
+Input.displayName = 'Input';

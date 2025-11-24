@@ -1,18 +1,19 @@
-import { forwardRef, type ComponentProps } from "react";
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { forwardRef, type ComponentProps } from 'react';
 
-type AuthInputProps = ComponentProps<"input">;
+import { Input } from '@/components/atoms/Input';
+import { cn } from '@/lib/utils';
+
+type AuthInputProps = ComponentProps<typeof Input>;
 
 export const AuthInput = forwardRef<HTMLInputElement, AuthInputProps>(
     ({ className, ...props }, ref) => (
         <Input
             ref={ref}
-            className={cn("h-11 bg-white/70 backdrop-blur", className)}
+            className={cn('bg-white/70 backdrop-blur', className)}
             {...props}
         />
     )
 );
 
-AuthInput.displayName = "AuthInput";
+AuthInput.displayName = 'AuthInput';
 
