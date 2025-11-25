@@ -137,7 +137,7 @@ export function TeamPermissionsSection() {
         );
     };
 
-    const permissionButtonVariant = (active: boolean) => (active ? 'default' : 'outline');
+    const permissionButtonVariant = (active: boolean) => (active ? 'primary' : 'outline');
 
     return (
         <Card>

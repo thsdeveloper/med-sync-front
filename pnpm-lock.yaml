@@ -96,6 +96,9 @@ importers:
       '@react-email/components':
         specifier: ^0.0.21
         version: 0.0.21(@types/react@19.2.6)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      '@react-email/render':
+        specifier: ^2.0.0
+        version: 2.0.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.1.17
@@ -114,6 +117,9 @@ importers:
       eslint-config-next:
         specifier: 16.0.3
         version: 16.0.3(@typescript-eslint/parser@8.47.0(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3)
+      prettier:
+        specifier: ^3.6.2
+        version: 3.6.2
       shadcn:
         specifier: ^3.5.0
         version: 3.5.0(@types/node@20.19.25)(typescript@5.9.3)
@@ -1235,6 +1241,13 @@ packages:
     peerDependencies:
       react: ^18.2.0
       react-dom: ^18.2.0
+
+  '@react-email/render@2.0.0':
+    resolution: {integrity: sha512-rdjNj6iVzv8kRKDPFas+47nnoe6B40+nwukuXwY4FCwM7XBg6tmYr+chQryCuavUj2J65MMf6fztk1bxOUiSVA==}
+    engines: {node: '>=22.0.0'}
+    peerDependencies:
+      react: ^18.0 || ^19.0 || ^19.0.0-rc
+      react-dom: ^18.0 || ^19.0 || ^19.0.0-rc
 
   '@react-email/row@0.0.8':
     resolution: {integrity: sha512-JsB6pxs/ZyjYpEML3nbwJRGAerjcN/Pa/QG48XUwnT/MioDWrUuyQuefw+CwCrSUZ2P1IDrv2tUD3/E3xzcoKw==}
@@ -3286,6 +3299,11 @@ packages:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
 
+  prettier@3.6.2:
+    resolution: {integrity: sha512-I7AIg5boAr5R0FFtJ6rCfD+LFsWHp81dolrFD8S79U9tb8Az2nGrJncnMSnys+bpQJfRUzqs9hnA81OAA3hCuQ==}
+    engines: {node: '>=14'}
+    hasBin: true
+
   pretty-ms@9.3.0:
     resolution: {integrity: sha512-gjVS5hOP+M3wMm5nmNOucbIrqudzs9v/57bWRHQWLYklXqoXKrVfYW2W9+glfGsqtPgpiz5WwyEEB+ksXIx3gQ==}
     engines: {node: '>=18'}
@@ -5066,6 +5084,13 @@ snapshots:
       react: 19.2.0
       react-dom: 19.2.0(react@19.2.0)
       react-promise-suspense: 0.3.4
+
+  '@react-email/render@2.0.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
+    dependencies:
+      html-to-text: 9.0.5
+      prettier: 3.6.2
+      react: 19.2.0
+      react-dom: 19.2.0(react@19.2.0)
 
   '@react-email/row@0.0.8(react@19.2.0)':
     dependencies:
@@ -7221,6 +7246,8 @@ snapshots:
       source-map-js: 1.2.1
 
   prelude-ls@1.2.1: {}
+
+  prettier@3.6.2: {}
 
   pretty-ms@9.3.0:
     dependencies:

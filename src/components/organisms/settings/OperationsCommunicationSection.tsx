@@ -270,7 +270,7 @@ export function OperationsCommunicationSection() {
                                 <p className="text-sm text-muted-foreground">{rule.description}</p>
                                 <Button
                                     type="button"
-                                    variant={rule.active ? 'default' : 'outline'}
+                                    variant={rule.active ? 'primary' : 'outline'}
                                     className="mt-4 w-full"
                                     onClick={() => toggleAutomation(rule.id)}
                                 >

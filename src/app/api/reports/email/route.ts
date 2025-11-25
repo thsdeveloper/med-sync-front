@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { renderToStaticMarkup } from 'react-dom/server';
+import { render } from '@react-email/render';
 import { z } from 'zod';
 import { ReportEmailTemplate } from '@/emails/ReportEmailTemplate';
 
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
             );
         }
 
-        const html = renderToStaticMarkup(
+        const html = render(
             ReportEmailTemplate({
                 message: payload.message,
                 periodLabel: payload.periodLabel,

@@ -300,7 +300,7 @@ export function SecurityIntegrationsSection() {
                                 </div>
                                 <Button
                                     type="button"
-                                    variant={webhook.status === 'active' ? 'default' : 'outline'}
+                                    variant={webhook.status === 'active' ? 'primary' : 'outline'}
                                     className="mt-4 w-full"
                                     onClick={() => toggleWebhookStatus(webhook.id)}
                                 >
