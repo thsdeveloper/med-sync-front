@@ -7,13 +7,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
 
-import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetHeader,
-    SheetTitle,
-} from '@/components/ui/sheet';
+import { BaseSheet } from '@/components/molecules/BaseSheet';
 import {
     Form,
     FormControl,
@@ -136,109 +130,80 @@ export function MedicalStaffSheet({
     };
 
     return (
-        <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <SheetContent className="sm:max-w-[540px] overflow-y-auto">
-                <SheetHeader>
-                    <SheetTitle>{isEditing ? 'Editar Profissional' : 'Novo Profissional'}</SheetTitle>
-                    <SheetDescription>
-                        {isEditing
-                            ? 'Edite os dados do profissional abaixo.'
-                            : 'Preencha os dados para cadastrar um novo membro da equipe.'}
-                    </SheetDescription>
-                </SheetHeader>
+        <BaseSheet
+            open={isOpen}
+            onOpenChange={(open) => {
+                if (!open) onClose();
+            }}
+            contentClassName="sm:max-w-[540px]"
+            title={isEditing ? 'Editar Profissional' : 'Novo Profissional'}
+            description={
+                isEditing
+                    ? 'Edite os dados do profissional abaixo.'
+                    : 'Preencha os dados para cadastrar um novo membro da equipe.'
+            }
+        >
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Nome Completo</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Dr. João Silva" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
 
-                <Separator className="my-6" />
-
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <div className="grid gap-4 sm:grid-cols-2">
                         <FormField
                             control={form.control}
-                            name="name"
+                            name="role"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Nome Completo</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Dr. João Silva" {...field} />
-                                    </FormControl>
+                                    <FormLabel>Função</FormLabel>
+                                    <Select
+                                        value={field.value}
+                                        onValueChange={field.onChange}
+                                        placeholder="Selecione a função"
+                                        options={ROLES.map((role) => ({
+                                            value: role,
+                                            label: role,
+                                        }))}
+                                    />
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
 
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <FormField
-                                control={form.control}
-                                name="role"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Função</FormLabel>
-                                        <Select
-                                            value={field.value}
-                                            onValueChange={field.onChange}
-                                            placeholder="Selecione a função"
-                                            options={ROLES.map((role) => ({
-                                                value: role,
-                                                label: role,
-                                            }))}
-                                        />
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={form.control}
-                                name="color"
-                                render={({ field }) => (
-                                    <FormItem className="sm:col-span-2">
-                                        <FormLabel>Cor na Escala</FormLabel>
-                                        <FormControl>
-                                            <ColorPicker value={field.value} onChange={field.onChange} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="crm"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Registro (CRM/COREN)</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="12345/SP" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={form.control}
-                                name="specialty"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Especialidade</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="Cardiologia" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-
                         <FormField
                             control={form.control}
-                            name="email"
+                            name="color"
+                            render={({ field }) => (
+                                <FormItem className="sm:col-span-2">
+                                    <FormLabel>Cor na Escala</FormLabel>
+                                    <FormControl>
+                                        <ColorPicker value={field.value} onChange={field.onChange} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="crm"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Email</FormLabel>
+                                    <FormLabel>Registro (CRM/COREN)</FormLabel>
                                     <FormControl>
-                                        <Input type="email" placeholder="joao@email.com" {...field} />
+                                        <Input placeholder="12345/SP" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -247,56 +212,84 @@ export function MedicalStaffSheet({
 
                         <FormField
                             control={form.control}
-                            name="phone"
+                            name="specialty"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Telefone</FormLabel>
+                                    <FormLabel>Especialidade</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="(11) 99999-9999" {...field} />
+                                        <Input placeholder="Cardiologia" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
+                    </div>
 
-                        <FormField
-                            control={form.control}
-                            name="active"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                    <div className="space-y-0.5">
-                                        <FormLabel className="text-base">Ativo</FormLabel>
-                                        <div className="text-sm text-muted-foreground">
-                                            Profissionais inativos não aparecem nas escalas.
-                                        </div>
+                    <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Email</FormLabel>
+                                <FormControl>
+                                    <Input type="email" placeholder="joao@email.com" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="phone"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Telefone</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="(11) 99999-9999" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="active"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                <div className="space-y-0.5">
+                                    <FormLabel className="text-base">Ativo</FormLabel>
+                                    <div className="text-sm text-muted-foreground">
+                                        Profissionais inativos não aparecem nas escalas.
                                     </div>
-                                    <FormControl>
-                                        <input
-                                            type="checkbox"
-                                            checked={field.value}
-                                            onChange={field.onChange}
-                                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                        />
-                                    </FormControl>
-                                </FormItem>
-                            )}
-                        />
+                                </div>
+                                <FormControl>
+                                    <input
+                                        type="checkbox"
+                                        checked={field.value}
+                                        onChange={field.onChange}
+                                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                </FormControl>
+                            </FormItem>
+                        )}
+                    />
 
-                        <div className="flex justify-end gap-4 pt-4">
-                            <Button type="button" variant="outline" onClick={onClose}>
-                                Cancelar
-                            </Button>
-                            <Button type="submit" disabled={form.formState.isSubmitting}>
-                                {form.formState.isSubmitting && (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                )}
-                                {isEditing ? 'Salvar Alterações' : 'Cadastrar Profissional'}
-                            </Button>
-                        </div>
-                    </form>
-                </Form>
-            </SheetContent>
-        </Sheet>
+                    <div className="flex justify-end gap-4 pt-4">
+                        <Button type="button" variant="outline" onClick={onClose}>
+                            Cancelar
+                        </Button>
+                        <Button type="submit" disabled={form.formState.isSubmitting}>
+                            {form.formState.isSubmitting && (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            )}
+                            {isEditing ? 'Salvar Alterações' : 'Cadastrar Profissional'}
+                        </Button>
+                    </div>
+                </form>
+            </Form>
+        </BaseSheet>
     );
 }
 

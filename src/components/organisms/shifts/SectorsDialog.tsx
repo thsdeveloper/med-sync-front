@@ -7,15 +7,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 
-import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetHeader,
-    SheetTitle,
-    SheetTrigger,
-} from '@/components/ui/sheet';
-
+import { BaseSheet } from '@/components/molecules/BaseSheet';
 import {
     Form,
     FormControl,
@@ -91,86 +83,81 @@ export function SectorsDialog({
     };
 
     return (
-        <Sheet open={isOpen} onOpenChange={setIsOpen}>
-            <SheetTrigger asChild>
-                <Button variant="outline">Gerenciar Setores</Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="sm:max-w-[425px]">
-                <SheetHeader>
-                    <SheetTitle>Setores / Departamentos</SheetTitle>
-                    <SheetDescription>
-                        Adicione os locais onde os plantões ocorrem (ex: UTI, Triagem).
-                    </SheetDescription>
-                </SheetHeader>
-
-                <div className="space-y-6 py-4">
-                    {/* Listagem de Setores Existentes */}
-                    <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-                        {sectors.map((sector) => (
-                            <div key={sector.id} className="flex items-center justify-between p-2 border rounded-md bg-slate-50">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: sector.color }} />
-                                    <span className="font-medium text-sm">{sector.name}</span>
-                                </div>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleDelete(sector.id)}
-                                    className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </Button>
+        <BaseSheet
+            open={isOpen}
+            onOpenChange={setIsOpen}
+            trigger={<Button variant="outline">Gerenciar Setores</Button>}
+            title="Setores / Departamentos"
+            description="Adicione os locais onde os plantões ocorrem (ex: UTI, Triagem)."
+            contentClassName="sm:max-w-[425px]"
+        >
+            <div className="space-y-6 py-4">
+                {/* Listagem de Setores Existentes */}
+                <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                    {sectors.map((sector) => (
+                        <div key={sector.id} className="flex items-center justify-between p-2 border rounded-md bg-slate-50">
+                            <div className="flex items-center gap-2">
+                                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: sector.color }} />
+                                <span className="font-medium text-sm">{sector.name}</span>
                             </div>
-                        ))}
-                        {sectors.length === 0 && (
-                            <p className="text-sm text-muted-foreground text-center py-2">Nenhum setor cadastrado.</p>
-                        )}
-                    </div>
-
-                    <div className="border-t pt-4">
-                        <Form {...form}>
-                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                                <FormField
-                                    control={form.control}
-                                    name="name"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormControl>
-                                                <Input placeholder="Novo Setor (ex: UTI)" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={form.control}
-                                    name="color"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Cor do setor</FormLabel>
-                                            <FormControl>
-                                                <ColorPicker value={field.value} onChange={field.onChange} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                                    {form.formState.isSubmitting ? (
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <Plus className="mr-2 h-4 w-4" />
-                                    )}
-                                    Adicionar setor
-                                </Button>
-                            </form>
-                        </Form>
-                    </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(sector.id)}
+                                className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </Button>
+                        </div>
+                    ))}
+                    {sectors.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-2">Nenhum setor cadastrado.</p>
+                    )}
                 </div>
-            </SheetContent>
-        </Sheet>
+
+                <div className="border-t pt-4">
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                            <FormField
+                                control={form.control}
+                                name="name"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormControl>
+                                            <Input placeholder="Novo Setor (ex: UTI)" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="color"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Cor do setor</FormLabel>
+                                        <FormControl>
+                                            <ColorPicker value={field.value} onChange={field.onChange} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                                {form.formState.isSubmitting ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Plus className="mr-2 h-4 w-4" />
+                                )}
+                                Adicionar setor
+                            </Button>
+                        </form>
+                    </Form>
+                </div>
+            </div>
+        </BaseSheet>
     );
 }
 
