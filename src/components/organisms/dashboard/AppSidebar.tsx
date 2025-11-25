@@ -15,7 +15,6 @@ import {
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -26,8 +25,6 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { Logo } from "@/components/atoms/Logo";
-import { UserMenu } from "@/components/molecules/navigation/UserMenu";
-import { useSupabaseAuth } from "@/providers/SupabaseAuthProvider";
 
 const mainNavItems = [
   {
@@ -66,7 +63,6 @@ const configNavItems = [
 ];
 
 export function AppSidebar() {
-  const { user, signOut } = useSupabaseAuth();
   const pathname = usePathname();
 
   const isActive = (url: string) => {
@@ -123,11 +119,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter>
-        <div className="p-1 group-data-[collapsible=icon]:hidden">
-            {user && <UserMenu user={user} onSignOut={signOut} />}
-        </div>
-      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );

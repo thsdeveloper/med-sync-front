@@ -77,7 +77,7 @@ export const UserMenu = ({ user, onSignOut }: UserMenuProps) => {
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href="/empresas/cadastro" className="w-full">
+            <Link href="/dashboard/organizacao" className="w-full">
               Minha Empresa
             </Link>
           </DropdownMenuItem>
