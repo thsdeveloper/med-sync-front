@@ -9,13 +9,7 @@ import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetHeader,
-    SheetTitle,
-} from '@/components/ui/sheet';
+import { BaseSheet } from '@/components/molecules/BaseSheet';
 import {
     Form,
     FormControl,
@@ -73,7 +67,7 @@ export function ShiftDialog({
             if (shiftToEdit) {
                 const startTime = new Date(shiftToEdit.start_time);
                 const endTime = new Date(shiftToEdit.end_time);
-                
+
                 form.reset({
                     sectorId: shiftToEdit.sector_id || '',
                     staffId: shiftToEdit.staff_id || 'open',
@@ -146,7 +140,7 @@ export function ShiftDialog({
     const handleDelete = async () => {
         if (!shiftToEdit || !confirm('Tem certeza que deseja excluir este plantão?')) return;
         try {
-             const { error } = await supabase
+            const { error } = await supabase
                 .from('shifts')
                 .delete()
                 .eq('id', shiftToEdit.id);
@@ -162,165 +156,164 @@ export function ShiftDialog({
     }
 
     return (
-        <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <SheetContent className="sm:max-w-[500px] overflow-y-auto">
-                <SheetHeader>
-                    <SheetTitle>{isEditing ? 'Editar Plantão' : 'Novo Plantão'}</SheetTitle>
-                    <SheetDescription>
-                        {isEditing
-                            ? 'Altere os detalhes do plantão existente.'
-                            : 'Agende um novo plantão para sua equipe.'}
-                    </SheetDescription>
-                </SheetHeader>
+        <BaseSheet
+            open={isOpen}
+            onOpenChange={(open) => {
+                if (!open) onClose();
+            }}
+            contentClassName="sm:max-w-[500px]"
+            title={isEditing ? 'Editar Plantão' : 'Novo Plantão'}
+            description={
+                isEditing
+                    ? 'Altere os detalhes do plantão existente.'
+                    : 'Agende um novo plantão para sua equipe.'
+            }
+        >
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 
-                <Separator className="my-6" />
-
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                             <FormField
-                                control={form.control}
-                                name="date"
-                                render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel>Data</FormLabel>
-                                        <FormControl>
-                                            <div className="relative">
-                                                <Input 
-                                                    type="date" 
-                                                    value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
-                                                    onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value + 'T12:00:00') : new Date())} // Simple fix to avoid timezone issues on date pickers
-                                                />
-                                            </div>
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                             <FormField
-                                control={form.control}
-                                name="sectorId"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Setor</FormLabel>
-                                        <FormControl>
-                                            <Select
-                                                value={field.value}
-                                                onValueChange={field.onChange}
-                                                disabled={sectors.length === 0}
-                                                placeholder="Selecione o setor"
-                                                options={sectors.map((s) => ({
-                                                    value: s.id,
-                                                    label: s.name,
-                                                }))}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="startTime"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Início</FormLabel>
-                                        <FormControl>
-                                            <Input type="time" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="endTime"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Fim</FormLabel>
-                                        <FormControl>
-                                            <Input type="time" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-
+                    <div className="grid grid-cols-2 gap-4">
                         <FormField
                             control={form.control}
-                            name="staffId"
+                            name="date"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-col">
+                                    <FormLabel>Data</FormLabel>
+                                    <FormControl>
+                                        <div className="relative">
+                                            <Input
+                                                type="date"
+                                                value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
+                                                onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value + 'T12:00:00') : new Date())} // Simple fix to avoid timezone issues on date pickers
+                                            />
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="sectorId"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Profissional</FormLabel>
+                                    <FormLabel>Setor</FormLabel>
                                     <FormControl>
                                         <Select
                                             value={field.value}
                                             onValueChange={field.onChange}
-                                            placeholder="Selecione o profissional"
-                                            options={[
-                                                { value: 'open', label: '-- Em Aberto --' },
-                                                ...staff.map((s) => ({
-                                                    value: s.id,
-                                                    label: `${s.name} (${s.role})`,
-                                                })),
-                                            ]}
+                                            disabled={sectors.length === 0}
+                                            placeholder="Selecione o setor"
+                                            options={sectors.map((s) => ({
+                                                value: s.id,
+                                                label: s.name,
+                                            }))}
                                         />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
+                    </div>
 
+                    <div className="grid grid-cols-2 gap-4">
                         <FormField
                             control={form.control}
-                            name="notes"
+                            name="startTime"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Observações</FormLabel>
+                                    <FormLabel>Início</FormLabel>
                                     <FormControl>
-                                        <Textarea 
-                                            placeholder="Ex: Plantão cobertura..." 
-                                            className="resize-none" 
-                                            {...field} 
-                                        />
+                                        <Input type="time" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
-
-                        <div className="flex justify-between gap-4 pt-4">
-                            {isEditing && (
-                                <Button 
-                                    type="button" 
-                                    variant="destructive" 
-                                    onClick={handleDelete}
-                                    disabled={form.formState.isSubmitting}
-                                >
-                                    Excluir
-                                </Button>
+                        <FormField
+                            control={form.control}
+                            name="endTime"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Fim</FormLabel>
+                                    <FormControl>
+                                        <Input type="time" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
                             )}
-                            <div className="flex gap-2 ml-auto">
-                                <Button type="button" variant="outline" onClick={onClose}>
-                                    Cancelar
-                                </Button>
-                                <Button type="submit" disabled={form.formState.isSubmitting}>
-                                    {form.formState.isSubmitting && (
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    )}
-                                    Salvar
-                                </Button>
-                            </div>
+                        />
+                    </div>
+
+                    <FormField
+                        control={form.control}
+                        name="staffId"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Profissional</FormLabel>
+                                <FormControl>
+                                    <Select
+                                        value={field.value}
+                                        onValueChange={field.onChange}
+                                        placeholder="Selecione o profissional"
+                                        options={[
+                                            { value: 'open', label: '-- Em Aberto --' },
+                                            ...staff.map((s) => ({
+                                                value: s.id,
+                                                label: `${s.name} (${s.role})`,
+                                            })),
+                                        ]}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="notes"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Observações</FormLabel>
+                                <FormControl>
+                                    <Textarea
+                                        placeholder="Ex: Plantão cobertura..."
+                                        className="resize-none"
+                                        {...field}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <div className="flex justify-between gap-4 pt-4">
+                        {isEditing && (
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={handleDelete}
+                                disabled={form.formState.isSubmitting}
+                            >
+                                Excluir
+                            </Button>
+                        )}
+                        <div className="flex gap-2 ml-auto">
+                            <Button type="button" variant="outline" onClick={onClose}>
+                                Cancelar
+                            </Button>
+                            <Button type="submit" disabled={form.formState.isSubmitting}>
+                                {form.formState.isSubmitting && (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                )}
+                                Salvar
+                            </Button>
                         </div>
-                    </form>
-                </Form>
-            </SheetContent>
-        </Sheet>
+                    </div>
+                </form>
+            </Form>
+        </BaseSheet>
     );
 }
 

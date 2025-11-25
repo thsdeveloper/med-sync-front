@@ -46,14 +46,27 @@ export function BaseSheet({
     contentProps,
     ...sheetProps
 }: BaseSheetProps) {
+    const widthStyle =
+        side === "left" || side === "right"
+            ? {
+                width: "100%",
+                maxWidth: "720px",
+                ...(contentProps?.style ?? {}),
+            }
+            : contentProps?.style
+
     return (
         <Sheet {...sheetProps}>
             {trigger ? <SheetTrigger asChild>{trigger}</SheetTrigger> : null}
 
             <SheetContent
                 side={side}
-                className={cn("flex h-full flex-col gap-0 p-0", contentClassName)}
+                className={cn(
+                    "flex h-full w-full flex-col gap-0 p-0",
+                    contentClassName,
+                )}
                 {...contentProps}
+                style={widthStyle}
             >
                 {title || description ? (
                     <SheetHeader className={cn("border-b px-4 pb-4 pt-6", headerClassName)}>

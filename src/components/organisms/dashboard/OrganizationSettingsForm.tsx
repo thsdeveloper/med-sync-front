@@ -31,6 +31,13 @@ import {
   type OrganizationSettingsFormData,
 } from "@/schemas/organizationSettings.schema";
 import { useToastMessage } from "@/hooks/useToastMessage";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar";
+import { FileUploaderSheet } from "@/components/molecules/upload/FileUploaderSheet";
+import { useSupabaseSignedUrl } from "@/hooks/useSupabaseSignedUrl";
 
 type OrganizationRecord = {
   id: string;
@@ -38,11 +45,23 @@ type OrganizationRecord = {
   cnpj: string;
   phone: string | null;
   address: string | null;
+  logo_url: string | null;
 };
 
 type OrganizationSettingsFormProps = {
   ownerId: string;
 };
+
+const STORAGE_BUCKET =
+  process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET ?? "med-sync-bucket";
+const SIGNED_URL_LIFETIME = 60 * 60 * 24;
+const MAX_LOGO_SIZE_MB = 2;
+const LOGO_ACCEPTED_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/svg+xml",
+  "application/pdf",
+] as const;
 
 const formatCnpj = (value: string) => {
   const digits = value.replace(/\D/g, "").slice(0, 14);
@@ -69,6 +88,17 @@ const sanitizePhone = (value?: string | null) => {
   return digits && digits.length > 0 ? digits : null;
 };
 
+const inferFileExtension = (file: File) => {
+  const nameExt = file.name.split(".").pop();
+  if (nameExt) return nameExt.toLowerCase();
+
+  if (file.type === "image/png") return "png";
+  if (file.type === "image/jpeg") return "jpg";
+  if (file.type === "image/svg+xml") return "svg";
+  if (file.type === "application/pdf") return "pdf";
+  return "png";
+};
+
 export const OrganizationSettingsForm = ({
   ownerId,
 }: OrganizationSettingsFormProps) => {
@@ -89,6 +119,31 @@ export const OrganizationSettingsForm = ({
   const [isFetching, setIsFetching] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [logoPath, setLogoPath] = useState<string | null>(null);
+  const {
+    url: logoPreviewUrl,
+    isLoading: isResolvingLogo,
+    refresh: refreshLogoSignedUrl,
+  } = useSupabaseSignedUrl(STORAGE_BUCKET, logoPath, {
+    expiresIn: SIGNED_URL_LIFETIME,
+    autoRefresh: true,
+  });
+  const organizationName = form.watch("name");
+  const organizationInitials = useMemo(() => {
+    if (!organizationName) return "ORG";
+    const initials = organizationName
+      .split(" ")
+      .filter(Boolean)
+      .map((word) => word[0]?.toUpperCase() ?? "")
+      .join("");
+    return initials.slice(0, 2) || "ORG";
+  }, [organizationName]);
+  const logoIsImage = useMemo(() => {
+    if (!logoPath) return false;
+    return /\.(png|jpe?g|gif|svg|webp)$/i.test(logoPath);
+  }, [logoPath]);
+  const avatarImageSrc =
+    logoIsImage && logoPreviewUrl ? logoPreviewUrl : undefined;
 
   const loadOrganization = useCallback(async () => {
     setIsFetching(true);
@@ -96,7 +151,7 @@ export const OrganizationSettingsForm = ({
 
     const { data, error } = await supabase
       .from("organizations")
-      .select("id,name,cnpj,address,phone")
+      .select("id,name,cnpj,address,phone,logo_url")
       .eq("owner_id", ownerId)
       .maybeSingle();
 
@@ -112,6 +167,7 @@ export const OrganizationSettingsForm = ({
 
     if (!data) {
       setOrganizationId(null);
+      setLogoPath(null);
       form.reset({
         name: "",
         cnpj: "",
@@ -124,6 +180,7 @@ export const OrganizationSettingsForm = ({
 
     const organization = data as OrganizationRecord;
     setOrganizationId(organization.id);
+    setLogoPath(organization.logo_url ?? null);
     form.reset({
       name: organization.name ?? "",
       cnpj: formatCnpj(organization.cnpj ?? ""),
@@ -177,6 +234,28 @@ export const OrganizationSettingsForm = ({
     return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
   };
 
+  const handleLogoPersist = useCallback(
+    async ({ path }: { path: string }) => {
+      if (!organizationId) {
+        throw new Error("Organização não encontrada.");
+      }
+
+      const { error } = await supabase
+        .from("organizations")
+        .update({ logo_url: path })
+        .eq("id", organizationId)
+        .eq("owner_id", ownerId);
+
+      if (error) {
+        throw error;
+      }
+
+      setLogoPath(path);
+      await refreshLogoSignedUrl(path);
+    },
+    [organizationId, ownerId, refreshLogoSignedUrl, supabase]
+  );
+
   const renderEmptyState = () => (
     <Alert className="border-dashed border-slate-300 bg-slate-50">
       <AlertCircle className="text-slate-500" />
@@ -194,6 +273,37 @@ export const OrganizationSettingsForm = ({
         </Button>
       </div>
     </Alert>
+  );
+
+  const avatarTrigger = (
+    <button
+      type="button"
+      className="group flex w-full items-center gap-4 rounded-xl border border-dashed border-slate-200 p-4 text-left transition hover:border-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
+    >
+      <Avatar className="size-16 border border-slate-200 bg-white shadow-sm">
+        {avatarImageSrc ? (
+          <AvatarImage src={avatarImageSrc} alt="Logo da organização" />
+        ) : (
+          <AvatarFallback className="text-base font-semibold text-slate-600">
+            {organizationInitials}
+          </AvatarFallback>
+        )}
+      </Avatar>
+      <div className="flex flex-col">
+        <span className="text-sm font-medium text-slate-700">
+          Logo da empresa
+        </span>
+        <span className="text-xs text-slate-500">
+          Clique para enviar PNG, JPG, SVG ou PDF (até {MAX_LOGO_SIZE_MB}MB)
+        </span>
+        {isResolvingLogo && (
+          <span className="mt-1 flex items-center gap-1 text-xs text-slate-400">
+            <Loader2 className="size-3 animate-spin" />
+            Atualizando preview...
+          </span>
+        )}
+      </div>
+    </button>
   );
 
   return (
@@ -244,6 +354,32 @@ export const OrganizationSettingsForm = ({
         {!isFetching && organizationId && (
           <Form {...form}>
             <form onSubmit={onSubmit} className="space-y-6">
+              <FileUploaderSheet
+                trigger={avatarTrigger}
+                title="Selecione seu novo logo"
+                description="Selecione uma imagem (PNG, JPG, SVG) ou PDF com até 2MB."
+                uploaderProps={{
+                  bucket: STORAGE_BUCKET,
+                  description:
+                    "Selecione uma imagem (PNG, JPG, SVG) ou PDF com até 2MB.",
+                  helperText:
+                    "Aceitamos PNG, JPG, SVG ou PDF. Tamanho máximo de 2MB.",
+                  value: logoPath,
+                  fileName: organizationName || undefined,
+                  previewVariant: "image",
+                  accept: [...LOGO_ACCEPTED_TYPES],
+                  maxSizeMb: MAX_LOGO_SIZE_MB,
+                  getFilePath: (file) => {
+                    if (!organizationId) {
+                      throw new Error("Organização não encontrada.");
+                    }
+                    const extension = inferFileExtension(file);
+                    return `organizations/${organizationId}/logo.${extension}`;
+                  },
+                  onFileUploaded: ({ path }) => handleLogoPersist({ path }),
+                }}
+              />
+
               <div className="grid gap-6 md:grid-cols-2">
                 <FormField
                   control={form.control}
