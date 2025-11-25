@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { MedicalStaffList } from '@/components/organisms/medical-staff/MedicalStaffList';
 import { MedicalStaffSheet } from '@/components/organisms/medical-staff/MedicalStaffSheet';
 import { MedicalStaff } from '@/schemas/medical-staff.schema';
+import { PageHeader } from '@/components/organisms/page';
 
 export default function TeamPage() {
     const [isLoading, setIsLoading] = useState(true);
@@ -93,21 +94,18 @@ export default function TeamPage() {
     };
 
     return (
-        <div className="h-full flex-1 flex-col space-y-8 p-8 md:flex">
-            <div className="flex items-center justify-between space-y-2">
-                <div>
-                    <h2 className="text-2xl font-bold tracking-tight">Corpo Clínico</h2>
-                    <p className="text-muted-foreground">
-                        Gerencie os médicos, enfermeiros e técnicos da sua equipe.
-                    </p>
-                </div>
-                <div className="flex items-center space-x-2">
+        <div className="flex flex-1 flex-col gap-8">
+            <PageHeader
+                icon={<Users className="h-6 w-6" />}
+                title="Corpo Clínico"
+                description="Gerencie os médicos, enfermeiros e técnicos da sua equipe."
+                actions={
                     <Button onClick={() => setIsSheetOpen(true)} disabled={isLoading || !organizationId}>
                         <Plus className="mr-2 h-4 w-4" />
                         Novo Profissional
                     </Button>
-                </div>
-            </div>
+                }
+            />
 
             <div className="flex-1">
                 {organizationId ? (

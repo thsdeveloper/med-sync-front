@@ -14,6 +14,11 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
+const BRAND_COLORS = [
+    { color: '#2563EB', name: 'Primary' },
+    { color: '#2DD4BF', name: 'Secondary' },
+];
+
 const DEFAULT_COLORS = [
     '#000000',
     '#434343',
@@ -102,6 +107,42 @@ export const ColorPicker = forwardRef<HTMLInputElement | null, ColorPickerProps>
                         className="w-[280px] border-none bg-transparent p-0 shadow-none"
                     >
                         <div className="rounded-2xl border bg-background p-4 shadow-lg">
+                            <div className="relative mb-4 overflow-hidden rounded-xl bg-gradient-to-br from-[#2563EB] to-[#2DD4BF] p-3">
+                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.2),transparent_50%)]" />
+                                <div className="relative mb-2">
+                                    <p className="text-sm font-semibold leading-tight text-white">Cores da marca</p>
+                                    <p className="text-xs text-white/70">MedSync</p>
+                                </div>
+                                <div className="relative flex gap-2">
+                                    {BRAND_COLORS.map(({ color, name }) => {
+                                        const isActive = normalizedValue.toLowerCase() === color.toLowerCase();
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={color}
+                                                aria-label={`Selecionar cor ${name}`}
+                                                aria-pressed={isActive}
+                                                className={cn(
+                                                    'group relative flex h-10 flex-1 items-center justify-center rounded-lg border-2 shadow-md transition will-change-transform',
+                                                    isActive
+                                                        ? 'border-white ring-2 ring-white/50'
+                                                        : 'border-white/30 hover:scale-[1.02] hover:border-white/60',
+                                                )}
+                                                style={{ backgroundColor: color }}
+                                                onClick={() => handleSelectColor(color)}
+                                            >
+                                                {isActive && (
+                                                    <Check className="h-4 w-4 text-white drop-shadow" strokeWidth={3} />
+                                                )}
+                                                <span className="absolute -bottom-5 text-[10px] font-semibold text-white/80 opacity-0 transition group-hover:opacity-100">
+                                                    {name}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
                             <div>
                                 <p className="text-sm font-semibold leading-tight">Cores padrão</p>
                                 <p className="text-xs text-muted-foreground">Sólidas</p>

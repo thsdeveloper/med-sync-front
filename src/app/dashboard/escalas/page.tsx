@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { CalendarDays, Loader2 } from 'lucide-react';
 
+import { PageHeader } from '@/components/organisms/page';
 import { ShiftCalendar } from '@/components/organisms/shifts/ShiftCalendar';
 import { ShiftDialog } from '@/components/organisms/shifts/ShiftDialog';
 import { SectorsDialog } from '@/components/organisms/shifts/SectorsDialog';
@@ -144,22 +145,21 @@ export default function EscalasPage() {
     }
 
     return (
-        <div className="flex flex-col h-[calc(100vh-4rem)] p-8 gap-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                    <h2 className="text-2xl font-bold tracking-tight">Escala de Plantões</h2>
-                    <p className="text-muted-foreground">
-                        Gerencie a distribuição de plantões da sua equipe.
-                    </p>
-                </div>
-                {organizationId && (
-                    <SectorsDialog 
-                        organizationId={organizationId} 
-                        sectors={sectors} 
-                        onUpdate={handleSectorUpdate} 
-                    />
-                )}
-            </div>
+        <div className="flex flex-col gap-6 min-h-[calc(100vh-4rem)]">
+            <PageHeader
+                icon={<CalendarDays className="h-6 w-6" />}
+                title="Escala de Plantões"
+                description="Gerencie a distribuição de plantões da sua equipe."
+                actions={
+                    organizationId ? (
+                        <SectorsDialog
+                            organizationId={organizationId}
+                            sectors={sectors}
+                            onUpdate={handleSectorUpdate}
+                        />
+                    ) : undefined
+                }
+            />
 
             {organizationId ? (
                 <div className="flex-1 min-h-0">

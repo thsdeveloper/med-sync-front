@@ -1,6 +1,7 @@
 'use client';
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   CalendarCheck2,
   Command,
@@ -66,6 +67,14 @@ const configNavItems = [
 
 export function AppSidebar() {
   const { user, signOut } = useSupabaseAuth();
+  const pathname = usePathname();
+
+  const isActive = (url: string) => {
+    if (url === "/dashboard") {
+      return pathname === "/dashboard";
+    }
+    return pathname.startsWith(url);
+  };
 
   return (
     <Sidebar collapsible="icon">
@@ -84,7 +93,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {mainNavItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild tooltip={item.title}>
+                  <SidebarMenuButton asChild tooltip={item.title} isActive={isActive(item.url)}>
                     <Link href={item.url}>
                       <item.icon />
                       <span>{item.title}</span>
@@ -102,7 +111,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {configNavItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild tooltip={item.title}>
+                  <SidebarMenuButton asChild tooltip={item.title} isActive={isActive(item.url)}>
                     <Link href={item.url}>
                       <item.icon />
                       <span>{item.title}</span>

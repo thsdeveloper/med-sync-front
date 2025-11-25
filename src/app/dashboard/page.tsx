@@ -7,7 +7,8 @@ import {
     BellRing,
     BookOpen,
     CalendarCheck2 as CalendarCheck,
-    MessageSquare,
+    FileText,
+    LayoutDashboard,
     Stethoscope,
     Wand2,
 } from "lucide-react";
@@ -15,6 +16,7 @@ import {
 import { useSupabaseAuth } from "@/providers/SupabaseAuthProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/organisms/page";
 
 const stats = [
     {
@@ -97,7 +99,34 @@ export default function DashboardPage() {
     }
 
     return (
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+        <div className="flex flex-1 flex-col gap-6">
+            <PageHeader
+                eyebrow="Visão geral"
+                icon={<LayoutDashboard className="h-6 w-6" />}
+                title={`Bem-vindo, ${displayName}`}
+                description="Acompanhe indicadores críticos, próximos plantões e recomendações assistidas por IA."
+                actions={
+                    <div className="flex flex-wrap gap-2">
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            className="gap-2"
+                            onClick={() => router.push("/dashboard/escalas")}
+                        >
+                            <CalendarCheck className="size-4" />
+                            Ver escalas
+                        </Button>
+                        <Button
+                            size="sm"
+                            className="gap-2"
+                            onClick={() => router.push("/dashboard/relatorios")}
+                        >
+                            <FileText className="size-4" />
+                            Relatórios
+                        </Button>
+                    </div>
+                }
+            />
             <div className="grid auto-rows-min gap-4 md:grid-cols-3">
                 {stats.map((item) => (
                     <Card key={item.label} className="border-slate-200 shadow-sm">

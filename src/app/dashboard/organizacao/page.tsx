@@ -2,8 +2,10 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Building2 } from "lucide-react";
 
 import { OrganizationSettingsForm } from "@/components/organisms/dashboard/OrganizationSettingsForm";
+import { PageHeader } from "@/components/organisms/page";
 import { useSupabaseAuth } from "@/providers/SupabaseAuthProvider";
 
 export default function OrganizationPage() {
@@ -25,13 +27,13 @@ export default function OrganizationPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold text-slate-900">Organização</h1>
-        <p className="text-sm text-slate-500">
-          Visualize e atualize os dados básicos da empresa criada por você.
-        </p>
-      </div>
+    <div className="flex flex-1 flex-col gap-6">
+      <PageHeader
+        eyebrow="Dados da empresa"
+        icon={<Building2 className="h-6 w-6" />}
+        title="Organização"
+        description="Visualize e atualize os dados básicos da empresa criada por você."
+      />
 
       <OrganizationSettingsForm ownerId={user.id} />
     </div>

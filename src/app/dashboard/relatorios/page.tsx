@@ -1,10 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Download, Mail, RefreshCcw } from 'lucide-react';
+import { Download, FileText, Mail, RefreshCcw } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/organisms/page';
 import { ReportFilters } from '@/components/organisms/reports/ReportFilters';
 import { ReportSummaryCards } from '@/components/organisms/reports/ReportSummaryCards';
 import { ReportAreaChart } from '@/components/organisms/reports/ReportAreaChart';
@@ -147,30 +148,30 @@ export default function ReportsPage() {
 
     return (
         <>
-            <div className="space-y-6" ref={reportRef}>
-                <section className="flex flex-col gap-4 rounded-3xl border border-dashed bg-gradient-to-r from-slate-50 to-white p-6 md:flex-row md:items-center md:justify-between">
-                    <div>
-                        <p className="text-sm font-semibold text-primary">Painel assistencial</p>
-                        <h1 className="text-3xl font-bold tracking-tight">Relatórios unificados</h1>
-                        <p className="text-muted-foreground">
-                            Combine métricas assistenciais e financeiras para tomar decisões em tempo real.
-                        </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        <Button variant="secondary" onClick={loadMetrics} disabled={isLoading}>
-                            <RefreshCcw className="mr-2 h-4 w-4" />
-                            Atualizar dados
-                        </Button>
-                        <Button onClick={handleExport} disabled={isExporting}>
-                            <Download className="mr-2 h-4 w-4" />
-                            Exportar PDF
-                        </Button>
-                        <Button variant="outline" onClick={() => setIsEmailSheetOpen(true)}>
-                            <Mail className="mr-2 h-4 w-4" />
-                            Enviar por e-mail
-                        </Button>
-                    </div>
-                </section>
+            <div className="flex flex-1 flex-col gap-6" ref={reportRef}>
+                <PageHeader
+                    className="rounded-3xl border border-dashed bg-gradient-to-r from-slate-50 to-white"
+                    eyebrow="Painel assistencial"
+                    icon={<FileText className="h-6 w-6" />}
+                    title="Relatórios unificados"
+                    description="Combine métricas assistenciais e financeiras para tomar decisões em tempo real."
+                    actions={
+                        <div className="flex flex-wrap gap-2">
+                            <Button variant="secondary" onClick={loadMetrics} disabled={isLoading}>
+                                <RefreshCcw className="mr-2 h-4 w-4" />
+                                Atualizar dados
+                            </Button>
+                            <Button onClick={handleExport} disabled={isExporting}>
+                                <Download className="mr-2 h-4 w-4" />
+                                Exportar PDF
+                            </Button>
+                            <Button variant="outline" onClick={() => setIsEmailSheetOpen(true)}>
+                                <Mail className="mr-2 h-4 w-4" />
+                                Enviar por e-mail
+                            </Button>
+                        </div>
+                    }
+                />
 
                 <ReportFilters filters={filters} onFiltersChange={handleFiltersChange} onRefresh={loadMetrics} isRefreshing={isLoading} />
 
