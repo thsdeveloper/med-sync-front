@@ -15,7 +15,7 @@ import {
 
 import { useSupabaseAuth } from "@/providers/SupabaseAuthProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/atoms/Button";
 import { PageHeader } from "@/components/organisms/page";
 
 const stats = [

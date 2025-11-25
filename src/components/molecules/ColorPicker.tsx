@@ -10,7 +10,7 @@ import {
 } from 'react';
 import { Check, ChevronsUpDown, Palette } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/atoms/Button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 

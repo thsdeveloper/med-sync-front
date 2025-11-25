@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/atoms/Button';
 
 type PermissionLevel = 'none' | 'read' | 'write';
 

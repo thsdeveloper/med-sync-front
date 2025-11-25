@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Download, FileText, Mail, RefreshCcw } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/atoms/Button';
 import { PageHeader } from '@/components/organisms/page';
 import { ReportFilters } from '@/components/organisms/reports/ReportFilters';
 import { ReportSummaryCards } from '@/components/organisms/reports/ReportSummaryCards';

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Edit, Trash2, Search, MoreHorizontal, Mail, Phone } from 'lucide-react';
 import { MedicalStaff } from '@/schemas/medical-staff.schema';
 import { Input } from '@/components/atoms/Input';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/atoms/Button';
 import {
     DropdownMenu,
     DropdownMenuContent,

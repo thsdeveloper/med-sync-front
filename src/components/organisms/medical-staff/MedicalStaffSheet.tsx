@@ -17,7 +17,7 @@ import {
     FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/atoms/Input';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/atoms/Button';
 import { Separator } from '@/components/ui/separator';
 import { Select } from '@/components/atoms/Select';
 import { ColorPicker } from '@/components/molecules/ColorPicker';

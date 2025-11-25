@@ -12,7 +12,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/atoms/Button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/atoms/Input';
 

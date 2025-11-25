@@ -15,7 +15,7 @@ import {
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Clock, User } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/atoms/Button';
 import { Shift, Sector } from '@/schemas/shifts.schema';
 import { cn } from '@/lib/utils'; // shadcn utility usually available
 

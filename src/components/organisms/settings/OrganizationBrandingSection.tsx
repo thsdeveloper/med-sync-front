@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/atoms/Button';
 import { Textarea } from '@/components/ui/textarea';
 import { ColorPicker } from '@/components/molecules/ColorPicker';
 

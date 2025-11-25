@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, Users } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/atoms/Button';
 import { MedicalStaffList } from '@/components/organisms/medical-staff/MedicalStaffList';
 import { MedicalStaffSheet } from '@/components/organisms/medical-staff/MedicalStaffSheet';
 import { MedicalStaff } from '@/schemas/medical-staff.schema';
@@ -20,7 +20,7 @@ export default function TeamPage() {
     const fetchOrganizationAndStaff = useCallback(async () => {
         try {
             setIsLoading(true);
-            
+
             // 1. Get current user
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
