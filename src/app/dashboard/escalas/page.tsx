@@ -4,18 +4,27 @@ import { useState, useEffect, useCallback } from 'react';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { CalendarDays, Loader2 } from 'lucide-react';
+import { CalendarDays, Loader2, Plus, Calendar, ClipboardList, RefreshCw } from 'lucide-react';
+import { generateShiftsForCalendarView } from '@/lib/shift-generation';
 
 import { PageHeader } from '@/components/organisms/page';
 import { ShiftCalendar } from '@/components/organisms/shifts/ShiftCalendar';
-import { ShiftDialog } from '@/components/organisms/shifts/ShiftDialog';
 import { SectorsDialog } from '@/components/organisms/shifts/SectorsDialog';
+import { FixedScheduleList } from '@/components/organisms/shifts/FixedScheduleList';
+import { FixedScheduleDialog } from '@/components/organisms/shifts/FixedScheduleDialog';
+import { Button } from '@/components/atoms/Button';
 import { Shift, Sector } from '@/schemas/shifts.schema';
 import { MedicalStaff } from '@/schemas/medical-staff.schema';
+import { Facility } from '@/schemas/facility.schema';
+import { FixedSchedule } from '@/schemas/fixed-schedule.schema';
 import { useOrganization } from '@/providers/OrganizationProvider';
+import { cn } from '@/lib/utils';
+
+type TabType = 'calendar' | 'fixed';
 
 export default function EscalasPage() {
     const { activeOrganization, loading: orgLoading } = useOrganization();
+    const [activeTab, setActiveTab] = useState<TabType>('calendar');
     const [currentDate, setCurrentDate] = useState(new Date());
     const [isLoading, setIsLoading] = useState(true);
     
@@ -25,17 +34,19 @@ export default function EscalasPage() {
     const [shifts, setShifts] = useState<Shift[]>([]);
     const [sectors, setSectors] = useState<Sector[]>([]);
     const [staff, setStaff] = useState<MedicalStaff[]>([]);
+    const [facilities, setFacilities] = useState<Facility[]>([]);
+    const [fixedSchedules, setFixedSchedules] = useState<FixedSchedule[]>([]);
 
-    // Dialog States
-    const [isShiftDialogOpen, setIsShiftDialogOpen] = useState(false);
-    const [editingShift, setEditingShift] = useState<Shift | null>(null);
-    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+    // Fixed Schedule Dialog States
+    const [isFixedScheduleDialogOpen, setIsFixedScheduleDialogOpen] = useState(false);
+    const [editingFixedSchedule, setEditingFixedSchedule] = useState<FixedSchedule | null>(null);
 
-    // Fetch Sectors and Staff when org changes
-    const fetchSectorsAndStaff = useCallback(async () => {
+    // Fetch base data (Sectors, Staff, Facilities) when org changes
+    const fetchBaseData = useCallback(async () => {
         if (!organizationId) {
             setSectors([]);
             setStaff([]);
+            setFacilities([]);
             return;
         }
 
@@ -65,8 +76,17 @@ export default function EscalasPage() {
                 .sort((a, b) => a.name.localeCompare(b.name));
             
             setStaff(staffList);
+
+            // Fetch Facilities
+            const { data: facilitiesData } = await supabase
+                .from('facilities')
+                .select('*')
+                .eq('organization_id', organizationId)
+                .eq('active', true)
+                .order('name');
+            setFacilities(facilitiesData as Facility[] || []);
         } catch (error) {
-            console.error('Error loading sectors and staff:', error);
+            console.error('Error loading base data:', error);
         }
     }, [organizationId]);
 
@@ -106,11 +126,39 @@ export default function EscalasPage() {
         }
     }, [currentDate, organizationId]);
 
+    // Fetch Fixed Schedules
+    const fetchFixedSchedules = useCallback(async () => {
+        if (!organizationId) {
+            setFixedSchedules([]);
+            return;
+        }
+        
+        try {
+            const { data, error } = await supabase
+                .from('fixed_schedules')
+                .select(`
+                    *,
+                    facilities (*),
+                    medical_staff (id, name, role, color),
+                    sectors (*)
+                `)
+                .eq('organization_id', organizationId)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            
+            setFixedSchedules(data as FixedSchedule[]);
+        } catch (error) {
+            console.error('Error loading fixed schedules:', error);
+            toast.error('Erro ao carregar escalas fixas.');
+        }
+    }, [organizationId]);
+
     useEffect(() => {
         if (!orgLoading) {
-            fetchSectorsAndStaff();
+            fetchBaseData();
         }
-    }, [orgLoading, fetchSectorsAndStaff]);
+    }, [orgLoading, fetchBaseData]);
 
     useEffect(() => {
         if (!orgLoading) {
@@ -118,25 +166,45 @@ export default function EscalasPage() {
         }
     }, [orgLoading, fetchShifts]);
 
-    // Handlers
-    const handleAddShift = (date: Date) => {
-        setSelectedDate(date);
-        setEditingShift(null);
-        setIsShiftDialogOpen(true);
+    useEffect(() => {
+        if (!orgLoading) {
+            fetchFixedSchedules();
+        }
+    }, [orgLoading, fetchFixedSchedules]);
+
+    // Generate shifts for calendar view when month changes
+    const handleDateChange = async (newDate: Date) => {
+        setCurrentDate(newDate);
+        
+        // Generate shifts from fixed schedules for the new month
+        if (organizationId && fixedSchedules.length > 0) {
+            await generateShiftsForCalendarView(organizationId, newDate);
+            // Refresh shifts after generation
+            fetchShifts();
+        }
     };
 
-    const handleEditShift = (shift: Shift) => {
-        setEditingShift(shift);
-        setSelectedDate(new Date(shift.start_time));
-        setIsShiftDialogOpen(true);
-    };
-
-    const handleShiftSuccess = () => {
-        fetchShifts();
+    // Manual refresh of generated shifts
+    const handleRefreshGeneratedShifts = async () => {
+        if (!organizationId) return;
+        
+        toast.loading('Gerando plantões...', { id: 'generating-shifts' });
+        const result = await generateShiftsForCalendarView(organizationId, currentDate);
+        toast.dismiss('generating-shifts');
+        
+        if (result.success) {
+            if (result.count > 0) {
+                toast.success(`${result.count} plantão(ões) gerado(s).`);
+            } else {
+                toast.info('Nenhum novo plantão para gerar.');
+            }
+            fetchShifts();
+        } else {
+            toast.error('Erro ao gerar plantões.');
+        }
     };
 
     const handleSectorUpdate = () => {
-        // Refresh sectors list
         if (organizationId) {
             supabase
                 .from('sectors')
@@ -149,6 +217,25 @@ export default function EscalasPage() {
         }
     };
 
+    // Handlers - Fixed Schedules
+    const handleAddFixedSchedule = () => {
+        setEditingFixedSchedule(null);
+        setIsFixedScheduleDialogOpen(true);
+    };
+
+    const handleEditFixedSchedule = (schedule: FixedSchedule) => {
+        setEditingFixedSchedule(schedule);
+        setIsFixedScheduleDialogOpen(true);
+    };
+
+    const handleFixedScheduleSuccess = () => {
+        fetchFixedSchedules();
+    };
+
+    const handleFixedScheduleDelete = () => {
+        fetchFixedSchedules();
+    };
+
     const loading = orgLoading || isLoading;
 
     if (loading && !organizationId) {
@@ -159,6 +246,11 @@ export default function EscalasPage() {
         );
     }
 
+    const tabs = [
+        { id: 'calendar' as const, label: 'Calendário', icon: Calendar },
+        { id: 'fixed' as const, label: 'Escalas Fixas', icon: ClipboardList },
+    ];
+
     return (
         <div className="flex flex-col gap-6 min-h-[calc(100vh-4rem)]">
             <PageHeader
@@ -167,27 +259,81 @@ export default function EscalasPage() {
                 description="Gerencie a distribuição de plantões da sua equipe."
                 actions={
                     organizationId ? (
-                        <SectorsDialog
-                            organizationId={organizationId}
-                            sectors={sectors}
-                            onUpdate={handleSectorUpdate}
-                        />
+                        <div className="flex items-center gap-2">
+                            {activeTab === 'calendar' && fixedSchedules.length > 0 && (
+                                <Button 
+                                    variant="outline" 
+                                    onClick={handleRefreshGeneratedShifts}
+                                    title="Gerar plantões das escalas fixas"
+                                >
+                                    <RefreshCw className="mr-2 h-4 w-4" />
+                                    Gerar Plantões
+                                </Button>
+                            )}
+                            {activeTab === 'fixed' && (
+                                <Button onClick={handleAddFixedSchedule}>
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Nova Escala Fixa
+                                </Button>
+                            )}
+                            <SectorsDialog
+                                organizationId={organizationId}
+                                sectors={sectors}
+                                onUpdate={handleSectorUpdate}
+                            />
+                        </div>
                     ) : undefined
                 }
             />
 
             {organizationId ? (
-                <div className="flex-1 min-h-0">
-                    <ShiftCalendar 
-                        currentDate={currentDate}
-                        onDateChange={setCurrentDate}
-                        shifts={shifts}
-                        sectors={sectors}
-                        onAddShift={handleAddShift}
-                        onEditShift={handleEditShift}
-                        isLoading={loading}
-                    />
-                </div>
+                <>
+                    {/* Tabs */}
+                    <div className="border-b border-slate-200">
+                        <nav className="flex gap-1" aria-label="Tabs">
+                            {tabs.map((tab) => {
+                                const Icon = tab.icon;
+                                const isActive = activeTab === tab.id;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={cn(
+                                            'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors',
+                                            isActive
+                                                ? 'border-blue-600 text-blue-600'
+                                                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                                        )}
+                                    >
+                                        <Icon className="h-4 w-4" />
+                                        {tab.label}
+                                    </button>
+                                );
+                            })}
+                        </nav>
+                    </div>
+
+                    {/* Tab Content */}
+                    <div className="flex-1 min-h-0">
+                        {activeTab === 'calendar' ? (
+                            <ShiftCalendar 
+                                currentDate={currentDate}
+                                onDateChange={handleDateChange}
+                                shifts={shifts}
+                                sectors={sectors}
+                                isLoading={loading}
+                            />
+                        ) : (
+                            <FixedScheduleList
+                                schedules={fixedSchedules}
+                                facilities={facilities}
+                                isLoading={loading}
+                                onEdit={handleEditFixedSchedule}
+                                onDelete={handleFixedScheduleDelete}
+                            />
+                        )}
+                    </div>
+                </>
             ) : (
                 !loading && (
                     <div className="flex-1 flex items-center justify-center border-2 border-dashed rounded-lg">
@@ -196,16 +342,18 @@ export default function EscalasPage() {
                 )
             )}
 
+            {/* Fixed Schedule Dialog */}
             {organizationId && (
-                <ShiftDialog 
-                    isOpen={isShiftDialogOpen}
-                    onClose={() => setIsShiftDialogOpen(false)}
-                    onSuccess={handleShiftSuccess}
+                <FixedScheduleDialog
+                    isOpen={isFixedScheduleDialogOpen}
+                    onClose={() => setIsFixedScheduleDialogOpen(false)}
+                    onSuccess={handleFixedScheduleSuccess}
                     organizationId={organizationId}
-                    sectors={sectors}
+                    facilities={facilities}
                     staff={staff}
-                    shiftToEdit={editingShift}
-                    initialDate={selectedDate}
+                    sectors={sectors}
+                    scheduleToEdit={editingFixedSchedule}
+                    onStaffRefresh={fetchBaseData}
                 />
             )}
         </div>

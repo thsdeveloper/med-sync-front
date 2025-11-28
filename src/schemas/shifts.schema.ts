@@ -42,6 +42,7 @@ export type Shift = {
     start_time: string; // ISO string from DB
     end_time: string; // ISO string from DB
     notes: string | null;
+    fixed_schedule_id: string | null; // Referência para escala fixa (null = shift manual)
     created_at: string;
     // Joins
     sectors?: Sector;
