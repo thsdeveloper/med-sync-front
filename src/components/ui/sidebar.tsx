@@ -407,7 +407,7 @@ function SidebarGroupLabel({
       data-slot="sidebar-group-label"
       data-sidebar="group-label"
       className={cn(
-        "text-sidebar-foreground/70 ring-sidebar-ring flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium outline-hidden transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+        "text-sidebar-foreground/50 ring-sidebar-ring flex h-8 shrink-0 items-center rounded-md px-2 text-[11px] font-semibold uppercase tracking-wider outline-hidden transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
         "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
         className
       )}
@@ -476,17 +476,48 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-hidden ring-sidebar-ring transition-[width,height,padding] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-gradient-to-r data-[active=true]:from-[#2563EB] data-[active=true]:to-[#2DD4BF] data-[active=true]:font-medium data-[active=true]:text-white data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0",
+  [
+    // Base styles
+    "peer/menu-button flex w-full items-center gap-2.5 overflow-hidden rounded-xl p-2.5 text-left text-sm outline-hidden ring-sidebar-ring transition-all duration-200 ease-out",
+    // Icon styles
+    "[&>svg]:size-[18px] [&>svg]:shrink-0 [&>svg]:transition-transform [&>svg]:duration-200",
+    // Text truncation
+    "[&>span:last-child]:truncate",
+    // Disabled states
+    "disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50",
+    // Focus states
+    "focus-visible:ring-2",
+    // Menu action spacing
+    "group-has-data-[sidebar=menu-action]/menu-item:pr-8",
+    // Collapsed icon mode
+    "group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:p-2! group-data-[collapsible=icon]:rounded-lg",
+  ].join(" "),
   {
     variants: {
       variant: {
-        default: "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-        outline:
-          "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]",
+        default: [
+          // Default hover state
+          "hover:bg-slate-100 hover:text-slate-900",
+          // Active state with gradient
+          "data-[active=true]:bg-gradient-to-r data-[active=true]:from-blue-600 data-[active=true]:to-cyan-500",
+          "data-[active=true]:text-white data-[active=true]:font-medium data-[active=true]:shadow-md data-[active=true]:shadow-blue-500/25",
+          // Active icon animation
+          "data-[active=true]:[&>svg]:scale-110",
+          // Open state
+          "data-[state=open]:bg-slate-100 data-[state=open]:text-slate-900",
+        ].join(" "),
+        outline: [
+          "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))]",
+          "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]",
+        ].join(" "),
+        ghost: [
+          "hover:bg-slate-100/80 hover:text-slate-900",
+          "data-[active=true]:bg-slate-100 data-[active=true]:text-slate-900 data-[active=true]:font-medium",
+        ].join(" "),
       },
       size: {
-        default: "h-8 text-sm",
-        sm: "h-7 text-xs",
+        default: "h-10 text-sm",
+        sm: "h-8 text-xs rounded-lg",
         lg: "h-12 text-sm group-data-[collapsible=icon]:p-0!",
       },
     },
@@ -647,7 +678,7 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
       data-slot="sidebar-menu-sub"
       data-sidebar="menu-sub"
       className={cn(
-        "border-sidebar-border mx-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l px-2.5 py-0.5",
+        "ml-3.5 flex min-w-0 flex-col gap-0.5 border-l-2 border-slate-200 pl-3 py-1",
         "group-data-[collapsible=icon]:hidden",
         className
       )}
@@ -690,10 +721,22 @@ function SidebarMenuSubButton({
       data-size={size}
       data-active={isActive}
       className={cn(
-        "text-sidebar-foreground ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent active:text-sidebar-accent-foreground [&>svg]:text-sidebar-accent-foreground flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-md px-2 outline-hidden focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0",
-        "data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground",
+        // Base styles
+        "ring-sidebar-ring flex h-8 min-w-0 items-center gap-2 overflow-hidden rounded-lg px-2.5 outline-hidden transition-all duration-200 ease-out focus-visible:ring-2",
+        // Text and icon styles
+        "[&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0",
+        // Disabled states
+        "disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50",
+        // Default state
+        "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+        // Active state
+        "data-[active=true]:bg-blue-50 data-[active=true]:text-blue-700 data-[active=true]:font-medium",
+        // Active indicator dot
+        "data-[active=true]:before:absolute data-[active=true]:before:-left-[11px] data-[active=true]:before:top-1/2 data-[active=true]:before:-translate-y-1/2 data-[active=true]:before:size-1.5 data-[active=true]:before:rounded-full data-[active=true]:before:bg-blue-600",
+        // Size variants
         size === "sm" && "text-xs",
         size === "md" && "text-sm",
+        // Collapsed mode
         "group-data-[collapsible=icon]:hidden",
         className
       )}

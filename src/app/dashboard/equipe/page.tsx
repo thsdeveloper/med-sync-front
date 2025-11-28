@@ -7,84 +7,139 @@ import { toast } from 'sonner';
 import { Button } from '@/components/atoms/Button';
 import { MedicalStaffList } from '@/components/organisms/medical-staff/MedicalStaffList';
 import { MedicalStaffSheet } from '@/components/organisms/medical-staff/MedicalStaffSheet';
-import { MedicalStaff } from '@/schemas/medical-staff.schema';
+import { MedicalStaffWithOrganization } from '@/schemas/medical-staff.schema';
 import { PageHeader } from '@/components/organisms/page';
+import { useOrganization } from '@/providers/OrganizationProvider';
 
 export default function TeamPage() {
+    const { activeOrganization, loading: orgLoading } = useOrganization();
     const [isLoading, setIsLoading] = useState(true);
-    const [staff, setStaff] = useState<MedicalStaff[]>([]);
-    const [organizationId, setOrganizationId] = useState<string | null>(null);
+    const [staff, setStaff] = useState<MedicalStaffWithOrganization[]>([]);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
-    const [editingStaff, setEditingStaff] = useState<MedicalStaff | null>(null);
+    const [editingStaff, setEditingStaff] = useState<MedicalStaffWithOrganization | null>(null);
 
-    const fetchOrganizationAndStaff = useCallback(async () => {
+    const organizationId = activeOrganization?.id ?? null;
+
+    const fetchStaff = useCallback(async () => {
+        if (!organizationId) {
+            setStaff([]);
+            setIsLoading(false);
+            return;
+        }
+
         try {
             setIsLoading(true);
 
-            // 1. Get current user
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            // Get staff via staff_organizations
+            const { data: staffOrgsData, error: staffOrgsError } = await supabase
+                .from('staff_organizations')
+                .select(`
+                    id,
+                    staff_id,
+                    organization_id,
+                    active,
+                    created_at,
+                    medical_staff (
+                        id,
+                        name,
+                        email,
+                        phone,
+                        crm,
+                        specialty,
+                        role,
+                        color,
+                        active,
+                        created_at,
+                        updated_at
+                    )
+                `)
+                .eq('organization_id', organizationId)
+                .order('created_at', { ascending: false });
 
-            // 2. Get user's organization
-            // TODO: Move this to a global context or hook for performance
-            const { data: orgs, error: orgError } = await supabase
-                .from('organizations')
-                .select('id')
-                .eq('owner_id', user.id)
-                .single();
+            if (staffOrgsError) throw staffOrgsError;
 
-            if (orgError) {
-                console.error('Error fetching organization:', orgError);
-                // Handle case where user might be a member but not owner (future)
-                return;
+            // Para cada profissional, contar em quantas organizações ele está vinculado
+            const staffWithOrgCount: MedicalStaffWithOrganization[] = [];
+
+            for (const staffOrg of staffOrgsData || []) {
+                const medicalStaff = staffOrg.medical_staff as any;
+                if (!medicalStaff) continue;
+
+                // Contar vínculos
+                const { count } = await supabase
+                    .from('staff_organizations')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('staff_id', staffOrg.staff_id);
+
+                staffWithOrgCount.push({
+                    ...medicalStaff,
+                    staff_organization: {
+                        id: staffOrg.id,
+                        staff_id: staffOrg.staff_id,
+                        organization_id: staffOrg.organization_id,
+                        active: staffOrg.active,
+                        created_at: staffOrg.created_at,
+                    },
+                    organization_count: count || 1,
+                });
             }
 
-            if (orgs) {
-                setOrganizationId(orgs.id);
-
-                // 3. Get staff
-                const { data: staffData, error: staffError } = await supabase
-                    .from('medical_staff')
-                    .select('*')
-                    .eq('organization_id', orgs.id)
-                    .order('name');
-
-                if (staffError) throw staffError;
-                setStaff(staffData as MedicalStaff[]);
-            }
+            // Ordenar por nome
+            staffWithOrgCount.sort((a, b) => a.name.localeCompare(b.name));
+            setStaff(staffWithOrgCount);
         } catch (error) {
             console.error('Error loading data:', error);
             toast.error('Erro ao carregar dados da equipe.');
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [organizationId]);
 
     useEffect(() => {
-        fetchOrganizationAndStaff();
-    }, [fetchOrganizationAndStaff]);
+        if (!orgLoading) {
+            fetchStaff();
+        }
+    }, [orgLoading, fetchStaff]);
 
-    const handleEdit = (member: MedicalStaff) => {
+    const handleEdit = (member: MedicalStaffWithOrganization) => {
         setEditingStaff(member);
         setIsSheetOpen(true);
     };
 
-    const handleDelete = async (id: string) => {
-        if (!window.confirm('Tem certeza que deseja excluir este profissional?')) return;
+    const handleUnlink = async (staffId: string, staffOrgId: string, organizationCount: number) => {
+        const isOnlyOrg = organizationCount <= 1;
+        const confirmMessage = isOnlyOrg
+            ? 'Este profissional só está vinculado à sua organização. Ao desvincular, o cadastro será excluído. Deseja continuar?'
+            : 'Deseja desvincular este profissional da sua organização? O cadastro será mantido em outras organizações.';
+
+        if (!window.confirm(confirmMessage)) return;
 
         try {
-            const { error } = await supabase
-                .from('medical_staff')
+            // 1. Remove o vínculo
+            const { error: unlinkError } = await supabase
+                .from('staff_organizations')
                 .delete()
-                .eq('id', id);
+                .eq('id', staffOrgId);
 
-            if (error) throw error;
+            if (unlinkError) throw unlinkError;
 
-            setStaff(prev => prev.filter(item => item.id !== id));
-            toast.success('Profissional removido com sucesso.');
+            // 2. Se era o único vínculo, remove o cadastro do profissional
+            if (isOnlyOrg) {
+                const { error: deleteError } = await supabase
+                    .from('medical_staff')
+                    .delete()
+                    .eq('id', staffId);
+
+                if (deleteError) {
+                    console.error('Error deleting staff:', deleteError);
+                }
+            }
+
+            setStaff(prev => prev.filter(item => item.id !== staffId));
+            toast.success(isOnlyOrg ? 'Profissional removido com sucesso.' : 'Profissional desvinculado com sucesso.');
         } catch (error) {
-            console.error('Error deleting staff:', error);
-            toast.error('Erro ao excluir profissional.');
+            console.error('Error unlinking staff:', error);
+            toast.error('Erro ao desvincular profissional.');
         }
     };
 
@@ -93,14 +148,16 @@ export default function TeamPage() {
         setEditingStaff(null);
     };
 
+    const loading = orgLoading || isLoading;
+
     return (
         <div className="flex flex-1 flex-col gap-8">
             <PageHeader
                 icon={<Users className="h-6 w-6" />}
                 title="Corpo Clínico"
-                description="Gerencie os médicos, enfermeiros e técnicos da sua equipe."
+                description="Gerencie os médicos, enfermeiros e técnicos vinculados à sua organização."
                 actions={
-                    <Button onClick={() => setIsSheetOpen(true)} disabled={isLoading || !organizationId}>
+                    <Button onClick={() => setIsSheetOpen(true)} disabled={loading || !organizationId}>
                         <Plus className="mr-2 h-4 w-4" />
                         Novo Profissional
                     </Button>
@@ -111,19 +168,19 @@ export default function TeamPage() {
                 {organizationId ? (
                     <MedicalStaffList
                         staff={staff}
-                        isLoading={isLoading}
+                        isLoading={loading}
                         onEdit={handleEdit}
-                        onDelete={handleDelete}
+                        onUnlink={handleUnlink}
                     />
                 ) : (
-                    !isLoading && (
+                    !loading && (
                         <div className="flex flex-col items-center justify-center h-64 text-center p-8 border-2 border-dashed rounded-lg bg-slate-50/50">
                             <div className="p-3 bg-slate-100 rounded-full mb-4">
                                 <Users className="h-6 w-6 text-slate-400" />
                             </div>
-                            <h3 className="text-lg font-medium text-slate-900 mb-1">Nenhuma organização encontrada</h3>
+                            <h3 className="text-lg font-medium text-slate-900 mb-1">Nenhuma organização selecionada</h3>
                             <p className="text-slate-500 max-w-sm">
-                                Parece que você ainda não possui uma organização vinculada. Entre em contato com o suporte.
+                                Selecione ou crie uma organização no menu lateral para gerenciar a equipe.
                             </p>
                         </div>
                     )
@@ -134,7 +191,7 @@ export default function TeamPage() {
                 <MedicalStaffSheet
                     isOpen={isSheetOpen}
                     onClose={handleSheetClose}
-                    onSuccess={fetchOrganizationAndStaff}
+                    onSuccess={fetchStaff}
                     organizationId={organizationId}
                     staffToEdit={editingStaff}
                 />
@@ -142,4 +199,3 @@ export default function TeamPage() {
         </div>
     );
 }
-

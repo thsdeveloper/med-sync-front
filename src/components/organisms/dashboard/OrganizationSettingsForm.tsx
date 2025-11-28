@@ -6,13 +6,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   AlertCircle,
-  Building2,
   Loader2,
   RefreshCw,
   Save,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/atoms/Button";
 import {
   Form,
@@ -38,19 +39,8 @@ import {
 } from "@/components/ui/avatar";
 import { FileUploaderSheet } from "@/components/molecules/upload/FileUploaderSheet";
 import { useSupabaseSignedUrl } from "@/hooks/useSupabaseSignedUrl";
-
-type OrganizationRecord = {
-  id: string;
-  name: string;
-  cnpj: string;
-  phone: string | null;
-  address: string | null;
-  logo_url: string | null;
-};
-
-type OrganizationSettingsFormProps = {
-  ownerId: string;
-};
+import { useOrganization } from "@/providers/OrganizationProvider";
+import { Separator } from "@/components/ui/separator";
 
 const STORAGE_BUCKET =
   process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET ?? "med-sync-bucket";
@@ -99,11 +89,10 @@ const inferFileExtension = (file: File) => {
   return "png";
 };
 
-export const OrganizationSettingsForm = ({
-  ownerId,
-}: OrganizationSettingsFormProps) => {
+export const OrganizationSettingsForm = () => {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const { notifyError, notifySuccess } = useToastMessage();
+  const { activeOrganization, loading: orgLoading, refreshOrganizations } = useOrganization();
 
   const form = useForm<OrganizationSettingsFormData>({
     resolver: zodResolver(organizationSettingsSchema),
@@ -115,10 +104,9 @@ export const OrganizationSettingsForm = ({
     },
   });
 
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
-  const [isFetching, setIsFetching] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [facilitiesCount, setFacilitiesCount] = useState<number | null>(null);
   const [logoPath, setLogoPath] = useState<string | null>(null);
   const {
     url: logoPreviewUrl,
@@ -128,6 +116,7 @@ export const OrganizationSettingsForm = ({
     expiresIn: SIGNED_URL_LIFETIME,
     autoRefresh: true,
   });
+
   const organizationName = form.watch("name");
   const organizationInitials = useMemo(() => {
     if (!organizationName) return "ORG";
@@ -138,64 +127,62 @@ export const OrganizationSettingsForm = ({
       .join("");
     return initials.slice(0, 2) || "ORG";
   }, [organizationName]);
+
   const logoIsImage = useMemo(() => {
     if (!logoPath) return false;
     return /\.(png|jpe?g|gif|svg|webp)$/i.test(logoPath);
   }, [logoPath]);
-  const avatarImageSrc =
-    logoIsImage && logoPreviewUrl ? logoPreviewUrl : undefined;
 
-  const loadOrganization = useCallback(async () => {
-    setIsFetching(true);
-    setFetchError(null);
+  const avatarImageSrc = logoIsImage && logoPreviewUrl ? logoPreviewUrl : undefined;
 
-    const { data, error } = await supabase
-      .from("organizations")
-      .select("id,name,cnpj,address,phone,logo_url")
-      .eq("owner_id", ownerId)
-      .maybeSingle();
+  const canDelete = facilitiesCount === 0;
 
-    if (error) {
-      console.error("Erro ao carregar organização", error);
-      setFetchError(
-        "Não foi possível carregar os dados da organização. Tente novamente."
-      );
-      setOrganizationId(null);
-      setIsFetching(false);
+  // Carregar contagem de facilities
+  const loadFacilitiesCount = useCallback(async () => {
+    if (!activeOrganization) {
+      setFacilitiesCount(null);
       return;
     }
 
-    if (!data) {
-      setOrganizationId(null);
-      setLogoPath(null);
+    const { count, error } = await supabase
+      .from("facilities")
+      .select("*", { count: "exact", head: true })
+      .eq("organization_id", activeOrganization.id);
+
+    if (error) {
+      console.error("Erro ao contar facilities:", error);
+      setFacilitiesCount(null);
+      return;
+    }
+
+    setFacilitiesCount(count ?? 0);
+  }, [activeOrganization, supabase]);
+
+  // Sincronizar form quando a organização ativa mudar
+  useEffect(() => {
+    if (activeOrganization) {
+      form.reset({
+        name: activeOrganization.name ?? "",
+        cnpj: formatCnpj(activeOrganization.cnpj ?? ""),
+        phone: formatPhone(activeOrganization.phone),
+        address: activeOrganization.address ?? "",
+      });
+      setLogoPath(activeOrganization.logo_url ?? null);
+      loadFacilitiesCount();
+    } else {
       form.reset({
         name: "",
         cnpj: "",
-        address: "",
         phone: "",
+        address: "",
       });
-      setIsFetching(false);
-      return;
+      setLogoPath(null);
+      setFacilitiesCount(null);
     }
-
-    const organization = data as OrganizationRecord;
-    setOrganizationId(organization.id);
-    setLogoPath(organization.logo_url ?? null);
-    form.reset({
-      name: organization.name ?? "",
-      cnpj: formatCnpj(organization.cnpj ?? ""),
-      phone: formatPhone(organization.phone),
-      address: organization.address ?? "",
-    });
-    setIsFetching(false);
-  }, [form, ownerId, supabase]);
-
-  useEffect(() => {
-    void loadOrganization();
-  }, [loadOrganization]);
+  }, [activeOrganization, form, loadFacilitiesCount]);
 
   const onSubmit = form.handleSubmit(async (values) => {
-    if (!organizationId) return;
+    if (!activeOrganization) return;
     setIsSubmitting(true);
 
     const payload = {
@@ -207,8 +194,7 @@ export const OrganizationSettingsForm = ({
     const { error } = await supabase
       .from("organizations")
       .update(payload)
-      .eq("id", organizationId)
-      .eq("owner_id", ownerId);
+      .eq("id", activeOrganization.id);
 
     if (error) {
       console.error("Erro ao atualizar organização", error);
@@ -221,8 +207,45 @@ export const OrganizationSettingsForm = ({
 
     notifySuccess("Dados da organização atualizados!");
     setIsSubmitting(false);
-    void loadOrganization();
+    await refreshOrganizations();
   });
+
+  const handleDelete = async () => {
+    if (!activeOrganization || !canDelete) return;
+
+    const confirmMessage = `Tem certeza que deseja excluir a organização "${activeOrganization.name}"? Esta ação não pode ser desfeita.`;
+    if (!window.confirm(confirmMessage)) return;
+
+    setIsDeleting(true);
+
+    try {
+      // 1. Deletar vínculos em user_organizations
+      const { error: userOrgError } = await supabase
+        .from("user_organizations")
+        .delete()
+        .eq("organization_id", activeOrganization.id);
+
+      if (userOrgError) throw userOrgError;
+
+      // 2. Deletar a organização
+      const { error: orgError } = await supabase
+        .from("organizations")
+        .delete()
+        .eq("id", activeOrganization.id);
+
+      if (orgError) throw orgError;
+
+      notifySuccess("Organização excluída com sucesso!");
+      await refreshOrganizations();
+    } catch (error: any) {
+      console.error("Erro ao excluir organização:", error);
+      notifyError("Não foi possível excluir a organização.", {
+        description: error.message || "Tente novamente mais tarde.",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const handlePhoneMask = (value: string) => {
     const digits = value.replace(/\D/g, "").slice(0, 11);
@@ -236,15 +259,14 @@ export const OrganizationSettingsForm = ({
 
   const handleLogoPersist = useCallback(
     async ({ path }: { path: string }) => {
-      if (!organizationId) {
+      if (!activeOrganization) {
         throw new Error("Organização não encontrada.");
       }
 
       const { error } = await supabase
         .from("organizations")
         .update({ logo_url: path })
-        .eq("id", organizationId)
-        .eq("owner_id", ownerId);
+        .eq("id", activeOrganization.id);
 
       if (error) {
         throw error;
@@ -252,24 +274,21 @@ export const OrganizationSettingsForm = ({
 
       setLogoPath(path);
       await refreshLogoSignedUrl(path);
+      await refreshOrganizations();
     },
-    [organizationId, ownerId, refreshLogoSignedUrl, supabase]
+    [activeOrganization, refreshLogoSignedUrl, refreshOrganizations, supabase]
   );
 
   const renderEmptyState = () => (
     <Alert className="border-dashed border-slate-300 bg-slate-50">
       <AlertCircle className="text-slate-500" />
-      <AlertTitle>Nenhuma organização encontrada</AlertTitle>
+      <AlertTitle>Nenhuma organização selecionada</AlertTitle>
       <AlertDescription>
-        Cadastre sua empresa para liberar o gerenciamento na área logada.
+        Selecione uma organização no menu lateral ou cadastre uma nova.
       </AlertDescription>
       <div className="col-span-2 mt-3 flex flex-wrap gap-2">
         <Button variant="outline" size="sm" asChild>
-          <Link href="/empresas/cadastro">Ir para cadastro</Link>
-        </Button>
-        <Button variant="ghost" size="sm" onClick={() => void loadOrganization()}>
-          <RefreshCw className="mr-2 size-4" />
-          Tentar novamente
+          <Link href="/empresas/cadastro">Cadastrar organização</Link>
         </Button>
       </div>
     </Alert>
@@ -307,193 +326,220 @@ export const OrganizationSettingsForm = ({
   );
 
   return (
-    <Card className="border-slate-200 shadow-sm">
-      <CardHeader className="border-b border-slate-100">
-        <div className="flex items-start gap-3">
-          <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
-            <Building2 className="size-5" />
-          </div>
-          <div>
-            <CardTitle className="text-xl font-semibold">
-              Dados da Organização
-            </CardTitle>
-            <p className="text-sm text-slate-500">
-              Atualize o nome, contato e endereço da sua empresa.
-            </p>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="py-6">
-        {fetchError && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle />
-            <AlertTitle>Erro ao carregar dados</AlertTitle>
-            <AlertDescription>{fetchError}</AlertDescription>
-            <div className="col-span-2 mt-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => void loadOrganization()}
-              >
-                <RefreshCw className="mr-2 size-4" />
-                Tentar novamente
-              </Button>
+    <div className="space-y-6">
+      <Card className="border-slate-200 shadow-sm">
+        <CardContent className="py-6">
+          {orgLoading && (
+            <div className="flex items-center gap-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+              <Loader2 className="size-4 animate-spin" />
+              Carregando dados da organização...
             </div>
-          </Alert>
-        )}
+          )}
 
-        {!fetchError && !isFetching && !organizationId && renderEmptyState()}
+          {!orgLoading && !activeOrganization && renderEmptyState()}
 
-        {isFetching && (
-          <div className="flex items-center gap-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-            <Loader2 className="size-4 animate-spin" />
-            Carregando dados da organização...
-          </div>
-        )}
-
-        {!isFetching && organizationId && (
-          <Form {...form}>
-            <form onSubmit={onSubmit} className="space-y-6">
-              <FileUploaderSheet
-                trigger={avatarTrigger}
-                title="Selecione seu novo logo"
-                description="Selecione uma imagem (PNG, JPG, SVG) ou PDF com até 2MB."
-                uploaderProps={{
-                  bucket: STORAGE_BUCKET,
-                  description:
-                    "Selecione uma imagem (PNG, JPG, SVG) ou PDF com até 2MB.",
-                  helperText:
-                    "Aceitamos PNG, JPG, SVG ou PDF. Tamanho máximo de 2MB.",
-                  value: logoPath,
-                  fileName: organizationName || undefined,
-                  previewVariant: "image",
-                  accept: [...LOGO_ACCEPTED_TYPES],
-                  maxSizeMb: MAX_LOGO_SIZE_MB,
-                  getFilePath: (file) => {
-                    if (!organizationId) {
-                      throw new Error("Organização não encontrada.");
-                    }
-                    const extension = inferFileExtension(file);
-                    return `organizations/${organizationId}/logo.${extension}`;
-                  },
-                  onFileUploaded: ({ path }) => handleLogoPersist({ path }),
-                }}
-              />
-
-              <div className="grid gap-6 md:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome fantasia</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Ex.: Hospital São Lucas" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+          {!orgLoading && activeOrganization && (
+            <Form {...form}>
+              <form onSubmit={onSubmit} className="space-y-6">
+                <FileUploaderSheet
+                  trigger={avatarTrigger}
+                  title="Selecione seu novo logo"
+                  description="Selecione uma imagem (PNG, JPG, SVG) ou PDF com até 2MB."
+                  uploaderProps={{
+                    bucket: STORAGE_BUCKET,
+                    description:
+                      "Selecione uma imagem (PNG, JPG, SVG) ou PDF com até 2MB.",
+                    helperText:
+                      "Aceitamos PNG, JPG, SVG ou PDF. Tamanho máximo de 2MB.",
+                    value: logoPath,
+                    fileName: organizationName || undefined,
+                    previewVariant: "image",
+                    accept: [...LOGO_ACCEPTED_TYPES],
+                    maxSizeMb: MAX_LOGO_SIZE_MB,
+                    getFilePath: (file) => {
+                      if (!activeOrganization) {
+                        throw new Error("Organização não encontrada.");
+                      }
+                      const extension = inferFileExtension(file);
+                      return `organizations/${activeOrganization.id}/logo.${extension}`;
+                    },
+                    onFileUploaded: ({ path }) => handleLogoPersist({ path }),
+                  }}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="cnpj"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>CNPJ (não editável)</FormLabel>
-                      <FormControl>
-                        <Input {...field} readOnly disabled className="bg-slate-50" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                <div className="grid gap-6 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nome fantasia</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Ex.: Hospital São Lucas" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-              <div className="grid gap-6 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="cnpj"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CNPJ (não editável)</FormLabel>
+                        <FormControl>
+                          <Input {...field} readOnly disabled className="bg-slate-50" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid gap-6 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Telefone comercial</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="(11) 99999-0000"
+                            onChange={(event) =>
+                              field.onChange(handlePhoneMask(event.target.value))
+                            }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex flex-col gap-2 text-sm text-slate-500">
+                    <span className="font-medium text-slate-700">
+                      Dicas rápidas
+                    </span>
+                    <p>
+                      Mantenha um telefone válido para facilitar o contato da sua
+                      equipe.
+                    </p>
+                  </div>
+                </div>
+
                 <FormField
                   control={form.control}
-                  name="phone"
+                  name="address"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Telefone comercial</FormLabel>
+                      <FormLabel>Endereço completo</FormLabel>
                       <FormControl>
-                        <Input
+                        <Textarea
                           {...field}
-                          placeholder="(11) 99999-0000"
-                          onChange={(event) =>
-                            field.onChange(handlePhoneMask(event.target.value))
-                          }
+                          rows={4}
+                          placeholder="Rua, número, bairro, cidade - UF"
                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <div className="flex flex-col gap-2 text-sm text-slate-500">
-                  <span className="font-medium text-slate-700">
-                    Dicas rápidas
-                  </span>
-                  <p>
-                    Mantenha um telefone válido para facilitar o contato da sua
-                    equipe.
+
+                <div className="flex flex-col gap-3 border-t border-slate-100 pt-4 md:flex-row md:items-center md:justify-between">
+                  <p className="text-sm text-slate-500">
+                    Todas as alterações são aplicadas imediatamente.
+                  </p>
+                  <div className="flex gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => refreshOrganizations()}
+                      disabled={isSubmitting}
+                    >
+                      <RefreshCw className="mr-2 size-4" />
+                      Recarregar
+                    </Button>
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 size-4 animate-spin" />
+                          Salvando...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="mr-2 size-4" />
+                          Salvar alterações
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </form>
+            </Form>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Zona de Perigo - Excluir Organização */}
+      {!orgLoading && activeOrganization && (
+        <Card className="border-red-200 shadow-sm">
+          <CardContent className="py-6">
+            <div className="flex items-start gap-4">
+              <div className="rounded-xl bg-red-50 p-3 text-red-600">
+                <AlertTriangle className="size-5" />
+              </div>
+              <div className="flex-1 space-y-3">
+                <div>
+                  <h3 className="text-base font-semibold text-slate-900">
+                    Zona de Perigo
+                  </h3>
+                  <p className="text-sm text-slate-500">
+                    Excluir esta organização é uma ação permanente e não pode ser desfeita.
                   </p>
                 </div>
-              </div>
 
-              <FormField
-                control={form.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Endereço completo</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        {...field}
-                        rows={4}
-                        placeholder="Rua, número, bairro, cidade - UF"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <Separator />
 
-              <div className="flex flex-col gap-3 border-t border-slate-100 pt-4 md:flex-row md:items-center md:justify-between">
-                <p className="text-sm text-slate-500">
-                  Todas as alterações são aplicadas imediatamente no Supabase.
-                </p>
-                <div className="flex gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-slate-700">
+                      Excluir organização
+                    </p>
+                    {facilitiesCount !== null && facilitiesCount > 0 ? (
+                      <p className="text-xs text-amber-600">
+                        Não é possível excluir. Existem {facilitiesCount} clínica(s)/hospital(is) cadastrado(s).
+                      </p>
+                    ) : (
+                      <p className="text-xs text-slate-500">
+                        Todos os dados serão removidos permanentemente.
+                      </p>
+                    )}
+                  </div>
                   <Button
                     type="button"
-                    variant="outline"
-                    onClick={() => void loadOrganization()}
-                    disabled={isSubmitting}
+                    variant="destructive"
+                    onClick={handleDelete}
+                    disabled={!canDelete || isDeleting}
                   >
-                    <RefreshCw className="mr-2 size-4" />
-                    Recarregar
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? (
+                    {isDeleting ? (
                       <>
                         <Loader2 className="mr-2 size-4 animate-spin" />
-                        Salvando...
+                        Excluindo...
                       </>
                     ) : (
                       <>
-                        <Save className="mr-2 size-4" />
-                        Salvar alterações
+                        <Trash2 className="mr-2 size-4" />
+                        Excluir Organização
                       </>
                     )}
                   </Button>
                 </div>
               </div>
-            </form>
-          </Form>
-        )}
-      </CardContent>
-    </Card>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 };
-
-

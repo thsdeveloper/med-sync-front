@@ -19,6 +19,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { useSupabaseAuth } from "@/providers/SupabaseAuthProvider";
+import { OrganizationProvider } from "@/providers/OrganizationProvider";
 
 const SEGMENT_TITLES: Record<string, string> = {
   escalas: "Escalas",
@@ -40,9 +41,10 @@ export default function DashboardLayout({
     : "Visão Geral";
 
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
+    <OrganizationProvider>
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
         <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b px-4 md:px-6">
           <div className="flex flex-1 items-center gap-2">
             <SidebarTrigger className="-ml-1" />
@@ -72,10 +74,11 @@ export default function DashboardLayout({
           )}
         </header>
         <div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-6">
-          {children}
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+            {children}
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    </OrganizationProvider>
   );
 }
 
