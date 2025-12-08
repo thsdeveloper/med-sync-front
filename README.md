@@ -1,60 +1,88 @@
-## MedSync Front
+## MedSync
 
-Aplicação Next.js 16 que segue Atomic Design para entregar a landing page e o fluxo autenticado das empresas. Utilizamos Supabase para autenticação, Tailwind CSS v4 para estilos e o kit de componentes do [shadcn/ui](https://ui.shadcn.com/).
+Monorepo com Turborepo contendo a aplicação web (Next.js 16) e mobile (Expo/React Native) do MedSync - plataforma administrativa para gestao clinica.
+
+### Estrutura
+
+```
+medsync/
+├── apps/
+│   ├── web/          # @medsync/web - Next.js 16, Tailwind v4, shadcn/ui
+│   └── mobile/       # @medsync/mobile - Expo SDK 54, React Native
+├── packages/
+│   └── shared/       # @medsync/shared - schemas, types, utils compartilhados
+├── turbo.json        # Configuracao do Turborepo
+└── pnpm-workspace.yaml
+```
 
 ### Requisitos
 
-- Node 20+
-- pnpm (recomendado) ou npm / bun
+- Node 18+
+- pnpm 9+
 - Conta Supabase com o projeto configurado
 
-### Configuração
-
-1. Instale as dependências:
+### Instalacao
 
 ```bash
 pnpm install
 ```
 
-2. Crie um arquivo `.env.local` com as credenciais públicas do Supabase:
+### Variaveis de ambiente
+
+Crie `apps/web/.env.local`:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=chave-anon
+RESEND_API_KEY=re_xxx  # opcional, para envio de emails
 ```
 
-3. Rode o servidor de desenvolvimento:
+### Scripts
 
 ```bash
-pnpm dev
+# Desenvolvimento
+pnpm dev              # Roda todos os apps
+pnpm dev:web          # Apenas web (Next.js)
+pnpm dev:mobile       # Apenas mobile (Expo)
+
+# Build e verificacao
+pnpm build            # Build de todos os pacotes
+pnpm build:web        # Build apenas web
+pnpm lint             # Lint em todos os pacotes
+pnpm typecheck        # Verificacao de tipos
+
+# Limpeza
+pnpm clean            # Remove node_modules e cache
 ```
 
-A página de login está disponível em [`/login`](http://localhost:3000/login). Usuários autenticados enxergam o avatar com menu no header e são redirecionados caso tentem acessar o login novamente.
+### Apps
 
-### shadcn/ui
+#### Web (`apps/web`)
 
-O projeto já está inicializado com `components.json`, tokens no `globals.css` e utilitários em `src/lib/utils.ts`. Para adicionar novos componentes basta executar, por exemplo:
+Aplicacao Next.js 16 com Atomic Design, Tailwind CSS v4 e [shadcn/ui](https://ui.shadcn.com/).
+
+Para adicionar componentes shadcn:
 
 ```bash
+cd apps/web
 pnpm dlx shadcn@latest add badge
 ```
 
-Os componentes gerados em `src/components/ui` podem ser reexportados/encapsulados em `src/components/atoms` conforme o padrão atômico.
+#### Mobile (`apps/mobile`)
 
-### Sistema de notificações
+Aplicacao Expo com React Native e expo-router.
 
-- A camada global (`src/app/providers.tsx`) renderiza o `Toaster` do shadcn/sonner.
-- Utilize o hook `useToastMessage` (`src/hooks/useToastMessage.ts`) para exibir mensagens padronizadas de sucesso, erro ou informação:
-
-```ts
-const { notifyError, notifySuccess } = useToastMessage();
-notifyError("Erro ao entrar", { description: "Credenciais inválidas." });
+```bash
+pnpm dev:mobile       # Inicia com tunnel (ngrok)
 ```
 
-Isso garante consistência visual e centraliza ajustes futuros (posição, duração, etc.).
+### Pacotes compartilhados
 
-### Testes manuais recomendados
+#### Shared (`packages/shared`)
 
-- `pnpm lint` para garantir qualidade estática.
-- Fluxo de login (credenciais válidas e inválidas).
-- Logout pelo menu do usuário e retorno do botão “Login” no header.
+Exporta schemas Zod, tipos TypeScript e utilitarios usados por ambos os apps:
+
+```ts
+import { userSchema } from "@medsync/shared/schemas";
+import { formatDate } from "@medsync/shared/utils";
+```
