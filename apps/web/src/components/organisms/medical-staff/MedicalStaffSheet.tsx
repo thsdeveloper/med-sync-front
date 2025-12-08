@@ -24,7 +24,7 @@ import { ColorPicker } from '@/components/molecules/ColorPicker';
 import { SupabaseFileUploader, type UploadedFileInfo } from '@/components/organisms/upload/SupabaseFileUploader';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-import { medicalStaffSchema, MedicalStaffFormData, ROLES, MedicalStaff, MedicalStaffWithOrganization } from '@medsync/shared';
+import { medicalStaffSchema, MedicalStaffFormData, ROLES, MedicalStaff, MedicalStaffWithOrganization, normalizeCRM } from '@medsync/shared';
 
 type StaffContractRecord = {
     id: string;
@@ -83,12 +83,13 @@ export function MedicalStaffSheet({
     const searchStaffByCrm = useCallback(async (crm: string) => {
         if (!crm || crm.length < 3 || isEditing) return;
 
+        const normalizedCrm = normalizeCRM(crm);
         setIsSearchingCrm(true);
         try {
             const { data, error } = await supabase
                 .from('medical_staff')
                 .select('id, name, email, crm, specialty, role')
-                .ilike('crm', crm.trim())
+                .ilike('crm', normalizedCrm)
                 .limit(1)
                 .maybeSingle();
 
@@ -404,9 +405,13 @@ export function MedicalStaffSheet({
                                     </FormLabel>
                                     <FormControl>
                                         <div className="relative">
-                                            <Input 
-                                                placeholder="12345/SP" 
-                                                {...field} 
+                                            <Input
+                                                placeholder="1234/SP"
+                                                {...field}
+                                                onChange={(e) => {
+                                                    const normalized = normalizeCRM(e.target.value);
+                                                    field.onChange(normalized);
+                                                }}
                                                 className={existingStaffMatch ? 'border-blue-300 focus:border-blue-500' : ''}
                                             />
                                             {!isEditing && (
@@ -416,7 +421,7 @@ export function MedicalStaffSheet({
                                     </FormControl>
                                     {!isEditing && (
                                         <p className="text-xs text-slate-500">
-                                            Digite o CRM para verificar se o profissional já existe no sistema.
+                                            Formato: número/UF (ex: 1234/SP). Digite para verificar se o profissional já existe.
                                         </p>
                                     )}
                                     <FormMessage />

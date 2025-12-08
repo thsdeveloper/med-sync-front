@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { crmOptionalSchema } from './crm.schema';
 
 export const ROLES = ['Médico', 'Enfermeiro', 'Técnico', 'Administrativo', 'Outro'] as const;
 
@@ -17,10 +18,7 @@ export const medicalStaffSchema = z.object({
         .string()
         .optional()
         .or(z.literal('')),
-    crm: z
-        .string()
-        .optional()
-        .or(z.literal('')),
+    crm: crmOptionalSchema,
     specialty: z
         .string()
         .optional()
@@ -39,6 +37,8 @@ export type MedicalStaffFormData = z.infer<typeof medicalStaffSchema>;
 export type MedicalStaff = MedicalStaffFormData & {
     id: string;
     organization_id?: string | null;
+    user_id?: string | null;
+    auth_email?: string | null;
     created_at: string;
     updated_at: string;
 };
@@ -60,7 +60,8 @@ export const searchStaffByCrmSchema = z.object({
     crm: z
         .string()
         .min(1, 'CRM é obrigatório para busca')
-        .min(3, 'CRM deve ter no mínimo 3 caracteres'),
+        .min(3, 'CRM deve ter no mínimo 3 caracteres')
+        .transform((value) => value.trim().toUpperCase()),
 });
 
 export type SearchStaffByCrmData = z.infer<typeof searchStaffByCrmSchema>;

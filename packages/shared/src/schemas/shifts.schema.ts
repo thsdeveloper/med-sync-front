@@ -29,6 +29,9 @@ export const shiftSchema = z.object({
 
 export type ShiftFormData = z.infer<typeof shiftSchema>;
 
+export const SHIFT_STATUS = ['pending', 'accepted', 'declined', 'swap_requested'] as const;
+export type ShiftStatus = typeof SHIFT_STATUS[number];
+
 export type Shift = {
     id: string;
     organization_id: string;
@@ -38,6 +41,7 @@ export type Shift = {
     end_time: string;
     notes: string | null;
     fixed_schedule_id: string | null;
+    status: ShiftStatus;
     created_at: string;
     sectors?: Sector;
     medical_staff?: {
