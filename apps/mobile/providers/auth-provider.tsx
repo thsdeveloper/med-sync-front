@@ -250,7 +250,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     setStaff(null);
-    router.replace('/(auth)');
+    // Navegação é feita automaticamente pelo Redirect em (app)/_layout.tsx
   }, []);
 
   const value: AuthContextType = {

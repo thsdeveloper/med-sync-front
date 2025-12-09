@@ -5,6 +5,7 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider } from '@/providers/auth-provider';
+import { NotificationProvider } from '@/providers/notification-provider';
 import { RealtimeProvider } from '@/providers/realtime-provider';
 
 export const unstable_settings = {
@@ -17,13 +18,21 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>
-        <RealtimeProvider>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(app)" />
-          </Stack>
-          <StatusBar style="auto" />
-        </RealtimeProvider>
+        <NotificationProvider>
+          <RealtimeProvider>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen
+                name="(auth)"
+                options={{ gestureEnabled: false }}
+              />
+              <Stack.Screen
+                name="(app)"
+                options={{ gestureEnabled: false }}
+              />
+            </Stack>
+            <StatusBar style="auto" />
+          </RealtimeProvider>
+        </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
   );

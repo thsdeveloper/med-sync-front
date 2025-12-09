@@ -109,10 +109,17 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       retryTimeoutRef.current = null;
     }
     if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
+      try {
+        supabase.removeChannel(channelRef.current);
+      } catch (error) {
+        console.log('[Realtime] Error removing channel:', error);
+      }
       channelRef.current = null;
     }
   }, []);
+
+  // Use ref for scheduleRetry to avoid circular dependency
+  const scheduleRetryRef = useRef<() => void>(() => {});
 
   // Connect to realtime channel
   const connect = useCallback(() => {
@@ -198,15 +205,15 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         (payload) => handleShiftAttendanceChange(payload as unknown as ShiftAttendancePayload)
       )
       .subscribe((status, err) => {
-        console.log('[Realtime] Subscription status:', status, err);
+        console.log('[Realtime] Subscription status:', status, err ?? '(no error)');
 
         if (status === 'SUBSCRIBED') {
           setConnectionStatus('connected');
           retryAttemptRef.current = 0; // Reset retry counter on success
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.error('[Realtime] Channel error:', err);
+          console.warn('[Realtime] Channel error:', err ?? 'Unknown error');
           setConnectionStatus('error');
-          scheduleRetry();
+          scheduleRetryRef.current();
         } else if (status === 'CLOSED') {
           setConnectionStatus('disconnected');
         }
@@ -237,6 +244,11 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       connect();
     }, delay);
   }, [connect]);
+
+  // Keep scheduleRetryRef updated
+  useEffect(() => {
+    scheduleRetryRef.current = scheduleRetry;
+  }, [scheduleRetry]);
 
   // Handle app state changes (foreground/background)
   useEffect(() => {
