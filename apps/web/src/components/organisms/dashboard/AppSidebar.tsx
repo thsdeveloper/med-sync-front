@@ -10,6 +10,7 @@ import {
   ChevronsUpDown,
   FileText,
   LayoutDashboard,
+  MessageCircle,
   Plus,
   Settings,
   Users2,
@@ -67,6 +68,11 @@ const mainNavItems = [
     title: "Corpo Clínico",
     url: "/dashboard/equipe",
     icon: Users2,
+  },
+  {
+    title: "Mensagens",
+    url: "/dashboard/chat",
+    icon: MessageCircle,
   },
   {
     title: "Relatórios",

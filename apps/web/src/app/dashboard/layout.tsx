@@ -4,6 +4,7 @@ import { useSelectedLayoutSegment } from "next/navigation";
 
 import { AppSidebar } from "@/components/organisms/dashboard/AppSidebar";
 import { UserMenu } from "@/components/molecules/navigation/UserMenu";
+import { ChatNotificationIcon } from "@/components/molecules/chat/ChatNotificationIcon";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -20,6 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useSupabaseAuth } from "@/providers/SupabaseAuthProvider";
 import { OrganizationProvider } from "@/providers/OrganizationProvider";
+import { ChatProvider } from "@/providers/ChatProvider";
 
 const SEGMENT_TITLES: Record<string, string> = {
   escalas: "Escalas",
@@ -27,6 +29,7 @@ const SEGMENT_TITLES: Record<string, string> = {
   relatorios: "Relatórios",
   configuracoes: "Configurações",
   organizacao: "Organização",
+  chat: "Mensagens",
 };
 
 export default function DashboardLayout({
@@ -42,42 +45,47 @@ export default function DashboardLayout({
 
   return (
     <OrganizationProvider>
-      <SidebarProvider>
-        <AppSidebar />
-        <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b px-4 md:px-6">
-          <div className="flex flex-1 items-center gap-2">
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>{currentBreadcrumb}</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-          {!loading && user ? (
-            <UserMenu user={user} onSignOut={signOut} />
-          ) : (
-            <div className="flex items-center gap-3">
-              <div className="size-10 animate-pulse rounded-full bg-slate-100" />
-              <div className="hidden h-10 flex-col justify-center space-y-1 sm:flex">
-                <div className="h-3 w-24 rounded bg-slate-100" />
-                <div className="h-3 w-16 rounded bg-slate-100" />
+      <ChatProvider>
+        <SidebarProvider>
+          <AppSidebar />
+          <SidebarInset>
+            <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b px-4 md:px-6">
+              <div className="flex flex-1 items-center gap-2">
+                <SidebarTrigger className="-ml-1" />
+                <Separator orientation="vertical" className="mr-2 h-4" />
+                <Breadcrumb>
+                  <BreadcrumbList>
+                    <BreadcrumbItem className="hidden md:block">
+                      <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator className="hidden md:block" />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage>{currentBreadcrumb}</BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </BreadcrumbList>
+                </Breadcrumb>
               </div>
+              <div className="flex items-center gap-2">
+                <ChatNotificationIcon />
+                {!loading && user ? (
+                  <UserMenu user={user} onSignOut={signOut} />
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <div className="size-10 animate-pulse rounded-full bg-slate-100" />
+                    <div className="hidden h-10 flex-col justify-center space-y-1 sm:flex">
+                      <div className="h-3 w-24 rounded bg-slate-100" />
+                      <div className="h-3 w-16 rounded bg-slate-100" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </header>
+            <div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-6">
+              {children}
             </div>
-          )}
-        </header>
-        <div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-6">
-            {children}
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
+          </SidebarInset>
+        </SidebarProvider>
+      </ChatProvider>
     </OrganizationProvider>
   );
 }

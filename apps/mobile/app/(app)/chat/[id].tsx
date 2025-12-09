@@ -34,7 +34,7 @@ export default function ChatConversationScreen() {
     if (!id) return;
 
     try {
-      // Load conversation details
+      // Load conversation details with organization for support chats
       const { data: convData } = await supabase
         .from('chat_conversations')
         .select(`
@@ -42,7 +42,8 @@ export default function ChatConversationScreen() {
           participants:chat_participants (
             staff_id,
             staff:medical_staff (id, name, color)
-          )
+          ),
+          organization:organizations (id, name, logo_url)
         `)
         .eq('id', id)
         .single();
@@ -167,6 +168,12 @@ export default function ChatConversationScreen() {
   };
 
   const getConversationTitle = () => {
+    // For support conversations, show organization name
+    const convAny = conversation as any;
+    if (convAny?.conversation_type === 'support' && convAny?.organization?.name) {
+      return convAny.organization.name;
+    }
+
     if (conversation?.name) return conversation.name;
 
     const otherParticipant = conversation?.participants.find(
@@ -174,6 +181,8 @@ export default function ChatConversationScreen() {
     );
     return otherParticipant?.staff?.name || 'Conversa';
   };
+
+  const isSupport = (conversation as any)?.conversation_type === 'support';
 
   const formatMessageDate = (dateStr: string) => {
     const date = parseISO(dateStr);
