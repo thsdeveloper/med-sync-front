@@ -35,6 +35,10 @@ interface ShiftWithRelations {
     role?: string;
     color?: string;
   } | null;
+  shift_attendance?: {
+    check_in_at?: string | null;
+    check_out_at?: string | null;
+  }[];
 }
 
 type ShiftCardVariant = 'full' | 'compact' | 'minimal';
@@ -72,10 +76,18 @@ export function ShiftCard({
   const sectorName = shift.sectors?.name;
   const sectorColor = shift.sectors?.color;
 
+  // Check for active check-in
+  const hasActiveCheckIn = shift.shift_attendance?.some(
+    (attendance) => attendance.check_in_at && !attendance.check_out_at
+  );
+
+  const activeCheckInStyle = hasActiveCheckIn ? styles.activeCheckInCard : {};
+  const activeCheckInBorder = hasActiveCheckIn ? styles.activeCheckInBorder : {};
+
   if (variant === 'minimal') {
     return (
       <TouchableOpacity onPress={handlePress} activeOpacity={0.7}>
-        <Card variant="outlined" style={[styles.minimalCard, style]}>
+        <Card variant="outlined" style={[styles.minimalCard, hasActiveCheckIn && styles.activeCheckInBorder, style]}>
           <View style={styles.minimalContent}>
             <View
               style={[
@@ -100,6 +112,12 @@ export function ShiftCard({
               )}
             </View>
             <View style={styles.minimalStatus}>
+              {hasActiveCheckIn && (
+                <View style={styles.activeCheckInBadge}>
+                  <View style={styles.activeDot} />
+                  <Text style={styles.activeCheckInText}>Em andamento</Text>
+                </View>
+              )}
               <StatusBadge status={shift.status} size="sm" />
               {showChevron && (
                 <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
@@ -114,7 +132,7 @@ export function ShiftCard({
   if (variant === 'compact') {
     return (
       <TouchableOpacity onPress={handlePress} activeOpacity={0.7}>
-        <Card variant="elevated" style={[styles.compactCard, style]}>
+        <Card variant="elevated" style={[styles.compactCard, activeCheckInBorder, style]}>
           <View style={styles.compactContent}>
             <PeriodIcon startTime={shift.start_time} size={40} />
             <View style={styles.compactInfo}>
@@ -135,6 +153,11 @@ export function ShiftCard({
               />
             </View>
             <View style={styles.compactRight}>
+              {hasActiveCheckIn && (
+                <View style={styles.activeCheckInBadgeSmall}>
+                  <View style={styles.activeDot} />
+                </View>
+              )}
               <StatusBadge status={shift.status} size="sm" />
               {showChevron && (
                 <Ionicons name="chevron-forward" size={18} color="#D1D5DB" />
@@ -149,9 +172,15 @@ export function ShiftCard({
   // Full variant (default)
   return (
     <TouchableOpacity onPress={handlePress} activeOpacity={0.7}>
-      <Card variant="elevated" style={[styles.fullCard, style]}>
+      <Card variant="elevated" style={[styles.fullCard, activeCheckInBorder, style]}>
         {showDate && (
           <ShiftDateHeader date={shift.start_time} status={shift.status} />
+        )}
+
+        {hasActiveCheckIn && (
+          <View style={styles.activeBanner}>
+            <Text style={styles.activeBannerText}>Check-in realizado • Plantão em andamento</Text>
+          </View>
         )}
 
         <View style={styles.fullBody}>
@@ -187,6 +216,12 @@ export function ShiftCard({
         {!showDate && (
           <View style={styles.statusRow}>
             <StatusBadge status={shift.status} size="md" />
+            {hasActiveCheckIn && (
+              <View style={styles.activeCheckInBadge}>
+                <View style={styles.activeDot} />
+                <Text style={styles.activeCheckInText}>Em andamento</Text>
+              </View>
+            )}
           </View>
         )}
       </Card>
@@ -195,6 +230,60 @@ export function ShiftCard({
 }
 
 const styles = StyleSheet.create({
+  // Active Check-in Styles
+  activeCheckInCard: {
+    backgroundColor: '#F0FDF4',
+  },
+  activeCheckInBorder: {
+    borderWidth: 2,
+    borderColor: '#10B981',
+  },
+  activeBanner: {
+    backgroundColor: '#10B981',
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeBannerText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  activeCheckInBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#10B981',
+    marginLeft: 8,
+  },
+  activeCheckInBadgeSmall: {
+    padding: 6,
+    backgroundColor: '#DCFCE7',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#10B981',
+    marginRight: 4,
+  },
+  activeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
+    marginRight: 6,
+  },
+  activeCheckInText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#15803D',
+  },
+
   // Full variant styles
   fullCard: {
     marginBottom: 12,
@@ -204,6 +293,7 @@ const styles = StyleSheet.create({
   fullBody: {
     flexDirection: 'row',
     alignItems: 'center',
+    padding: 12,
   },
   fullInfo: {
     flex: 1,
@@ -216,11 +306,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   statusRow: {
-    marginTop: 12,
+    marginTop: 0,
     paddingTop: 12,
+    paddingBottom: 12,
+    paddingHorizontal: 12,
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
-    alignItems: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
 
   // Compact variant styles
@@ -231,21 +325,25 @@ const styles = StyleSheet.create({
   compactContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    padding: 12,
+    gap: 10,
   },
   compactInfo: {
     flex: 1,
-    marginLeft: 10,
+    // Removed marginLeft as we use gap in parent now
   },
   compactTimeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
     gap: 6,
+    flexWrap: 'wrap', // Allow wrapping if space is tight
   },
   compactRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flexShrink: 0, // Prevent status from shrinking
   },
 
   // Minimal variant styles
@@ -255,6 +353,7 @@ const styles = StyleSheet.create({
   minimalContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    padding: 12,
   },
   minimalIndicator: {
     width: 4,

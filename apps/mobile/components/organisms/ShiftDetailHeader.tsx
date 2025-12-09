@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
@@ -13,26 +13,32 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { getShiftPeriod, getShiftPeriodConfig } from '../atoms/PeriodBadge';
-import { getSkyTheme } from '../atoms/SkyTheme';
-import { SkyScene } from '../molecules/SkyScene';
+import Svg, { Path } from 'react-native-svg';
 
-const HEADER_HEIGHT = 220;
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+// Import SVG as component
+import MedicalIllustration from '@/assets/images/undraw_medicine_hqqg.svg';
+
+const HEADER_HEIGHT = 200;
 
 interface ShiftDetailHeaderProps {
   startTime: string;
   endTime: string;
   children: React.ReactNode;
+  color?: string;
+  iconName?: keyof typeof Ionicons.glyphMap;
+  title?: string;
 }
 
-export function ShiftDetailHeader({ startTime, endTime, children }: ShiftDetailHeaderProps) {
+export function ShiftDetailHeader({
+  startTime,
+  endTime,
+  children,
+  color = '#0066CC',
+  iconName = 'calendar',
+  title = 'Plantão',
+}: ShiftDetailHeaderProps) {
   const insets = useSafeAreaInsets();
   const scrollOffset = useSharedValue(0);
-
-  const period = getShiftPeriod(startTime);
-  const periodConfig = getShiftPeriodConfig(startTime);
-  const skyTheme = getSkyTheme(period);
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -41,53 +47,23 @@ export function ShiftDetailHeader({ startTime, endTime, children }: ShiftDetailH
   });
 
   const headerAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      {
-        translateY: interpolate(
-          scrollOffset.value,
-          [-100, 0, HEADER_HEIGHT],
-          [-50, 0, HEADER_HEIGHT * 0.4],
-          Extrapolation.CLAMP
-        ),
-      },
-      {
-        scale: interpolate(
-          scrollOffset.value,
-          [-100, 0],
-          [1.3, 1],
-          Extrapolation.CLAMP
-        ),
-      },
-    ],
+    height: interpolate(
+      scrollOffset.value,
+      [0, 100],
+      [HEADER_HEIGHT, HEADER_HEIGHT - 50],
+      Extrapolation.CLAMP
+    )
   }));
 
-  const timeOverlayStyle = useAnimatedStyle(() => ({
+  const contentOpacityStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       scrollOffset.value,
       [0, 60],
       [1, 0],
       Extrapolation.CLAMP
-    ),
-    transform: [
-      {
-        translateY: interpolate(
-          scrollOffset.value,
-          [0, 60],
-          [0, -20],
-          Extrapolation.CLAMP
-        ),
-      },
-    ],
+    )
   }));
 
-  const closeButtonStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      scrollOffset.value,
-      [0, 40],
-      [1, 0.7],
-      Extrapolation.CLAMP
-    ),
-  }));
 
   const formattedDate = format(parseISO(startTime), "EEEE, dd 'de' MMMM", {
     locale: ptBR,
@@ -103,24 +79,20 @@ export function ShiftDetailHeader({ startTime, endTime, children }: ShiftDetailH
 
   return (
     <View style={styles.container}>
-      <StatusBar style={skyTheme.statusBarStyle} />
+      <StatusBar style="light" />
 
-      {/* Animated Header */}
-      <Animated.View style={[styles.header, headerAnimatedStyle]}>
-        <SkyScene
-          period={period}
-          scrollOffset={scrollOffset}
-          style={styles.skyScene}
-        />
+      {/* Fixed Header Background */}
+      <Animated.View style={[styles.header, { backgroundColor: color }, headerAnimatedStyle]}>
 
-        {/* Close button */}
-        <Animated.View
-          style={[
-            styles.closeButtonContainer,
-            { top: insets.top + 8 },
-            closeButtonStyle,
-          ]}
-        >
+        {/* SVG Illustration Background */}
+        <View style={StyleSheet.absoluteFill}>
+          <MedicalIllustration width="100%" height="100%" opacity={0.3} preserveAspectRatio="xMidYMid slice" />
+        </View>
+
+        <View style={styles.overlay} />
+
+        {/* Close Button */}
+        <View style={[styles.closeButtonContainer, { top: insets.top + 10 }]}>
           <TouchableOpacity
             style={styles.closeButton}
             onPress={handleClose}
@@ -128,57 +100,56 @@ export function ShiftDetailHeader({ startTime, endTime, children }: ShiftDetailH
           >
             <Ionicons name="close" size={24} color="#FFFFFF" />
           </TouchableOpacity>
+        </View>
+
+        <Animated.View style={[styles.headerContent, { paddingTop: insets.top + 5 }, contentOpacityStyle]}>
+          {/* Left: Icon Box */}
+          <View style={styles.iconBox}>
+            <Ionicons name={iconName} size={32} color={color} />
+          </View>
+
+          {/* Right: Info */}
+          <View style={styles.headerInfo}>
+            {/* Turno Label */}
+            <View style={styles.turnoContainer}>
+              <Text style={styles.turnoLabel}>{title}</Text>
+            </View>
+
+            {/* Date/Time Info */}
+            <Text style={styles.timeText}>{formattedTime}</Text>
+            <Text style={styles.dateText}>{formattedDate}</Text>
+          </View>
         </Animated.View>
 
-        {/* Time overlay on header */}
-        <Animated.View style={[styles.timeOverlay, timeOverlayStyle]}>
-          <View style={styles.periodBadge}>
-            <Ionicons name={periodConfig.icon} size={16} color="#FFFFFF" />
-            <Text style={styles.periodLabel}>{periodConfig.label}</Text>
-          </View>
-          <Text
-            style={[
-              styles.timeText,
-              {
-                color: skyTheme.textColor,
-                textShadowColor: skyTheme.textShadow,
-              },
-            ]}
+        {/* Wavy Curve Bottom */}
+        <View style={styles.waveContainer}>
+          <Svg
+            height="100%"
+            width="100%"
+            viewBox="0 0 1440 320"
+            preserveAspectRatio="none"
           >
-            {formattedTime}
-          </Text>
-          <Text
-            style={[
-              styles.dateText,
-              {
-                color: skyTheme.textColor,
-                textShadowColor: skyTheme.textShadow,
-              },
-            ]}
-          >
-            {formattedDate}
-          </Text>
-        </Animated.View>
+            <Path
+              fill="#F9FAFB"
+              d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,112C672,96,768,96,864,112C960,128,1056,160,1152,160C1248,160,1344,128,1392,112L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"
+            />
+          </Svg>
+        </View>
+
       </Animated.View>
 
-      {/* Scrollable content */}
+
+      {/* Scrollable Content */}
       <Animated.ScrollView
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: HEADER_HEIGHT },
+          { paddingTop: HEADER_HEIGHT + 20 }
         ]}
         showsVerticalScrollIndicator={false}
-        bounces={true}
       >
-        {/* Curved transition */}
-        <View style={styles.curveContainer}>
-          <View style={styles.curve} />
-        </View>
-
-        {/* Content */}
-        <View style={styles.content}>{children}</View>
+        {children}
       </Animated.ScrollView>
     </View>
   );
@@ -194,11 +165,13 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: HEADER_HEIGHT,
     zIndex: 10,
+    overflow: 'hidden',
+    justifyContent: 'flex-start'
   },
-  skyScene: {
-    height: HEADER_HEIGHT,
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.1)', // Slight dark overlay for text contrast
   },
   closeButtonContainer: {
     position: 'absolute',
@@ -206,77 +179,76 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   closeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
   },
-  timeOverlay: {
-    position: 'absolute',
-    bottom: 45,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  periodBadge: {
+  headerContent: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
-    marginBottom: 10,
+    paddingHorizontal: 24,
+    alignItems: 'flex-start',
   },
-  periodLabel: {
+  iconBox: {
+    width: 64,
+    height: 64,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  headerInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  turnoContainer: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+  },
+  turnoLabel: {
     color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   timeText: {
-    fontSize: 34,
+    color: '#FFFFFF',
+    fontSize: 20,
     fontWeight: '700',
-    letterSpacing: 1,
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+    marginBottom: 2,
   },
   dateText: {
-    fontSize: 15,
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 14,
     fontWeight: '500',
     textTransform: 'capitalize',
-    marginTop: 4,
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+  },
+  waveContainer: {
+    position: 'absolute',
+    bottom: -2,
+    left: 0,
+    right: 0,
+    height: 60,
+    zIndex: 5,
   },
   scrollContent: {
-    flexGrow: 1,
-  },
-  curveContainer: {
-    height: 28,
-    marginTop: -28,
-    overflow: 'hidden',
-  },
-  curve: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-  },
-  content: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
+    paddingBottom: 40,
   },
 });
+

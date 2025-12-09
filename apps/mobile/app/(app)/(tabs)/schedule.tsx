@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { StatusBar, setStatusBarStyle } from 'expo-status-bar';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar, DateData } from 'react-native-calendars';
 import { format, parseISO, startOfMonth, endOfMonth, isSameDay } from 'date-fns';
@@ -71,7 +71,8 @@ export default function ScheduleScreen() {
             shift_type,
             facilities (name, type)
           ),
-          medical_staff (name, role, color)
+          medical_staff (name, role, color),
+          shift_attendance (*)
         `)
         .eq('staff_id', staff.id)
         .gte('start_time', monthStart.toISOString())
@@ -94,7 +95,7 @@ export default function ScheduleScreen() {
     shifts.forEach((shift) => {
       const dateKey = format(parseISO(shift.start_time), 'yyyy-MM-dd');
       const color = shift.status === 'pending' ? '#F59E0B' :
-                   shift.status === 'accepted' ? '#10B981' : '#6B7280';
+        shift.status === 'accepted' ? '#10B981' : '#6B7280';
 
       if (!marked[dateKey]) {
         marked[dateKey] = {
@@ -384,12 +385,39 @@ export default function ScheduleScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="calendar-outline" size={48} color="#D1D5DB" />
-            <Text style={styles.emptyText}>
-              Nenhum plantão neste dia
-            </Text>
-          </View>
+          isLoading ? (
+            <View style={styles.emptyContainer}>
+              <ActivityIndicator size="large" color="#0066CC" />
+            </View>
+          ) : fetchedShifts.length === 0 ? (
+            <Card variant="elevated" style={styles.requestScheduleCard}>
+              <View style={styles.requestScheduleContent}>
+                <View style={styles.iconContainer}>
+                  <Ionicons name="calendar-outline" size={32} color="#0066CC" />
+                </View>
+                <View style={styles.textContainer}>
+                  <Text style={styles.requestTitle}>Nenhuma escala definida</Text>
+                  <Text style={styles.requestDescription}>
+                    Você não possui escalas para este mês. Entre em contato para solicitar.
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.requestButton}
+                onPress={() => router.push('/(app)/(tabs)/chat')}
+              >
+                <Text style={styles.requestButtonText}>Solicitar Escala</Text>
+                <Ionicons name="chatbubble-ellipses-outline" size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+            </Card>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="calendar-outline" size={48} color="#D1D5DB" />
+              <Text style={styles.emptyText}>
+                Nenhum plantão neste dia
+              </Text>
+            </View>
+          )
         }
       />
     </SafeAreaView>
@@ -521,5 +549,54 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#EF4444',
+  },
+  // Request Schedule Card Styles
+  requestScheduleCard: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  requestScheduleContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 16,
+  },
+  iconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#EBF5FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textContainer: {
+    flex: 1,
+  },
+  requestTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  requestDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+  },
+  requestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0066CC',
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  requestButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

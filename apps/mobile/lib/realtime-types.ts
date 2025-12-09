@@ -67,6 +67,7 @@ export type ShiftWithRelations = Omit<Shift, 'sectors' | 'medical_staff'> & {
     role?: string;
     color?: string;
   };
+  shift_attendance?: ShiftAttendance[];
 };
 
 /**

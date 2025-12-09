@@ -58,7 +58,8 @@ export default function HomeScreen() {
             facility_id,
             shift_type,
             facilities (name, type)
-          )
+          ),
+          shift_attendance (*)
         `)
         .eq('staff_id', staff.id)
         .gte('start_time', new Date().toISOString())
@@ -221,9 +222,25 @@ export default function HomeScreen() {
           </View>
 
           {upcomingShifts.length === 0 ? (
-            <Card variant="outlined" style={styles.emptyCard}>
-              <Ionicons name="calendar-outline" size={48} color="#D1D5DB" />
-              <Text style={styles.emptyText}>Nenhum plantão agendado</Text>
+            <Card variant="elevated" style={styles.requestScheduleCard}>
+              <View style={styles.requestScheduleContent}>
+                <View style={styles.iconContainer}>
+                  <Ionicons name="calendar-outline" size={32} color="#0066CC" />
+                </View>
+                <View style={styles.textContainer}>
+                  <Text style={styles.requestTitle}>Nenhuma escala definida</Text>
+                  <Text style={styles.requestDescription}>
+                    Você não possui escalas para este mês. Entre em contato para solicitar.
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.requestButton}
+                onPress={() => router.push('/(app)/(tabs)/chat')}
+              >
+                <Text style={styles.requestButtonText}>Solicitar Escala</Text>
+                <Ionicons name="chatbubble-ellipses-outline" size={18} color="#FFFFFF" />
+              </TouchableOpacity>
             </Card>
           ) : (
             upcomingShifts.map((shift) => (
@@ -480,5 +497,54 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     fontWeight: '500',
+  },
+  // Request Schedule Card Styles
+  requestScheduleCard: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  requestScheduleContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 16,
+  },
+  iconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#EBF5FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textContainer: {
+    flex: 1,
+  },
+  requestTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  requestDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+  },
+  requestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0066CC',
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  requestButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
