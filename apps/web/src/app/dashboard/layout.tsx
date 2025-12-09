@@ -5,6 +5,7 @@ import { useSelectedLayoutSegment } from "next/navigation";
 import { AppSidebar } from "@/components/organisms/dashboard/AppSidebar";
 import { UserMenu } from "@/components/molecules/navigation/UserMenu";
 import { ChatNotificationIcon } from "@/components/molecules/chat/ChatNotificationIcon";
+import { NotificationIcon } from "@/components/molecules/notifications/NotificationIcon";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -22,6 +23,7 @@ import {
 import { useSupabaseAuth } from "@/providers/SupabaseAuthProvider";
 import { OrganizationProvider } from "@/providers/OrganizationProvider";
 import { ChatProvider } from "@/providers/ChatProvider";
+import { NotificationProvider } from "@/providers/NotificationProvider";
 
 const SEGMENT_TITLES: Record<string, string> = {
   escalas: "Escalas",
@@ -30,6 +32,7 @@ const SEGMENT_TITLES: Record<string, string> = {
   configuracoes: "Configurações",
   organizacao: "Organização",
   chat: "Mensagens",
+  trocas: "Trocas de Plantão",
 };
 
 export default function DashboardLayout({
@@ -45,8 +48,9 @@ export default function DashboardLayout({
 
   return (
     <OrganizationProvider>
-      <ChatProvider>
-        <SidebarProvider>
+      <NotificationProvider>
+        <ChatProvider>
+          <SidebarProvider>
           <AppSidebar />
           <SidebarInset>
             <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b px-4 md:px-6">
@@ -66,6 +70,7 @@ export default function DashboardLayout({
                 </Breadcrumb>
               </div>
               <div className="flex items-center gap-2">
+                <NotificationIcon />
                 <ChatNotificationIcon />
                 {!loading && user ? (
                   <UserMenu user={user} onSignOut={signOut} />
@@ -85,7 +90,8 @@ export default function DashboardLayout({
             </div>
           </SidebarInset>
         </SidebarProvider>
-      </ChatProvider>
+        </ChatProvider>
+      </NotificationProvider>
     </OrganizationProvider>
   );
 }

@@ -169,7 +169,7 @@ export default function ShiftDetailScreen() {
   };
 
   const handleRequestSwap = () => {
-    Alert.alert('Em breve', 'Funcionalidade de troca em desenvolvimento');
+    router.push(`/(app)/shift/${id}/request-swap`);
   };
 
   const handleCheckIn = async () => {

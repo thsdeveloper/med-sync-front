@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
+  ArrowLeftRight,
   CalendarCheck2,
   ChevronRight,
   ChevronsUpDown,
@@ -47,7 +48,9 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { useOrganization, type Organization } from "@/providers/OrganizationProvider";
+import { useNotifications } from "@/providers/NotificationProvider";
 import { Skeleton } from "@/components/ui/skeleton";
+import { NotificationBadge } from "@/components/atoms";
 import { NewOrganizationDialog } from "./NewOrganizationDialog";
 import { useSupabaseSignedUrl } from "@/hooks/useSupabaseSignedUrl";
 
@@ -63,6 +66,11 @@ const mainNavItems = [
     title: "Escalas",
     url: "/dashboard/escalas",
     icon: CalendarCheck2,
+  },
+  {
+    title: "Trocas",
+    url: "/dashboard/trocas",
+    icon: ArrowLeftRight,
   },
   {
     title: "Corpo Clínico",
@@ -172,6 +180,7 @@ export function AppSidebar() {
     loading,
     setActiveOrganization,
   } = useOrganization();
+  const { pendingSwapsCount } = useNotifications();
 
   const isActive = (url: string) => {
     if (url === "/dashboard") {
@@ -298,7 +307,14 @@ export function AppSidebar() {
                     <SidebarMenuButton asChild tooltip={item.title} isActive={isActive(item.url)}>
                       <Link href={item.url}>
                         <item.icon />
-                        <span>{item.title}</span>
+                        <span className="flex-1">{item.title}</span>
+                        {item.url === "/dashboard/trocas" && pendingSwapsCount > 0 && (
+                          <NotificationBadge
+                            count={pendingSwapsCount}
+                            variant="warning"
+                            size="sm"
+                          />
+                        )}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
