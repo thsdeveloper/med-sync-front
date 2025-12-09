@@ -8,15 +8,18 @@ import {
   TouchableOpacity,
   RefreshControl,
   TextInput,
+  SectionList,
 } from 'react-native';
-import { router } from 'expo-router';
+import { StatusBar, setStatusBarStyle } from 'expo-status-bar';
+import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Avatar } from '@/components/ui';
 import { useAuth } from '@/providers/auth-provider';
 import { supabase } from '@/lib/supabase';
-import type { ConversationWithDetails } from '@medsync/shared';
+import { OrganizationChatSelector } from '@/components/molecules';
+import type { ConversationWithDetails, OrganizationForChat } from '@medsync/shared';
 
 export default function ChatScreen() {
   const { staff } = useAuth();
@@ -24,6 +27,14 @@ export default function ChatScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showOrgSelector, setShowOrgSelector] = useState(false);
+
+  // Set status bar to dark when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      setStatusBarStyle('dark');
+    }, [])
+  );
 
   const loadConversations = useCallback(async () => {
     if (!staff?.id) return;
@@ -183,17 +194,57 @@ export default function ChatScreen() {
     return name.includes(searchQuery.toLowerCase());
   });
 
+  // Separate conversations by type
+  const supportConversations = filteredConversations.filter(
+    (conv: any) => conv.conversation_type === 'support'
+  );
+  const staffConversations = filteredConversations.filter(
+    (conv: any) => conv.conversation_type !== 'support'
+  );
+
+  // Handle creating/opening support conversation with organization
+  const handleSelectOrganization = async (org: OrganizationForChat) => {
+    if (!staff?.id) return;
+
+    try {
+      // Use the secure function to create or get existing conversation
+      const { data, error } = await supabase.rpc('create_support_conversation', {
+        p_organization_id: org.id,
+        p_staff_id: staff.id,
+        p_staff_name: staff.name || 'Profissional',
+      });
+
+      if (error) {
+        console.error('Error creating conversation:', error);
+        return;
+      }
+
+      // Navigate to the conversation
+      router.push(`/(app)/chat/${data}`);
+      loadConversations();
+    } catch (error) {
+      console.error('Error handling organization selection:', error);
+    }
+  };
+
   const renderConversationItem = ({ item }: { item: ConversationWithDetails }) => {
     const avatar = getConversationAvatar(item);
     const name = getConversationName(item);
     const hasUnread = (item.unread_count || 0) > 0;
+    const isSupport = (item as any).conversation_type === 'support';
 
     return (
       <TouchableOpacity
         style={styles.conversationItem}
         onPress={() => router.push(`/(app)/chat/${item.id}`)}
       >
-        <Avatar name={avatar.name} color={avatar.color} size="lg" />
+        {isSupport ? (
+          <View style={styles.supportAvatar}>
+            <Ionicons name="business" size={24} color="#FFFFFF" />
+          </View>
+        ) : (
+          <Avatar name={avatar.name} color={avatar.color} size="lg" />
+        )}
 
         <View style={styles.conversationContent}>
           <View style={styles.conversationHeader}>
@@ -236,9 +287,26 @@ export default function ChatScreen() {
     );
   };
 
+  const renderSectionHeader = ({ section }: { section: { title: string } }) => (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>{section.title}</Text>
+    </View>
+  );
+
+  const sections = [
+    ...(supportConversations.length > 0
+      ? [{ title: 'Instituições', data: supportConversations }]
+      : []),
+    ...(staffConversations.length > 0
+      ? [{ title: 'Conversas', data: staffConversations }]
+      : []),
+  ];
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Search */}
+      <StatusBar style="dark" />
+
+      {/* Search and Support Button */}
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
           <Ionicons name="search" size={20} color="#9CA3AF" />
@@ -255,31 +323,66 @@ export default function ChatScreen() {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Support Button */}
+        <TouchableOpacity
+          style={styles.supportButton}
+          onPress={() => setShowOrgSelector(true)}
+        >
+          <Ionicons name="business" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
       </View>
 
       {/* Conversations List */}
-      <FlatList
-        data={filteredConversations}
-        renderItem={renderConversationItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="chatbubbles-outline" size={48} color="#D1D5DB" />
-            <Text style={styles.emptyText}>
-              {searchQuery
-                ? 'Nenhuma conversa encontrada'
-                : 'Nenhuma conversa ainda'}
-            </Text>
-            <Text style={styles.emptySubtext}>
-              Suas conversas com outros médicos e administradores aparecerão aqui
-            </Text>
-          </View>
-        }
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
+      {sections.length > 0 ? (
+        <SectionList
+          sections={sections}
+          renderItem={renderConversationItem}
+          renderSectionHeader={renderSectionHeader}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          stickySectionHeadersEnabled={false}
+        />
+      ) : (
+        <FlatList
+          data={[]}
+          renderItem={() => null}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="chatbubbles-outline" size={48} color="#D1D5DB" />
+              <Text style={styles.emptyText}>
+                {searchQuery
+                  ? 'Nenhuma conversa encontrada'
+                  : 'Nenhuma conversa ainda'}
+              </Text>
+              <Text style={styles.emptySubtext}>
+                Suas conversas com outros médicos e administradores aparecerão aqui
+              </Text>
+              <TouchableOpacity
+                style={styles.startChatButton}
+                onPress={() => setShowOrgSelector(true)}
+              >
+                <Ionicons name="business" size={20} color="#FFFFFF" />
+                <Text style={styles.startChatButtonText}>Falar com Instituição</Text>
+              </TouchableOpacity>
+            </View>
+          }
+        />
+      )}
+
+      {/* Organization Selector Modal */}
+      <OrganizationChatSelector
+        visible={showOrgSelector}
+        onClose={() => setShowOrgSelector(false)}
+        onSelect={handleSelectOrganization}
       />
     </SafeAreaView>
   );
@@ -291,18 +394,50 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+    gap: 12,
   },
   searchInputContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F3F4F6',
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 44,
+  },
+  supportButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#0066CC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  supportAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#0066CC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionHeader: {
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   searchInput: {
     flex: 1,
@@ -402,5 +537,20 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  startChatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0066CC',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 24,
+    gap: 8,
+  },
+  startChatButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

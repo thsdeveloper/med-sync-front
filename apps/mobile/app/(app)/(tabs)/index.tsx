@@ -7,60 +7,65 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
+  Dimensions,
 } from 'react-native';
-import { router } from 'expo-router';
+import { StatusBar, setStatusBarStyle } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { format, isToday, isTomorrow, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { Card, Avatar } from '@/components/ui';
+import { ShiftCard } from '@/components/organisms';
 import { useAuth } from '@/providers/auth-provider';
+import { useRealtime } from '@/providers/realtime-provider';
+import { useRealtimeShifts, useRealtimeSwapRequests } from '@/hooks';
 import { supabase } from '@/lib/supabase';
-import type { Shift, ShiftSwapRequest } from '@medsync/shared';
+import type { ShiftWithRelations } from '@/lib/realtime-types';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const { staff, signOut } = useAuth();
-  const [upcomingShifts, setUpcomingShifts] = useState<Shift[]>([]);
-  const [pendingRequests, setPendingRequests] = useState<number>(0);
-  const [pendingAccepts, setPendingAccepts] = useState<number>(0);
+  const { isConnected } = useRealtime();
+
+  // Initial fetched data state
+  const [fetchedShifts, setFetchedShifts] = useState<ShiftWithRelations[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Realtime hooks - will auto-update when changes occur
+  const { shifts: upcomingShifts, pendingCount: pendingAccepts } = useRealtimeShifts(fetchedShifts);
+  const { pendingIncomingCount: pendingRequests } = useRealtimeSwapRequests([], staff?.id);
+
+  // Set status bar to light when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      setStatusBarStyle('light');
+    }, [])
+  );
 
   const loadData = useCallback(async () => {
     if (!staff?.id) return;
 
     try {
-      // Load upcoming shifts
+      // Load upcoming shifts with organization and facility data
       const { data: shifts } = await supabase
         .from('shifts')
         .select(`
           *,
           sectors (name, color),
-          medical_staff (name, role, color)
+          organizations (name),
+          fixed_schedules (
+            facility_id,
+            shift_type,
+            facilities (name, type)
+          )
         `)
         .eq('staff_id', staff.id)
         .gte('start_time', new Date().toISOString())
         .order('start_time', { ascending: true })
         .limit(3);
 
-      setUpcomingShifts(shifts || []);
-
-      // Count pending swap requests
-      const { count: swapCount } = await supabase
-        .from('shift_swap_requests')
-        .select('*', { count: 'exact', head: true })
-        .eq('target_staff_id', staff.id)
-        .eq('status', 'pending');
-
-      setPendingRequests(swapCount || 0);
-
-      // Count pending shift accepts
-      const { count: acceptCount } = await supabase
-        .from('shifts')
-        .select('*', { count: 'exact', head: true })
-        .eq('staff_id', staff.id)
-        .eq('status', 'pending');
-
-      setPendingAccepts(acceptCount || 0);
+      setFetchedShifts((shifts || []) as ShiftWithRelations[]);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -85,44 +90,94 @@ export default function HomeScreen() {
     return 'Boa noite';
   };
 
-  const formatShiftDate = (dateStr: string) => {
-    const date = parseISO(dateStr);
-    if (isToday(date)) return 'Hoje';
-    if (isTomorrow(date)) return 'Amanhã';
-    return format(date, "EEEE, dd 'de' MMMM", { locale: ptBR });
+  const getGreetingIcon = () => {
+    const hour = new Date().getHours();
+    if (hour >= 6 && hour < 12) return 'sunny';
+    if (hour >= 12 && hour < 18) return 'partly-sunny';
+    return 'moon';
   };
 
-  const formatShiftTime = (start: string, end: string) => {
-    return `${format(parseISO(start), 'HH:mm')} - ${format(parseISO(end), 'HH:mm')}`;
+  const getFirstName = () => {
+    if (!staff?.name) return 'Doutor(a)';
+    const firstName = staff.name.split(' ')[0];
+    return `Dr(a). ${firstName}`;
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <StatusBar style="light" />
+
+      {/* Elegant Header with Gradient */}
+      <LinearGradient
+        colors={['#0047B3', '#0066CC', '#0077E6']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.headerGradient}
+      >
+        <SafeAreaView style={styles.headerSafeArea}>
+          <View style={styles.headerContent}>
+            {/* Left side - Greeting */}
+            <View style={styles.headerLeft}>
+              <View style={styles.greetingRow}>
+                <Ionicons
+                  name={getGreetingIcon() as any}
+                  size={20}
+                  color="#FFD93D"
+                  style={styles.greetingIcon}
+                />
+                <Text style={styles.greetingText}>{getGreeting()},</Text>
+              </View>
+              <Text style={styles.userName}>{getFirstName()}</Text>
+              <Text style={styles.roleText}>{staff?.role || 'Profissional de Saúde'}</Text>
+            </View>
+
+            {/* Right side - Avatar & Notifications */}
+            <View style={styles.headerRight}>
+              <TouchableOpacity
+                style={styles.notificationButton}
+                onPress={() => router.push('/(app)/(tabs)/requests')}
+              >
+                <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
+                {(pendingAccepts > 0 || pendingRequests > 0) && (
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.notificationBadgeText}>
+                      {pendingAccepts + pendingRequests}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.avatarContainer}
+                onPress={() => router.push('/(app)/profile')}
+              >
+                <View style={styles.avatarBorder}>
+                  <Avatar
+                    name={staff?.name || '?'}
+                    color={staff?.color || '#FFFFFF'}
+                    size="md"
+                  />
+                </View>
+                <View style={styles.onlineIndicator} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </SafeAreaView>
+
+        {/* Curved bottom edge */}
+        <View style={styles.headerCurve}>
+          <View style={styles.headerCurveInner} />
+        </View>
+      </LinearGradient>
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0066CC" />
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.greeting}>{getGreeting()},</Text>
-            <Text style={styles.userName}>{staff?.name?.split(' ')[0] || 'Doutor(a)'}</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.profileButton}
-            onPress={() => router.push('/(app)/profile')}
-          >
-            <Avatar
-              name={staff?.name || '?'}
-              color={staff?.color || '#0066CC'}
-              size="md"
-            />
-          </TouchableOpacity>
-        </View>
 
         {/* Pending Actions */}
         {(pendingAccepts > 0 || pendingRequests > 0) && (
@@ -172,40 +227,13 @@ export default function HomeScreen() {
             </Card>
           ) : (
             upcomingShifts.map((shift) => (
-              <TouchableOpacity
+              <ShiftCard
                 key={shift.id}
-                onPress={() => router.push(`/(app)/shift/${shift.id}`)}
-              >
-                <Card variant="outlined" style={styles.shiftCard}>
-                  <View style={styles.shiftHeader}>
-                    <View
-                      style={[
-                        styles.shiftIndicator,
-                        { backgroundColor: shift.sectors?.color || '#0066CC' },
-                      ]}
-                    />
-                    <View style={styles.shiftInfo}>
-                      <Text style={styles.shiftDate}>
-                        {formatShiftDate(shift.start_time)}
-                      </Text>
-                      <Text style={styles.shiftTime}>
-                        {formatShiftTime(shift.start_time, shift.end_time)}
-                      </Text>
-                      {shift.sectors?.name && (
-                        <Text style={styles.shiftSector}>{shift.sectors.name}</Text>
-                      )}
-                    </View>
-                    <View style={styles.shiftStatus}>
-                      {shift.status === 'pending' && (
-                        <View style={styles.statusBadge}>
-                          <Text style={styles.statusText}>Pendente</Text>
-                        </View>
-                      )}
-                      <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-                    </View>
-                  </View>
-                </Card>
-              </TouchableOpacity>
+                shift={shift}
+                variant="full"
+                showDate={true}
+                showDuration={true}
+              />
             ))
           )}
         </View>
@@ -256,7 +284,7 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -265,36 +293,122 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9FAFB',
   },
-  scrollView: {
-    flex: 1,
+  // Elegant Header Styles
+  headerGradient: {
+    paddingBottom: 0,
   },
-  scrollContent: {
-    padding: 16,
+  headerSafeArea: {
+    paddingTop: 4,
   },
-  header: {
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
   headerLeft: {
     flex: 1,
   },
-  greeting: {
-    fontSize: 16,
-    color: '#6B7280',
+  greetingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  greetingIcon: {
+    marginRight: 6,
+  },
+  greetingText: {
+    fontSize: 15,
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontWeight: '500',
   },
   userName: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '700',
-    color: '#1F2937',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
-  profileButton: {
-    marginLeft: 16,
+  roleText: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 2,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  notificationButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#0066CC',
+  },
+  notificationBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+    paddingHorizontal: 4,
+  },
+  avatarContainer: {
+    position: 'relative',
+  },
+  avatarBorder: {
+    padding: 3,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  onlineIndicator: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#10B981',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  headerCurve: {
+    height: 24,
+    backgroundColor: '#0077E6',
+  },
+  headerCurveInner: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+  // Content Styles
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 24,
   },
   alertCard: {
     backgroundColor: '#FFFBEB',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   alertHeader: {
     flexDirection: 'row',
@@ -319,7 +433,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -345,54 +459,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#9CA3AF',
     marginTop: 8,
-  },
-  shiftCard: {
-    marginBottom: 8,
-  },
-  shiftHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  shiftIndicator: {
-    width: 4,
-    height: 48,
-    borderRadius: 2,
-    marginRight: 12,
-  },
-  shiftInfo: {
-    flex: 1,
-  },
-  shiftDate: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1F2937',
-    textTransform: 'capitalize',
-  },
-  shiftTime: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  shiftSector: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    marginTop: 2,
-  },
-  shiftStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusBadge: {
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginRight: 8,
-  },
-  statusText: {
-    fontSize: 12,
-    color: '#D97706',
-    fontWeight: '500',
   },
   quickActions: {
     flexDirection: 'row',

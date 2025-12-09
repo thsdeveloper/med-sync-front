@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,27 +7,50 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
+import { StatusBar, setStatusBarStyle } from 'expo-status-bar';
+import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar, DateData } from 'react-native-calendars';
 import { format, parseISO, startOfMonth, endOfMonth, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { ShiftCard } from '@/components/organisms';
 import { Card } from '@/components/ui';
 import { useAuth } from '@/providers/auth-provider';
+import { useRealtimeShifts } from '@/hooks';
 import { supabase } from '@/lib/supabase';
-import type { Shift, ShiftStatus } from '@medsync/shared';
+import type { ShiftWithRelations } from '@/lib/realtime-types';
 
 type FilterType = 'all' | 'pending' | 'accepted';
 
 export default function ScheduleScreen() {
   const { staff } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [fetchedShifts, setFetchedShifts] = useState<ShiftWithRelations[]>([]);
   const [markedDates, setMarkedDates] = useState<Record<string, any>>({});
   const [filter, setFilter] = useState<FilterType>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isBulkAccepting, setIsBulkAccepting] = useState(false);
+  const [isBulkDeclining, setIsBulkDeclining] = useState(false);
+
+  // Realtime hook - auto-updates when shifts change
+  const { shifts, pendingCount } = useRealtimeShifts(fetchedShifts);
+
+  // Get all pending shifts
+  const pendingShifts = useMemo(() =>
+    shifts.filter((shift) => shift.status === 'pending'),
+    [shifts]
+  );
+
+  // Set status bar to dark when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      setStatusBarStyle('dark');
+    }, [])
+  );
 
   const loadShifts = useCallback(async (date: Date) => {
     if (!staff?.id) return;
@@ -42,6 +65,12 @@ export default function ScheduleScreen() {
         .select(`
           *,
           sectors (id, name, color),
+          organizations (name),
+          fixed_schedules (
+            facility_id,
+            shift_type,
+            facilities (name, type)
+          ),
           medical_staff (name, role, color)
         `)
         .eq('staff_id', staff.id)
@@ -50,40 +79,42 @@ export default function ScheduleScreen() {
         .order('start_time', { ascending: true });
 
       if (data) {
-        setShifts(data);
-
-        // Build marked dates for calendar
-        const marked: Record<string, any> = {};
-        data.forEach((shift) => {
-          const dateKey = format(parseISO(shift.start_time), 'yyyy-MM-dd');
-          const color = shift.status === 'pending' ? '#F59E0B' :
-                       shift.status === 'accepted' ? '#10B981' : '#6B7280';
-
-          if (!marked[dateKey]) {
-            marked[dateKey] = {
-              dots: [{ key: shift.id, color }],
-            };
-          } else {
-            marked[dateKey].dots.push({ key: shift.id, color });
-          }
-        });
-
-        // Mark selected date
-        const selectedKey = format(selectedDate, 'yyyy-MM-dd');
-        marked[selectedKey] = {
-          ...marked[selectedKey],
-          selected: true,
-          selectedColor: '#0066CC',
-        };
-
-        setMarkedDates(marked);
+        setFetchedShifts(data as ShiftWithRelations[]);
       }
     } catch (error) {
       console.error('Error loading shifts:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [staff?.id, selectedDate]);
+  }, [staff?.id]);
+
+  // Update marked dates when shifts change (from fetch or realtime)
+  useEffect(() => {
+    const marked: Record<string, any> = {};
+    shifts.forEach((shift) => {
+      const dateKey = format(parseISO(shift.start_time), 'yyyy-MM-dd');
+      const color = shift.status === 'pending' ? '#F59E0B' :
+                   shift.status === 'accepted' ? '#10B981' : '#6B7280';
+
+      if (!marked[dateKey]) {
+        marked[dateKey] = {
+          dots: [{ key: shift.id, color }],
+        };
+      } else {
+        marked[dateKey].dots.push({ key: shift.id, color });
+      }
+    });
+
+    // Mark selected date
+    const selectedKey = format(selectedDate, 'yyyy-MM-dd');
+    marked[selectedKey] = {
+      ...marked[selectedKey],
+      selected: true,
+      selectedColor: '#0066CC',
+    };
+
+    setMarkedDates(marked);
+  }, [shifts, selectedDate]);
 
   useEffect(() => {
     loadShifts(selectedDate);
@@ -95,12 +126,119 @@ export default function ScheduleScreen() {
     setRefreshing(false);
   };
 
+  const handleBulkAccept = async () => {
+    if (!staff || pendingShifts.length === 0) return;
+
+    Alert.alert(
+      'Confirmar Todas as Escalas',
+      `Deseja confirmar ${pendingShifts.length} escala(s) pendente(s)?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Confirmar Todas',
+          onPress: async () => {
+            setIsBulkAccepting(true);
+            try {
+              const pendingIds = pendingShifts.map((s) => s.id);
+
+              // Update all pending shifts to accepted
+              const { error: shiftError } = await supabase
+                .from('shifts')
+                .update({ status: 'accepted' })
+                .in('id', pendingIds);
+
+              if (shiftError) throw shiftError;
+
+              // Create response records for all shifts
+              const responses = pendingShifts.map((shift) => ({
+                shift_id: shift.id,
+                staff_id: staff.id,
+                response: 'accepted',
+                responded_at: new Date().toISOString(),
+              }));
+
+              const { error: responseError } = await supabase
+                .from('shift_responses')
+                .upsert(responses);
+
+              if (responseError) throw responseError;
+
+              Alert.alert('Sucesso', `${pendingShifts.length} escala(s) confirmada(s) com sucesso!`);
+              loadShifts(selectedDate);
+            } catch (error) {
+              console.error('Error bulk accepting shifts:', error);
+              Alert.alert('Erro', 'Não foi possível confirmar as escalas');
+            } finally {
+              setIsBulkAccepting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleBulkDecline = async () => {
+    if (!staff || pendingShifts.length === 0) return;
+
+    Alert.alert(
+      'Recusar Todas as Escalas',
+      `Tem certeza que deseja recusar ${pendingShifts.length} escala(s) pendente(s)? Esta ação não pode ser desfeita.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Recusar Todas',
+          style: 'destructive',
+          onPress: async () => {
+            setIsBulkDeclining(true);
+            try {
+              const pendingIds = pendingShifts.map((s) => s.id);
+
+              // Update all pending shifts to declined
+              const { error: shiftError } = await supabase
+                .from('shifts')
+                .update({ status: 'declined' })
+                .in('id', pendingIds);
+
+              if (shiftError) throw shiftError;
+
+              // Create response records for all shifts
+              const responses = pendingShifts.map((shift) => ({
+                shift_id: shift.id,
+                staff_id: staff.id,
+                response: 'declined',
+                responded_at: new Date().toISOString(),
+              }));
+
+              const { error: responseError } = await supabase
+                .from('shift_responses')
+                .upsert(responses);
+
+              if (responseError) throw responseError;
+
+              Alert.alert('Escalas Recusadas', `${pendingShifts.length} escala(s) recusada(s).`);
+              loadShifts(selectedDate);
+            } catch (error) {
+              console.error('Error bulk declining shifts:', error);
+              Alert.alert('Erro', 'Não foi possível recusar as escalas');
+            } finally {
+              setIsBulkDeclining(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const onDayPress = (day: DateData) => {
-    setSelectedDate(new Date(day.dateString));
+    // Parse date string as local date (not UTC) to avoid timezone offset issues
+    const [year, month, dayNum] = day.dateString.split('-').map(Number);
+    setSelectedDate(new Date(year, month - 1, dayNum));
   };
 
   const onMonthChange = (month: DateData) => {
-    loadShifts(new Date(month.dateString));
+    // Parse date string as local date (not UTC) to avoid timezone offset issues
+    const [year, monthNum, day] = month.dateString.split('-').map(Number);
+    loadShifts(new Date(year, monthNum - 1, day));
   };
 
   const getFilteredShifts = () => {
@@ -114,73 +252,19 @@ export default function ScheduleScreen() {
 
   const filteredShifts = getFilteredShifts();
 
-  const formatShiftTime = (start: string, end: string) => {
-    return `${format(parseISO(start), 'HH:mm')} - ${format(parseISO(end), 'HH:mm')}`;
-  };
-
-  const getStatusColor = (status: ShiftStatus) => {
-    switch (status) {
-      case 'pending': return '#F59E0B';
-      case 'accepted': return '#10B981';
-      case 'declined': return '#EF4444';
-      default: return '#6B7280';
-    }
-  };
-
-  const getStatusLabel = (status: ShiftStatus) => {
-    switch (status) {
-      case 'pending': return 'Pendente';
-      case 'accepted': return 'Confirmado';
-      case 'declined': return 'Recusado';
-      default: return status;
-    }
-  };
-
-  const renderShiftItem = ({ item }: { item: Shift }) => (
-    <TouchableOpacity onPress={() => router.push(`/(app)/shift/${item.id}`)}>
-      <Card variant="outlined" style={styles.shiftCard}>
-        <View style={styles.shiftHeader}>
-          <View
-            style={[
-              styles.shiftIndicator,
-              { backgroundColor: item.sectors?.color || '#0066CC' },
-            ]}
-          />
-          <View style={styles.shiftInfo}>
-            <Text style={styles.shiftTime}>
-              {formatShiftTime(item.start_time, item.end_time)}
-            </Text>
-            {item.sectors?.name && (
-              <Text style={styles.shiftSector}>{item.sectors.name}</Text>
-            )}
-            {item.notes && (
-              <Text style={styles.shiftNotes} numberOfLines={1}>
-                {item.notes}
-              </Text>
-            )}
-          </View>
-          <View style={styles.shiftStatus}>
-            <View
-              style={[
-                styles.statusBadge,
-                { backgroundColor: `${getStatusColor(item.status)}20` },
-              ]}
-            >
-              <Text
-                style={[styles.statusText, { color: getStatusColor(item.status) }]}
-              >
-                {getStatusLabel(item.status)}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-          </View>
-        </View>
-      </Card>
-    </TouchableOpacity>
+  const renderShiftItem = ({ item }: { item: ShiftWithRelations }) => (
+    <ShiftCard
+      shift={item}
+      variant="compact"
+      showDate={false}
+      showDuration={true}
+    />
   );
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar style="dark" />
+
       {/* Calendar */}
       <Calendar
         current={format(selectedDate, 'yyyy-MM-dd')}
@@ -204,6 +288,53 @@ export default function ScheduleScreen() {
           textDayHeaderFontWeight: '500',
         }}
       />
+
+      {/* Bulk Actions Banner */}
+      {pendingShifts.length > 0 && (
+        <Card variant="elevated" style={styles.bulkActionsCard}>
+          <View style={styles.bulkActionsHeader}>
+            <View style={styles.bulkActionsInfo}>
+              <View style={styles.pendingBadge}>
+                <Ionicons name="time" size={16} color="#F59E0B" />
+                <Text style={styles.pendingCount}>{pendingShifts.length}</Text>
+              </View>
+              <Text style={styles.bulkActionsText}>
+                escala{pendingShifts.length > 1 ? 's' : ''} pendente{pendingShifts.length > 1 ? 's' : ''}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.bulkActionsButtons}>
+            <TouchableOpacity
+              style={[styles.bulkButton, styles.acceptAllButton]}
+              onPress={handleBulkAccept}
+              disabled={isBulkAccepting || isBulkDeclining}
+            >
+              {isBulkAccepting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
+                  <Text style={styles.acceptAllText}>Aceitar Todas</Text>
+                </>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.bulkButton, styles.declineAllButton]}
+              onPress={handleBulkDecline}
+              disabled={isBulkAccepting || isBulkDeclining}
+            >
+              {isBulkDeclining ? (
+                <ActivityIndicator size="small" color="#EF4444" />
+              ) : (
+                <>
+                  <Ionicons name="close-circle" size={18} color="#EF4444" />
+                  <Text style={styles.declineAllText}>Recusar Todas</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </Card>
+      )}
 
       {/* Filter */}
       <View style={styles.filterContainer}>
@@ -316,51 +447,6 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 16,
   },
-  shiftCard: {
-    marginBottom: 8,
-  },
-  shiftHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  shiftIndicator: {
-    width: 4,
-    height: 48,
-    borderRadius: 2,
-    marginRight: 12,
-  },
-  shiftInfo: {
-    flex: 1,
-  },
-  shiftTime: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  shiftSector: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  shiftNotes: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    marginTop: 2,
-  },
-  shiftStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginRight: 8,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
   emptyContainer: {
     alignItems: 'center',
     paddingVertical: 48,
@@ -369,5 +455,71 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#9CA3AF',
     marginTop: 8,
+  },
+  // Bulk Actions Styles
+  bulkActionsCard: {
+    marginHorizontal: 16,
+    marginVertical: 12,
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  bulkActionsHeader: {
+    marginBottom: 12,
+  },
+  bulkActionsInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pendingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginRight: 8,
+  },
+  pendingCount: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#D97706',
+    marginLeft: 4,
+  },
+  bulkActionsText: {
+    fontSize: 15,
+    color: '#92400E',
+    fontWeight: '500',
+  },
+  bulkActionsButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  bulkButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 10,
+    gap: 6,
+  },
+  acceptAllButton: {
+    backgroundColor: '#10B981',
+  },
+  acceptAllText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  declineAllButton: {
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  declineAllText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#EF4444',
   },
 });

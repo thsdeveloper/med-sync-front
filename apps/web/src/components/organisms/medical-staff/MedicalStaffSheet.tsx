@@ -379,13 +379,36 @@ export function MedicalStaffSheet({
 
                     <FormField
                         control={form.control}
-                        name="name"
+                        name="crm"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Nome Completo</FormLabel>
+                                <FormLabel className="flex items-center gap-2">
+                                    Registro (CRM/COREN)
+                                    {isSearchingCrm && (
+                                        <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
+                                    )}
+                                </FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Dr. João Silva" {...field} />
+                                    <div className="relative">
+                                        <Input
+                                            placeholder="1234/SP"
+                                            {...field}
+                                            onChange={(e) => {
+                                                const normalized = normalizeCRM(e.target.value);
+                                                field.onChange(normalized);
+                                            }}
+                                            className={existingStaffMatch ? 'border-blue-300 focus:border-blue-500' : ''}
+                                        />
+                                        {!isEditing && (
+                                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                        )}
+                                    </div>
                                 </FormControl>
+                                {!isEditing && (
+                                    <p className="text-xs text-slate-500">
+                                        Formato: número/UF (ex: 1234/SP). Digite para verificar se o profissional já existe.
+                                    </p>
+                                )}
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -394,36 +417,13 @@ export function MedicalStaffSheet({
                     <div className="grid gap-4 sm:grid-cols-2">
                         <FormField
                             control={form.control}
-                            name="crm"
+                            name="name"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="flex items-center gap-2">
-                                        Registro (CRM/COREN)
-                                        {isSearchingCrm && (
-                                            <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
-                                        )}
-                                    </FormLabel>
+                                    <FormLabel>Nome Completo</FormLabel>
                                     <FormControl>
-                                        <div className="relative">
-                                            <Input
-                                                placeholder="1234/SP"
-                                                {...field}
-                                                onChange={(e) => {
-                                                    const normalized = normalizeCRM(e.target.value);
-                                                    field.onChange(normalized);
-                                                }}
-                                                className={existingStaffMatch ? 'border-blue-300 focus:border-blue-500' : ''}
-                                            />
-                                            {!isEditing && (
-                                                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                            )}
-                                        </div>
+                                        <Input placeholder="Dr. João Silva" {...field} />
                                     </FormControl>
-                                    {!isEditing && (
-                                        <p className="text-xs text-slate-500">
-                                            Formato: número/UF (ex: 1234/SP). Digite para verificar se o profissional já existe.
-                                        </p>
-                                    )}
                                     <FormMessage />
                                 </FormItem>
                             )}

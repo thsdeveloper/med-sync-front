@@ -11,3 +11,4 @@ export * from './staff-auth.schema';
 export * from './shift-response.schema';
 export * from './shift-swap.schema';
 export * from './chat.schema';
+export * from './shift-attendance.schema';

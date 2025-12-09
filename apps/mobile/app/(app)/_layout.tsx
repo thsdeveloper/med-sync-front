@@ -24,8 +24,7 @@ export default function AppLayout() {
         name="shift/[id]"
         options={{
           presentation: 'modal',
-          headerShown: true,
-          title: 'Detalhes da Escala',
+          headerShown: false,
         }}
       />
       <Stack.Screen

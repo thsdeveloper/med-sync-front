@@ -137,6 +137,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: new Error('Falha ao criar usuário') };
       }
 
+      // Sign in immediately to ensure session is active
+      // (signUp may not create an active session depending on Supabase config)
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: authEmail,
+        password: data.password,
+      });
+
+      if (signInError) {
+        console.error('SignIn after signup failed:', signInError);
+        return { error: signInError };
+      }
+
       // Create medical_staff record
       const { error: staffError } = await supabase
         .from('medical_staff')
@@ -154,10 +166,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
       if (staffError) {
-        // Rollback: delete auth user if staff creation fails
-        await supabase.auth.admin.deleteUser(authData.user.id);
+        // Rollback: sign out and try to clean up
+        await supabase.auth.signOut();
         return { error: staffError };
       }
+
+      // Refresh staff data after insert
+      await refreshStaff();
 
       // Navigate to app
       router.replace('/(app)/(tabs)');
@@ -165,7 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       return { error: err as Error };
     }
-  }, []);
+  }, [refreshStaff]);
 
   const setupPassword = useCallback(async (data: SetupPasswordData) => {
     try {
@@ -218,6 +233,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.log('Setup password completed successfully');
+
+      // Refresh staff data after update (important: the onAuthStateChange
+      // refreshStaff ran before the update, so staff is still null)
+      await refreshStaff();
 
       // Navigate to app
       router.replace('/(app)/(tabs)');

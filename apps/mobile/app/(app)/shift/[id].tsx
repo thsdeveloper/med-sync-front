@@ -4,23 +4,28 @@ import {
   Text,
   StyleSheet,
   SafeAreaView,
-  ScrollView,
   Alert,
   ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { format, parseISO, differenceInHours } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { parseISO, differenceInHours } from 'date-fns';
 import { Button, Card } from '@/components/ui';
+import { ShiftDetailHeader } from '@/components/organisms/ShiftDetailHeader';
+import { AttendanceStatusBadge } from '@/components/atoms';
+import { CheckInOutButton, AttendanceTimeInfo } from '@/components/molecules';
 import { useAuth } from '@/providers/auth-provider';
+import { useShiftAttendance } from '@/hooks';
 import { supabase } from '@/lib/supabase';
 import type { Shift, ShiftStatus } from '@medsync/shared';
 
 type ShiftWithRelations = Shift & {
   sectors?: { name: string; color: string };
   organizations?: { name: string };
-  facilities?: { name: string; type: string };
+  fixed_schedules?: {
+    facility_id: string;
+    facilities: { name: string; type: string; address?: string };
+  };
 };
 
 export default function ShiftDetailScreen() {
@@ -30,6 +35,23 @@ export default function ShiftDetailScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAccepting, setIsAccepting] = useState(false);
   const [isDeclining, setIsDeclining] = useState(false);
+
+  // Hook de check-in/check-out
+  const {
+    attendance,
+    attendanceStatus,
+    timeWindow,
+    isCheckingIn,
+    isCheckingOut,
+    error: attendanceError,
+    checkIn,
+    checkOut,
+  } = useShiftAttendance({
+    shiftId: id || '',
+    shiftStartTime: shift?.start_time || '',
+    shiftEndTime: shift?.end_time || '',
+    shiftStatus: shift?.status || '',
+  });
 
   useEffect(() => {
     loadShift();
@@ -45,7 +67,11 @@ export default function ShiftDetailScreen() {
           *,
           sectors (name, color),
           organizations (name),
-          medical_staff (name, role, color)
+          medical_staff (name, role, color),
+          fixed_schedules (
+            facility_id,
+            facilities (name, type, address)
+          )
         `)
         .eq('id', id)
         .single();
@@ -148,6 +174,26 @@ export default function ShiftDetailScreen() {
     Alert.alert('Em breve', 'Funcionalidade de troca em desenvolvimento');
   };
 
+  // Handler de check-in
+  const handleCheckIn = async () => {
+    const success = await checkIn();
+    if (success) {
+      Alert.alert('Sucesso', 'Entrada registrada com sucesso!');
+    } else if (attendanceError) {
+      Alert.alert('Erro', attendanceError);
+    }
+  };
+
+  // Handler de check-out
+  const handleCheckOut = async () => {
+    const success = await checkOut();
+    if (success) {
+      Alert.alert('Sucesso', 'Saida registrada com sucesso!');
+    } else if (attendanceError) {
+      Alert.alert('Erro', attendanceError);
+    }
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -175,25 +221,33 @@ export default function ShiftDetailScreen() {
 
   const getStatusColor = (status: ShiftStatus) => {
     switch (status) {
-      case 'pending': return '#F59E0B';
-      case 'accepted': return '#10B981';
-      case 'declined': return '#EF4444';
-      default: return '#6B7280';
+      case 'pending':
+        return '#F59E0B';
+      case 'accepted':
+        return '#10B981';
+      case 'declined':
+        return '#EF4444';
+      default:
+        return '#6B7280';
     }
   };
 
   const getStatusLabel = (status: ShiftStatus) => {
     switch (status) {
-      case 'pending': return 'Pendente';
-      case 'accepted': return 'Confirmado';
-      case 'declined': return 'Recusado';
-      default: return status;
+      case 'pending':
+        return 'Pendente';
+      case 'accepted':
+        return 'Confirmado';
+      case 'declined':
+        return 'Recusado';
+      default:
+        return status;
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+    <ShiftDetailHeader startTime={shift.start_time} endTime={shift.end_time}>
+      <View style={styles.content}>
         {/* Status Badge */}
         <View style={styles.statusContainer}>
           <View
@@ -208,78 +262,140 @@ export default function ShiftDetailScreen() {
                 { backgroundColor: getStatusColor(shift.status) },
               ]}
             />
-            <Text style={[styles.statusText, { color: getStatusColor(shift.status) }]}>
+            <Text
+              style={[styles.statusText, { color: getStatusColor(shift.status) }]}
+            >
               {getStatusLabel(shift.status)}
             </Text>
           </View>
         </View>
 
-        {/* Date & Time Card */}
-        <Card variant="elevated" style={styles.mainCard}>
-          <View style={styles.dateSection}>
-            <View style={styles.dateIcon}>
-              <Ionicons name="calendar" size={24} color="#0066CC" />
+        {/* Duration Card */}
+        <Card variant="elevated" style={styles.infoCard}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.cardIconBadge, { backgroundColor: '#EBF5FF' }]}>
+              <Ionicons name="time-outline" size={18} color="#0066CC" />
             </View>
-            <View style={styles.dateInfo}>
-              <Text style={styles.dateText}>
-                {format(startDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-              </Text>
-              <Text style={styles.timeText}>
-                {format(startDate, 'HH:mm')} - {format(endDate, 'HH:mm')}
-              </Text>
-              <Text style={styles.durationText}>
-                Duração: {duration} hora{duration !== 1 ? 's' : ''}
-              </Text>
-            </View>
+            <Text style={styles.cardTitle}>Duração do Plantão</Text>
           </View>
+          <Text style={styles.cardValueLarge}>
+            {duration} hora{duration !== 1 ? 's' : ''}
+          </Text>
         </Card>
 
-        {/* Details Card */}
-        <Card variant="outlined" style={styles.detailsCard}>
-          {shift.sectors && (
-            <View style={styles.detailRow}>
-              <View style={styles.detailIcon}>
-                <Ionicons name="business" size={20} color="#6B7280" />
+        {/* Facility Card - Destaque para a Clínica/Hospital */}
+        {shift.fixed_schedules?.facilities && (
+          <Card variant="elevated" style={styles.facilityCard}>
+            <View style={styles.cardHeader}>
+              <View style={[styles.cardIconBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                <Ionicons
+                  name={shift.fixed_schedules.facilities.type === 'hospital' ? 'medkit' : 'business'}
+                  size={18}
+                  color="#FFFFFF"
+                />
               </View>
-              <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Setor</Text>
-                <View style={styles.sectorRow}>
-                  <View
-                    style={[
-                      styles.sectorDot,
-                      { backgroundColor: shift.sectors.color },
-                    ]}
-                  />
-                  <Text style={styles.detailValue}>{shift.sectors.name}</Text>
+              <Text style={styles.facilityTypeLabel}>
+                {shift.fixed_schedules.facilities.type === 'hospital' ? 'Hospital' : 'Clínica'}
+              </Text>
+            </View>
+            <Text style={styles.facilityName}>
+              {shift.fixed_schedules.facilities.name}
+            </Text>
+            {shift.fixed_schedules.facilities.address && (
+              <View style={styles.facilityAddressRow}>
+                <Ionicons name="location-outline" size={14} color="rgba(255, 255, 255, 0.7)" />
+                <Text style={styles.facilityAddress}>
+                  {shift.fixed_schedules.facilities.address}
+                </Text>
+              </View>
+            )}
+          </Card>
+        )}
+
+        {/* Sector Card */}
+        {shift.sectors && (
+          <Card variant="outlined" style={styles.infoCard}>
+            <View style={styles.cardHeader}>
+              <View style={[styles.cardIconBadge, { backgroundColor: `${shift.sectors.color}20` }]}>
+                <Ionicons name="grid-outline" size={18} color={shift.sectors.color} />
+              </View>
+              <Text style={styles.cardTitle}>Setor</Text>
+            </View>
+            <View style={styles.sectorRow}>
+              <View
+                style={[
+                  styles.sectorDot,
+                  { backgroundColor: shift.sectors.color },
+                ]}
+              />
+              <Text style={styles.cardValue}>{shift.sectors.name}</Text>
+            </View>
+          </Card>
+        )}
+
+        {/* Organization Card */}
+        {shift.organizations && (
+          <Card variant="outlined" style={styles.infoCard}>
+            <View style={styles.cardHeader}>
+              <View style={[styles.cardIconBadge, { backgroundColor: '#F3E8FF' }]}>
+                <Ionicons name="briefcase-outline" size={18} color="#7C3AED" />
+              </View>
+              <Text style={styles.cardTitle}>Organização</Text>
+            </View>
+            <Text style={styles.cardValue}>{shift.organizations.name}</Text>
+          </Card>
+        )}
+
+        {/* Notes Card */}
+        {shift.notes && (
+          <Card variant="outlined" style={styles.infoCard}>
+            <View style={styles.cardHeader}>
+              <View style={[styles.cardIconBadge, { backgroundColor: '#FEF3C7' }]}>
+                <Ionicons name="document-text-outline" size={18} color="#D97706" />
+              </View>
+              <Text style={styles.cardTitle}>Observacoes</Text>
+            </View>
+            <Text style={styles.cardValue}>{shift.notes}</Text>
+          </Card>
+        )}
+
+        {/* Attendance Card - Check-in/Check-out */}
+        {shift.status === 'accepted' && (
+          <Card variant="elevated" style={styles.attendanceCard}>
+            <View style={styles.attendanceHeader}>
+              <View style={styles.cardHeader}>
+                <View style={[styles.cardIconBadge, { backgroundColor: '#EBF5FF' }]}>
+                  <Ionicons name="finger-print" size={18} color="#0066CC" />
                 </View>
+                <Text style={styles.cardTitle}>Registro de Presenca</Text>
               </View>
+              <AttendanceStatusBadge status={attendanceStatus} size="sm" />
             </View>
-          )}
 
-          {shift.organizations && (
-            <View style={styles.detailRow}>
-              <View style={styles.detailIcon}>
-                <Ionicons name="medical" size={20} color="#6B7280" />
+            {attendance && (
+              <View style={styles.attendanceTimeInfoContainer}>
+                <AttendanceTimeInfo attendance={attendance} />
               </View>
-              <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Organização</Text>
-                <Text style={styles.detailValue}>{shift.organizations.name}</Text>
-              </View>
-            </View>
-          )}
+            )}
 
-          {shift.notes && (
-            <View style={styles.detailRow}>
-              <View style={styles.detailIcon}>
-                <Ionicons name="document-text" size={20} color="#6B7280" />
-              </View>
-              <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Observações</Text>
-                <Text style={styles.detailValue}>{shift.notes}</Text>
-              </View>
+            <View style={styles.attendanceButtonContainer}>
+              <CheckInOutButton
+                attendanceStatus={attendanceStatus}
+                canCheckIn={timeWindow.canCheckIn}
+                canCheckOut={timeWindow.canCheckOut}
+                isCheckingIn={isCheckingIn}
+                isCheckingOut={isCheckingOut}
+                onCheckIn={handleCheckIn}
+                onCheckOut={handleCheckOut}
+                minutesUntilCheckIn={timeWindow.minutesUntilCheckIn}
+                minutesUntilCheckOut={timeWindow.minutesUntilCheckOut}
+                isBeforeCheckInWindow={timeWindow.isBeforeCheckInWindow}
+                isAfterCheckInWindow={timeWindow.isAfterCheckInWindow}
+                isAfterCheckOutWindow={timeWindow.isAfterCheckOutWindow}
+              />
             </View>
-          )}
-        </Card>
+          </Card>
+        )}
 
         {/* Actions */}
         {shift.status === 'pending' && (
@@ -310,8 +426,8 @@ export default function ShiftDetailScreen() {
             />
           </View>
         )}
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+    </ShiftDetailHeader>
   );
 }
 
@@ -335,11 +451,9 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginTop: 12,
   },
-  scrollView: {
-    flex: 1,
-  },
   content: {
     padding: 16,
+    paddingBottom: 32,
   },
   statusContainer: {
     alignItems: 'center',
@@ -362,80 +476,98 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  mainCard: {
-    marginBottom: 16,
+  infoCard: {
+    marginBottom: 12,
   },
-  dateSection: {
+  cardHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  dateIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: '#EBF5FF',
+  cardIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: 10,
   },
-  dateInfo: {
-    flex: 1,
+  cardTitle: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
-  dateText: {
-    fontSize: 18,
+  cardValue: {
+    fontSize: 16,
     fontWeight: '600',
     color: '#1F2937',
-    textTransform: 'capitalize',
-    marginBottom: 4,
+    marginLeft: 42,
   },
-  timeText: {
-    fontSize: 24,
+  cardValueLarge: {
+    fontSize: 22,
     fontWeight: '700',
-    color: '#0066CC',
-    marginBottom: 4,
-  },
-  durationText: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  detailsCard: {
-    marginBottom: 24,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  detailIcon: {
-    width: 40,
-    alignItems: 'center',
-    paddingTop: 2,
-  },
-  detailContent: {
-    flex: 1,
-  },
-  detailLabel: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    marginBottom: 4,
-  },
-  detailValue: {
-    fontSize: 16,
     color: '#1F2937',
+    marginLeft: 42,
+  },
+  facilityCard: {
+    marginBottom: 12,
+    backgroundColor: '#0066CC',
+  },
+  facilityTypeLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.85)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  facilityName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginLeft: 42,
+  },
+  facilityAddressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    marginLeft: 42,
+    gap: 6,
+  },
+  facilityAddress: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.75)',
+    flex: 1,
   },
   sectorRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginLeft: 42,
   },
   sectorDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     marginRight: 8,
   },
   actions: {
     gap: 12,
+  },
+  attendanceCard: {
+    marginBottom: 12,
+  },
+  attendanceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  attendanceTimeInfoContainer: {
+    marginTop: 8,
+  },
+  attendanceButtonContainer: {
+    marginTop: 16,
   },
   acceptButton: {
     backgroundColor: '#10B981',

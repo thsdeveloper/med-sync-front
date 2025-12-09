@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,14 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
-import { router } from 'expo-router';
+import { StatusBar, setStatusBarStyle } from 'expo-status-bar';
+import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Card, Avatar } from '@/components/ui';
 import { useAuth } from '@/providers/auth-provider';
+import { useRealtimeSwapRequests } from '@/hooks';
 import { supabase } from '@/lib/supabase';
 import type { ShiftSwapRequestWithDetails, SwapStatus } from '@medsync/shared';
 
@@ -22,16 +24,38 @@ type TabType = 'received' | 'sent';
 export default function RequestsScreen() {
   const { staff } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('received');
-  const [requests, setRequests] = useState<ShiftSwapRequestWithDetails[]>([]);
+  const [fetchedRequests, setFetchedRequests] = useState<ShiftSwapRequestWithDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Realtime hook - auto-updates when swap requests change
+  const {
+    swapRequests: allRequests,
+    pendingIncomingCount,
+  } = useRealtimeSwapRequests(fetchedRequests, staff?.id);
+
+  // Filter requests based on active tab
+  const requests = useMemo(() => {
+    if (activeTab === 'received') {
+      return allRequests.filter((r) => r.target_staff_id === staff?.id);
+    }
+    return allRequests.filter((r) => r.requester_id === staff?.id);
+  }, [allRequests, activeTab, staff?.id]);
+
+  // Set status bar to dark when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      setStatusBarStyle('dark');
+    }, [])
+  );
 
   const loadRequests = useCallback(async () => {
     if (!staff?.id) return;
 
     setIsLoading(true);
     try {
-      let query = supabase
+      // Load ALL requests (both received and sent) for realtime to work properly
+      const { data, error } = await supabase
         .from('shift_swap_requests')
         .select(`
           *,
@@ -46,27 +70,20 @@ export default function RequestsScreen() {
             sectors (name, color)
           )
         `)
+        .or(`target_staff_id.eq.${staff.id},requester_id.eq.${staff.id}`)
         .order('created_at', { ascending: false });
-
-      if (activeTab === 'received') {
-        query = query.eq('target_staff_id', staff.id);
-      } else {
-        query = query.eq('requester_id', staff.id);
-      }
-
-      const { data, error } = await query;
 
       if (error) {
         console.error('Error loading requests:', error);
       } else {
-        setRequests(data || []);
+        setFetchedRequests((data || []) as ShiftSwapRequestWithDetails[]);
       }
     } catch (error) {
       console.error('Error:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [staff?.id, activeTab]);
+  }, [staff?.id]);
 
   useEffect(() => {
     loadRequests();
@@ -193,10 +210,15 @@ export default function RequestsScreen() {
     );
   };
 
-  const pendingCount = requests.filter((r) => r.status === 'pending').length;
+  // Use realtime pending count for received tab badge
+  const pendingCount = activeTab === 'received'
+    ? pendingIncomingCount
+    : requests.filter((r) => r.status === 'pending').length;
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar style="dark" />
+
       {/* Tabs */}
       <View style={styles.tabsContainer}>
         <TouchableOpacity
