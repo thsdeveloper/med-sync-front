@@ -10,6 +10,8 @@ import { SocialProof } from '../components/organisms/SocialProof';
 import { CTA } from '../components/organisms/CTA';
 import { Footer } from '../components/organisms/Footer';
 
+import { PlatformFeatures } from '../components/organisms/PlatformFeatures';
+
 export default function Home() {
   // Intersection Observer for Fade In
   useEffect(() => {
@@ -42,6 +44,7 @@ export default function Home() {
       <AIDemo />
       <Benefits />
       <MobileApp />
+      <PlatformFeatures />
       <SocialProof />
       <CTA />
       <Footer />

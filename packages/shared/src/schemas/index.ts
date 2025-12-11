@@ -5,6 +5,7 @@ export * from './facility.schema';
 export * from './fixed-schedule.schema';
 export * from './company-registration.schema';
 export * from './organization-settings.schema';
+export * from './payment.schema';
 
 // Mobile doctor app schemas
 export * from './staff-auth.schema';
