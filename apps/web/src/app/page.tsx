@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import { Header } from '../components/organisms/Header';
 import { Hero } from '../components/organisms/Hero';
+import { MobileApp } from '../components/organisms/MobileApp';
 import { AIDemo } from '../components/organisms/AIDemo';
 import { Benefits } from '../components/organisms/Benefits';
 import { SocialProof } from '../components/organisms/SocialProof';
@@ -40,6 +41,7 @@ export default function Home() {
       <Hero />
       <AIDemo />
       <Benefits />
+      <MobileApp />
       <SocialProof />
       <CTA />
       <Footer />
