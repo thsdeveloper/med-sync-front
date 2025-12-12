@@ -351,7 +351,9 @@ BEGIN
     INTO v_specialty_trend
     FROM pivoted;
 
-    -- Build efficiency trend (occupancy rate over time from shift_attendance)
+    -- Build efficiency trend (occupancy rate and SLA over time from shift_attendance)
+    -- Occupancy: (shifts with complete attendance / total accepted shifts) * 100
+    -- SLA: Average check-in delay in minutes (negative = early, positive = late)
     WITH date_series AS (
         SELECT
             generate_series(
@@ -364,7 +366,12 @@ BEGIN
         SELECT
             ds.period_start,
             COUNT(s.id) FILTER (WHERE s.status = 'accepted') as accepted_shifts,
-            COUNT(sa.id) FILTER (WHERE sa.check_in_at IS NOT NULL AND sa.check_out_at IS NOT NULL) as attended_shifts
+            COUNT(sa.id) FILTER (WHERE sa.check_in_at IS NOT NULL AND sa.check_out_at IS NOT NULL) as attended_shifts,
+            -- Calculate average check-in delay in minutes
+            -- EXTRACT(EPOCH FROM (check_in - scheduled_start)) / 60 gives delay in minutes
+            AVG(
+                EXTRACT(EPOCH FROM (sa.check_in_at - s.start_time)) / 60
+            ) FILTER (WHERE sa.check_in_at IS NOT NULL) as avg_delay_minutes
         FROM date_series ds
         LEFT JOIN shifts s ON DATE_TRUNC(v_trunc_unit, s.start_time) = ds.period_start
         LEFT JOIN shift_attendance sa ON sa.shift_id = s.id
@@ -385,10 +392,7 @@ BEGIN
                 (attended_shifts::NUMERIC / NULLIF(accepted_shifts, 0) * 100),
                 0
             ), 1),
-            'sla', ROUND(COALESCE(
-                100 - (attended_shifts::NUMERIC / NULLIF(accepted_shifts, 0) * 100),
-                100
-            ), 1)
+            'sla', ROUND(COALESCE(avg_delay_minutes, 0), 1)
         ) ORDER BY period_start
     )
     INTO v_efficiency_trend
@@ -491,6 +495,7 @@ COMMENT ON FUNCTION reports_dashboard_metrics IS 'Aggregates dashboard metrics w
 - Revenue: SUM of payment_records.total_amount
 - Glosa rate: Calculated from payment_records.calculation_metadata
 - Specialty trends: Time series grouped by date and specialty (dynamic bucketing)
+- Efficiency trends: Occupancy % and average check-in delay (SLA) in minutes
 - All metrics include period-over-period delta percentages
 Filters by specialty and facility (unit) parameters.
 Date bucketing: 7d/30d use daily, 90d/180d use weekly aggregation.';

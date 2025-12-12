@@ -256,7 +256,7 @@
         "Handles missing shift_attendance records gracefully",
         "Groups data by appropriate date intervals based on period"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F018",
