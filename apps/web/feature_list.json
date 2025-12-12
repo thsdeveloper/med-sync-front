@@ -186,7 +186,7 @@
         "Specialty trend data correctly reflects filtered results",
         "Handles NULL specialty values gracefully"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F013",

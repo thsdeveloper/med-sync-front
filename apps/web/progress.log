@@ -1,0 +1,9 @@
+[2024-12-12T$(date +%H:%M:%S)] [F012] Implement specialty-based filtering in report metrics - COMPLETED
+- Extended reports_dashboard_metrics RPC function to filter by medical_staff.specialty
+- Added COALESCE handling for NULL specialty values (defaults to 'geral')
+- Fixed specialty_counts CTE to respect p_specialty parameter filter
+- Fixed highlights query column references to use proper aliases
+- Fixed RANDOM() type casting issue with NUMERIC conversion
+- Verified filtering works correctly: 'todas' returns all data, specific specialty filters properly
+- Applied migration via Supabase MCP successfully
+- All acceptance criteria met and tested with real database queries

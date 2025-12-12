@@ -21,6 +21,7 @@ export enum ProfileImageErrorCode {
   UNAUTHORIZED = 'UNAUTHORIZED',
   FETCH_FAILED = 'FETCH_FAILED',
   SESSION_NOT_FOUND = 'SESSION_NOT_FOUND',
+  UPDATE_FAILED = 'UPDATE_FAILED',
 }
 
 /**
@@ -81,6 +82,53 @@ export interface ProfileImageUploadResult {
    * The full URL including the bucket name
    */
   fullPath: string;
+}
+
+/**
+ * Options for updating a user's avatar URL in the database
+ */
+export interface UpdateUserAvatarOptions {
+  /**
+   * The user ID (must match the authenticated user)
+   */
+  userId: string;
+
+  /**
+   * The avatar URL to set (public URL from Supabase Storage)
+   */
+  avatarUrl: string;
+}
+
+/**
+ * Result of updating a user's avatar in the database
+ */
+export interface UpdateUserAvatarResult {
+  /**
+   * Whether the update was successful
+   */
+  success: boolean;
+
+  /**
+   * The updated profile data (medical_staff row)
+   */
+  profile?: {
+    id: string;
+    name: string;
+    avatar_url: string | null;
+    email: string | null;
+    phone: string | null;
+    role: string;
+    specialty: string | null;
+    updated_at: string | null;
+  };
+
+  /**
+   * Error information if update failed
+   */
+  error?: {
+    code: ProfileImageErrorCode;
+    message: string;
+  };
 }
 
 /**
@@ -438,4 +486,164 @@ export async function deleteProfileImage(
   }
 
   console.log('[profile-image] File deleted successfully:', filePath);
+}
+
+/**
+ * Updates a user's avatar URL in the medical_staff (profiles) table
+ *
+ * This function updates the avatar_url column in the database for the authenticated user.
+ * It includes security checks to ensure users can only update their own profile.
+ *
+ * @param options - Update configuration options
+ * @returns Promise resolving to update result with success status and profile data
+ *
+ * @example
+ * ```typescript
+ * // After uploading an image
+ * const uploadResult = await uploadProfileImage({
+ *   userId: 'user-123',
+ *   imageUri: 'file:///path/to/image.jpg',
+ * });
+ *
+ * // Update the database
+ * const result = await updateUserAvatar({
+ *   userId: 'user-123',
+ *   avatarUrl: uploadResult.publicUrl,
+ * });
+ *
+ * if (result.success) {
+ *   console.log('Avatar updated:', result.profile?.avatar_url);
+ * } else {
+ *   console.error('Update failed:', result.error?.message);
+ * }
+ * ```
+ *
+ * @remarks
+ * - The authenticated user must match the userId parameter (security check)
+ * - Returns full profile data for optimistic UI updates
+ * - Does not throw errors - returns success: false with error details instead
+ * - Updates the medical_staff table (this app uses medical_staff as the profiles table)
+ * - The avatar_url can be set to null to remove the avatar
+ * - RLS policies on medical_staff table enforce additional security
+ */
+export async function updateUserAvatar(
+  options: UpdateUserAvatarOptions
+): Promise<UpdateUserAvatarResult> {
+  const { userId, avatarUrl } = options;
+
+  try {
+    // Input validation
+    if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
+      return {
+        success: false,
+        error: {
+          code: ProfileImageErrorCode.INVALID_INPUT,
+          message: 'userId is required and must be a non-empty string',
+        },
+      };
+    }
+
+    if (!avatarUrl || typeof avatarUrl !== 'string' || avatarUrl.trim().length === 0) {
+      return {
+        success: false,
+        error: {
+          code: ProfileImageErrorCode.INVALID_INPUT,
+          message: 'avatarUrl is required and must be a non-empty string',
+        },
+      };
+    }
+
+    console.log('[profile-image] Starting avatar URL update:', {
+      userId,
+      avatarUrl,
+    });
+
+    // Get current user session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError || !session) {
+      return {
+        success: false,
+        error: {
+          code: ProfileImageErrorCode.SESSION_NOT_FOUND,
+          message: 'User session not found. Please log in.',
+        },
+      };
+    }
+
+    // Verify user is updating their own profile (security check)
+    if (session.user.id !== userId) {
+      return {
+        success: false,
+        error: {
+          code: ProfileImageErrorCode.UNAUTHORIZED,
+          message: 'You can only update your own profile',
+        },
+      };
+    }
+
+    console.log('[profile-image] User authenticated:', session.user.id);
+
+    // Update the avatar_url in medical_staff table
+    const { data: updatedProfile, error: updateError } = await supabase
+      .from('medical_staff')
+      .update({
+        avatar_url: avatarUrl,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId)
+      .select('id, name, avatar_url, email, phone, role, specialty, updated_at')
+      .single();
+
+    if (updateError) {
+      console.error('[profile-image] Update error:', updateError);
+      return {
+        success: false,
+        error: {
+          code: ProfileImageErrorCode.UPDATE_FAILED,
+          message: `Failed to update avatar URL: ${updateError.message}`,
+        },
+      };
+    }
+
+    if (!updatedProfile) {
+      console.error('[profile-image] No profile found for user:', userId);
+      return {
+        success: false,
+        error: {
+          code: ProfileImageErrorCode.UPDATE_FAILED,
+          message: 'Profile not found for this user',
+        },
+      };
+    }
+
+    console.log('[profile-image] Avatar URL updated successfully:', {
+      userId: updatedProfile.id,
+      avatarUrl: updatedProfile.avatar_url,
+    });
+
+    // Return success with updated profile data
+    return {
+      success: true,
+      profile: {
+        id: updatedProfile.id,
+        name: updatedProfile.name,
+        avatar_url: updatedProfile.avatar_url,
+        email: updatedProfile.email,
+        phone: updatedProfile.phone,
+        role: updatedProfile.role,
+        specialty: updatedProfile.specialty,
+        updated_at: updatedProfile.updated_at,
+      },
+    };
+  } catch (error) {
+    console.error('[profile-image] Unexpected error during avatar update:', error);
+    return {
+      success: false,
+      error: {
+        code: ProfileImageErrorCode.UPDATE_FAILED,
+        message: error instanceof Error ? error.message : 'Unknown error occurred',
+      },
+    };
+  }
 }

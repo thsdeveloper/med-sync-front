@@ -1,6 +1,6 @@
 -- Migration: Fix specialty filtering in reports_dashboard_metrics RPC function
 -- Description: Ensures specialty trend data respects the p_specialty parameter
--- This replaces the entire function to add the missing specialty filter in the specialty_counts CTE
+-- Also fixes highlights query column references and RANDOM() type casting
 
 CREATE OR REPLACE FUNCTION reports_dashboard_metrics(
     p_period TEXT DEFAULT '30d',
@@ -298,22 +298,20 @@ BEGIN
     -- Build highlights (top performers by shift count)
     SELECT json_agg(
         json_build_object(
-            'id', row_num::TEXT,
-            'name', COALESCE(ms.name, 'N/A'),
-            'specialty', COALESCE(ms.specialty, 'Geral'),
-            'unit', COALESCE(f.name, 'N/A'),
+            'id', staff_name,
+            'name', staff_name,
+            'specialty', staff_specialty,
+            'unit', facility_name,
             'volume', shift_count,
-            'variation', ROUND(RANDOM() * 10, 1)
+            'variation', ROUND((RANDOM() * 10)::NUMERIC, 1)
         )
     )
     INTO v_highlights
     FROM (
         SELECT
-            ROW_NUMBER() OVER (ORDER BY COUNT(s.id) DESC) as row_num,
-            ms.id as staff_id,
-            ms.name,
-            ms.specialty,
-            f.name,
+            COALESCE(ms.name, 'N/A') as staff_name,
+            COALESCE(ms.specialty, 'Geral') as staff_specialty,
+            COALESCE(f.name, 'N/A') as facility_name,
             COUNT(s.id) as shift_count
         FROM shifts s
         LEFT JOIN medical_staff ms ON s.staff_id = ms.id
@@ -324,7 +322,7 @@ BEGIN
             AND (p_specialty = 'todas' OR LOWER(COALESCE(ms.specialty, 'geral')) = LOWER(p_specialty))
             AND (p_unit = 'todas' OR f.id::TEXT = p_unit)
             AND ms.id IS NOT NULL
-        GROUP BY ms.id, ms.name, ms.specialty, f.name
+        GROUP BY ms.name, ms.specialty, f.name
         ORDER BY shift_count DESC
         LIMIT 5
     ) top_performers;
