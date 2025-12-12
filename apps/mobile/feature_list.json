@@ -89,7 +89,7 @@
         "Circular crop mask applied for avatar format",
         "Error handling implemented for manipulation failures"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F005",

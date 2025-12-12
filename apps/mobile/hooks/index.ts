@@ -8,6 +8,7 @@ export { useRealtimeSwapRequests } from './use-realtime-swap-requests';
 // Feature hooks
 export { useShiftAttendance } from './use-shift-attendance';
 export { useImagePicker } from './useImagePicker';
+export { useImageCropper } from './useImageCropper';
 
 // Re-export types for convenience
 export type { ShiftWithRelations } from '@/lib/realtime-types';
@@ -16,3 +17,8 @@ export type {
   UseImagePickerOptions,
   UseImagePickerReturn
 } from './useImagePicker';
+export type {
+  CropResult,
+  UseImageCropperOptions,
+  UseImageCropperReturn
+} from './useImageCropper';

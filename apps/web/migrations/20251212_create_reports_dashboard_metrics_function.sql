@@ -221,32 +221,39 @@ BEGIN
                     ELSE INTERVAL '30 days'
                 END
             ) AS period_start
+    ),
+    period_stats AS (
+        SELECT
+            ds.period_start,
+            COUNT(s.id) as total_shifts,
+            COUNT(s.id) FILTER (WHERE s.status = 'accepted') as accepted_shifts
+        FROM date_series ds
+        LEFT JOIN shifts s ON s.start_time >= ds.period_start
+            AND s.start_time < ds.period_start + CASE
+                WHEN v_period_days <= 30 THEN INTERVAL '7 days'
+                ELSE INTERVAL '30 days'
+            END
+        LEFT JOIN medical_staff ms ON s.staff_id = ms.id
+        LEFT JOIN facilities f ON s.facility_id = f.id
+        WHERE (p_specialty = 'todas' OR LOWER(ms.specialty) = LOWER(p_specialty))
+            AND (p_unit = 'todas' OR f.id::TEXT = p_unit)
+        GROUP BY ds.period_start
     )
     SELECT json_agg(
         json_build_object(
             'label', TO_CHAR(period_start, 'Mon'),
             'ocupacao', ROUND(COALESCE(
-                (COUNT(s.id) FILTER (WHERE s.status = 'accepted')::NUMERIC / NULLIF(COUNT(s.id), 0) * 100),
+                (accepted_shifts::NUMERIC / NULLIF(total_shifts, 0) * 100),
                 0
             ), 1),
             'sla', ROUND(COALESCE(
-                100 - (COUNT(s.id) FILTER (WHERE s.status = 'accepted')::NUMERIC / NULLIF(COUNT(s.id), 0) * 100),
+                100 - (accepted_shifts::NUMERIC / NULLIF(total_shifts, 0) * 100),
                 0
             ), 1)
         ) ORDER BY period_start
     )
     INTO v_efficiency_trend
-    FROM date_series ds
-    LEFT JOIN shifts s ON s.start_time >= ds.period_start
-        AND s.start_time < ds.period_start + CASE
-            WHEN v_period_days <= 30 THEN INTERVAL '7 days'
-            ELSE INTERVAL '30 days'
-        END
-    LEFT JOIN medical_staff ms ON s.staff_id = ms.id
-    LEFT JOIN facilities f ON s.facility_id = f.id
-    WHERE (p_specialty = 'todas' OR LOWER(ms.specialty) = LOWER(p_specialty))
-        AND (p_unit = 'todas' OR f.id::TEXT = p_unit)
-    GROUP BY period_start;
+    FROM period_stats;
 
     -- Build financial trend (revenue over time)
     WITH date_series AS (
@@ -259,26 +266,32 @@ BEGIN
                     ELSE INTERVAL '30 days'
                 END
             ) AS period_start
+    ),
+    revenue_by_period AS (
+        SELECT
+            ds.period_start,
+            COALESCE(SUM(pr.total_amount), 0) as receita
+        FROM date_series ds
+        LEFT JOIN payment_records pr ON pr.shift_start_time >= ds.period_start
+            AND pr.shift_start_time < ds.period_start + CASE
+                WHEN v_period_days <= 30 THEN INTERVAL '7 days'
+                ELSE INTERVAL '30 days'
+            END
+        LEFT JOIN medical_staff ms ON pr.staff_id = ms.id
+        LEFT JOIN facilities f ON pr.facility_id = f.id
+        WHERE (p_specialty = 'todas' OR LOWER(ms.specialty) = LOWER(p_specialty))
+            AND (p_unit = 'todas' OR f.id::TEXT = p_unit)
+        GROUP BY ds.period_start
     )
     SELECT json_agg(
         json_build_object(
             'label', TO_CHAR(period_start, 'Mon'),
-            'receita', COALESCE(SUM(pr.total_amount), 0),
+            'receita', receita,
             'glosas', 0
         ) ORDER BY period_start
     )
     INTO v_financial_trend
-    FROM date_series ds
-    LEFT JOIN payment_records pr ON pr.shift_start_time >= ds.period_start
-        AND pr.shift_start_time < ds.period_start + CASE
-            WHEN v_period_days <= 30 THEN INTERVAL '7 days'
-            ELSE INTERVAL '30 days'
-        END
-    LEFT JOIN medical_staff ms ON pr.staff_id = ms.id
-    LEFT JOIN facilities f ON pr.facility_id = f.id
-    WHERE (p_specialty = 'todas' OR LOWER(ms.specialty) = LOWER(p_specialty))
-        AND (p_unit = 'todas' OR f.id::TEXT = p_unit)
-    GROUP BY period_start;
+    FROM revenue_by_period;
 
     -- Build highlights (top performers by shift count)
     SELECT json_agg(
