@@ -101,3 +101,31 @@
 - Verified division by zero handling: returns 0 when no accepted shifts exist
 - Verified with current data: 25 accepted shifts, 0% occupancy (0 complete attendances), -59.8 min SLA on 09/12
 - All acceptance criteria met and tested
+[2025-12-12T$(date +%H:%M:%S)] [F018] Generate top performers highlights from real data - COMPLETED
+- Replaced mock RANDOM() variation with real period-over-period calculation in highlights CTE
+- Implemented current_period_stats CTE: joins shifts with medical_staff and facilities, counts shifts per staff member
+- Implemented previous_period_stats CTE: same logic for previous equivalent period (v_start_date - period_length)
+- Implemented top_performers CTE: calculates variation percentage and orders by shift_count DESC LIMIT 5
+- Variation formula: ((current_count - previous_count) / NULLIF(previous_count, 0)) * 100
+- Returns 100% variation for staff with no previous period data (new performers)
+- Returns 0% variation when both periods have zero shifts
+- Query structure: current_period_stats LEFT JOIN previous_period_stats ON staff_id
+- Joins with medical_staff using INNER JOIN (requires valid staff_id)
+- Joins with facilities using LEFT JOIN (handles NULL facility_id gracefully)
+- Returns JSON structure matching HighlightRow interface:
+  * id: staff name
+  * name: staff name  
+  * specialty: staff specialty (COALESCE handles NULL → 'Geral')
+  * unit: facility name (COALESCE handles NULL → 'N/A')
+  * volume: shift count (integer)
+  * variation: percentage change (numeric, rounded to 1 decimal)
+- Respects all filters: date range, specialty (p_specialty), facility (p_unit)
+- Tested with real database queries:
+  * 30d 'todas'/'todas': Returns 5 performers (Amanda olveita: 8 shifts, Thiago Soares: 4 shifts, etc.)
+  * 30d 'cardio'/'todas': Returns 3 performers filtered by cardio specialty
+  * 7d period: Returns staff with shifts in last 7 days
+- All performers show 100% variation (indicating no shifts in previous period)
+- Applied migration 20251212_generate_top_performers_highlights.sql via Supabase MCP successfully
+- Fixed SQL syntax issue: moved ORDER BY and LIMIT into top_performers CTE subquery
+- All acceptance criteria verified and met
+
