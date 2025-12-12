@@ -401,3 +401,37 @@
 - Date formatting uses date-fns with pt-BR locale (full date format)
 - Build completed successfully with no TypeScript errors
 - Feature fully implemented and tested
+
+[2025-12-12T22:30:00] [F026] Create calendar filter controls component - COMPLETED
+- Installed shadcn/ui calendar and popover components (react-day-picker, @radix-ui/react-popover)
+- Created CalendarFilters molecule component in src/components/molecules/CalendarFilters.tsx
+- Implemented date range picker using Popover + Calendar with Portuguese locale (pt-BR)
+- Date picker uses react-day-picker in range mode with 2-month display
+- Dates formatted as DD/MM/YYYY using date-fns with pt-BR locale
+- Facility dropdown fetches dynamic options from /api/reports/filter-options endpoint
+- Specialty dropdown fetches dynamic options from same API endpoint
+- Both dropdowns include "Todas" option at the top (todas unidades, todas especialidades)
+- Filter options populated based on organization_id parameter
+- Implemented "Limpar filtros" button to reset all filters to default state
+- Clear button resets date range to empty, facility and specialty to 'todas'
+- Optional onClear callback prop for additional actions on clear
+- Component uses controlled state pattern: filters prop + onFiltersChange callback
+- CalendarFiltersState interface matches CalendarFilters type from calendar.ts
+- Updates properly trigger calendar data refetch through useShiftsCalendar hook
+- Styled consistently with ReportFilters component (Card wrapper, 3-column grid, same visual patterns)
+- Card uses border-dashed style matching existing filters
+- Header includes Funnel icon and "Filtros de calendário" title
+- All labels use muted-foreground with uppercase tracking-wide style
+- Created comprehensive examples file with 8 usage patterns:
+  * Basic usage with current month
+  * Custom initial filters (facility + specialty)
+  * With clear callback tracking
+  * Integration with calendar component
+  * Empty state handling
+  * Multiple organizations support
+  * OrganizationProvider integration
+  * Responsive/compact version
+- TypeScript interfaces include full JSDoc documentation
+- Graceful error handling with fallback to default options if API fails
+- Build completed successfully with no TypeScript errors
+- All acceptance criteria verified and met

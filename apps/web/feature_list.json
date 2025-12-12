@@ -385,7 +385,7 @@
         "Clear filters button resets all filters to default",
         "Filters properly update calendar data through hook"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F027",
