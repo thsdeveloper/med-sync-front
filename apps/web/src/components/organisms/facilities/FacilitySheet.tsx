@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
 import { z } from 'zod';
+import dynamic from 'next/dynamic';
 
 import { BaseSheet } from '@/components/molecules/BaseSheet';
 import {
@@ -22,10 +23,17 @@ import { Button } from '@/components/atoms/Button';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/ui/textarea';
 import { PaymentConfigSection } from '@/components/organisms/payments/PaymentConfigSection';
+import { AddressFormFields } from '@/components/molecules/AddressFormFields';
+
+// Dynamically import LocationPicker to avoid SSR issues with Leaflet
+const LocationPicker = dynamic(
+    () => import('@/components/molecules/LocationPicker').then(mod => mod.LocationPicker),
+    { ssr: false, loading: () => <div className="h-[400px] bg-muted animate-pulse rounded-md" /> }
+);
 
 import {
-    facilitySchema,
-    FacilityFormData,
+    facilityWithAddressSchema,
+    FacilityWithAddressFormData,
     Facility,
     FACILITY_TYPES,
     FACILITY_TYPE_LABELS,
@@ -39,7 +47,7 @@ interface FacilitySheetProps {
     facilityToEdit?: Facility | null;
 }
 
-// Extended schema combining facility + payment config
+// Extended schema combining facility + address + payment config
 const shiftDurationRateFormSchema = z.object({
     duration_hours: z.number(),
     fixed_rate: z.number(),
@@ -57,11 +65,11 @@ const paymentConfigWithRatesSchema = z.object({
     duration_rates: z.array(shiftDurationRateFormSchema),
 });
 
-const facilityWithPaymentSchema = facilitySchema.extend({
+const facilityWithAllDataSchema = facilityWithAddressSchema.extend({
     payment_config: paymentConfigWithRatesSchema.optional(),
 });
 
-type FacilityWithPaymentFormData = z.infer<typeof facilityWithPaymentSchema>;
+type FacilityWithAllDataFormData = z.infer<typeof facilityWithAllDataSchema>;
 
 const formatCnpj = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 14);
@@ -92,9 +100,10 @@ export function FacilitySheet({
 }: FacilitySheetProps) {
     const isEditing = !!facilityToEdit;
     const [isLoading, setIsLoading] = useState(false);
+    const [isSavingAddress, setIsSavingAddress] = useState(false);
 
-    const form = useForm<FacilityWithPaymentFormData>({
-        resolver: zodResolver(facilityWithPaymentSchema),
+    const form = useForm<FacilityWithAllDataFormData>({
+        resolver: zodResolver(facilityWithAllDataSchema),
         defaultValues: {
             name: '',
             type: 'clinic',
@@ -102,6 +111,18 @@ export function FacilitySheet({
             address: '',
             phone: '',
             active: true,
+            address_fields: {
+                street: '',
+                number: '',
+                complement: '',
+                neighborhood: '',
+                city: '',
+                state: '' as any,
+                postal_code: '',
+                country: 'Brasil',
+                latitude: null,
+                longitude: null,
+            },
             payment_config: {
                 payment_type: 'hourly',
                 hourly_rate: undefined,
@@ -117,7 +138,7 @@ export function FacilitySheet({
     });
 
     useEffect(() => {
-        const loadPaymentConfig = async () => {
+        const loadFacilityData = async () => {
             if (!facilityToEdit) return;
 
             try {
@@ -131,8 +152,43 @@ export function FacilitySheet({
                 if (configError && configError.code !== 'PGRST116') {
                     // PGRST116 = no rows returned
                     console.error('Error loading payment config:', configError);
-                    return;
                 }
+
+                // Fetch address data
+                const { data: addressData, error: addressError } = await supabase
+                    .from('facility_addresses')
+                    .select('*')
+                    .eq('facility_id', facilityToEdit.id)
+                    .single();
+
+                if (addressError && addressError.code !== 'PGRST116') {
+                    console.error('Error loading address:', addressError);
+                }
+
+                // Prepare address fields
+                const addressFields = addressData ? {
+                    street: addressData.street,
+                    number: addressData.number,
+                    complement: addressData.complement || '',
+                    neighborhood: addressData.neighborhood,
+                    city: addressData.city,
+                    state: addressData.state,
+                    postal_code: addressData.postal_code,
+                    country: addressData.country || 'Brasil',
+                    latitude: addressData.latitude,
+                    longitude: addressData.longitude,
+                } : {
+                    street: '',
+                    number: '',
+                    complement: '',
+                    neighborhood: '',
+                    city: '',
+                    state: '' as any,
+                    postal_code: '',
+                    country: 'Brasil',
+                    latitude: null,
+                    longitude: null,
+                };
 
                 if (paymentConfig) {
                     // Fetch duration rates if payment type is fixed_per_shift
@@ -165,8 +221,10 @@ export function FacilitySheet({
                         })),
                     });
                 }
+
+                form.setValue('address_fields', addressFields);
             } catch (error) {
-                console.error('Error loading payment config:', error);
+                console.error('Error loading facility data:', error);
             }
         };
 
@@ -179,6 +237,18 @@ export function FacilitySheet({
                     address: facilityToEdit.address || '',
                     phone: facilityToEdit.phone ? formatPhone(facilityToEdit.phone) : '',
                     active: facilityToEdit.active,
+                    address_fields: {
+                        street: '',
+                        number: '',
+                        complement: '',
+                        neighborhood: '',
+                        city: '',
+                        state: '' as any,
+                        postal_code: '',
+                        country: 'Brasil',
+                        latitude: null,
+                        longitude: null,
+                    },
                     payment_config: {
                         payment_type: 'hourly',
                         hourly_rate: undefined,
@@ -191,7 +261,7 @@ export function FacilitySheet({
                         duration_rates: [],
                     },
                 });
-                loadPaymentConfig();
+                loadFacilityData();
             } else {
                 form.reset({
                     name: '',
@@ -200,6 +270,18 @@ export function FacilitySheet({
                     address: '',
                     phone: '',
                     active: true,
+                    address_fields: {
+                        street: '',
+                        number: '',
+                        complement: '',
+                        neighborhood: '',
+                        city: '',
+                        state: '' as any,
+                        postal_code: '',
+                        country: 'Brasil',
+                        latitude: null,
+                        longitude: null,
+                    },
                     payment_config: {
                         payment_type: 'hourly',
                         hourly_rate: undefined,
@@ -216,7 +298,7 @@ export function FacilitySheet({
         }
     }, [isOpen, facilityToEdit, form]);
 
-    const onSubmit = async (data: FacilityWithPaymentFormData) => {
+    const onSubmit = async (data: FacilityWithAllDataFormData) => {
         setIsLoading(true);
         try {
             const facilityPayload = {
@@ -254,7 +336,92 @@ export function FacilitySheet({
                 facilityId = newFacility.id;
             }
 
-            // Step 2: Save/update payment config if provided
+            // Step 2: Save/update address data if provided
+            if (data.address_fields) {
+                const addressFields = data.address_fields;
+
+                // Check if any address field is filled
+                const hasAddressData =
+                    addressFields.street ||
+                    addressFields.number ||
+                    addressFields.neighborhood ||
+                    addressFields.city ||
+                    addressFields.state ||
+                    addressFields.postal_code;
+
+                if (hasAddressData) {
+                    setIsSavingAddress(true);
+                    try {
+                        // Get auth token
+                        const { data: { session } } = await supabase.auth.getSession();
+                        if (!session) {
+                            throw new Error('Não autenticado');
+                        }
+
+                        // Prepare address payload
+                        const addressPayload = {
+                            facility_id: facilityId,
+                            street: addressFields.street || '',
+                            number: addressFields.number || '',
+                            complement: addressFields.complement || '',
+                            neighborhood: addressFields.neighborhood || '',
+                            city: addressFields.city || '',
+                            state: addressFields.state || '',
+                            postal_code: addressFields.postal_code?.replace(/\D/g, '') || '',
+                            country: addressFields.country || 'Brasil',
+                            latitude: addressFields.latitude || null,
+                            longitude: addressFields.longitude || null,
+                        };
+
+                        // Check if address already exists
+                        const { data: existingAddress } = await supabase
+                            .from('facility_addresses')
+                            .select('id')
+                            .eq('facility_id', facilityId)
+                            .single();
+
+                        if (existingAddress) {
+                            // Update existing address via API
+                            const response = await fetch(`/api/facilities/${facilityId}/address`, {
+                                method: 'PATCH',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${session.access_token}`,
+                                },
+                                body: JSON.stringify(addressPayload),
+                            });
+
+                            if (!response.ok) {
+                                const errorData = await response.json();
+                                throw new Error(errorData.error || 'Erro ao atualizar endereço');
+                            }
+                        } else {
+                            // Create new address via API
+                            const response = await fetch(`/api/facilities/${facilityId}/address`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${session.access_token}`,
+                                },
+                                body: JSON.stringify(addressPayload),
+                            });
+
+                            if (!response.ok) {
+                                const errorData = await response.json();
+                                throw new Error(errorData.error || 'Erro ao salvar endereço');
+                            }
+                        }
+                    } catch (addressError: any) {
+                        console.error('Error saving address:', addressError);
+                        toast.error(addressError.message || 'Erro ao salvar endereço da unidade');
+                        // Don't throw - facility was saved successfully
+                    } finally {
+                        setIsSavingAddress(false);
+                    }
+                }
+            }
+
+            // Step 3: Save/update payment config if provided
             if (data.payment_config) {
                 const paymentConfigPayload = {
                     facility_id: facilityId,
@@ -307,7 +474,7 @@ export function FacilitySheet({
                     paymentConfigId = newConfig.id;
                 }
 
-                // Step 3: Insert duration rates if payment type is fixed_per_shift
+                // Step 4: Insert duration rates if payment type is fixed_per_shift
                 if (data.payment_config.payment_type === 'fixed_per_shift' &&
                     data.payment_config.duration_rates &&
                     data.payment_config.duration_rates.length > 0) {
@@ -441,18 +608,46 @@ export function FacilitySheet({
                         name="address"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Endereço Completo</FormLabel>
+                                <FormLabel>Endereço Completo (Legado - opcional)</FormLabel>
                                 <FormControl>
                                     <Textarea
                                         {...field}
-                                        rows={3}
-                                        placeholder="Rua, número, bairro, cidade - UF"
+                                        rows={2}
+                                        placeholder="Campo legado - use os campos de endereço abaixo"
                                     />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
                     />
+
+                    {/* Address Section */}
+                    <div className="space-y-4 rounded-lg border p-4">
+                        <div className="space-y-1">
+                            <h3 className="text-base font-semibold">Endereço Detalhado</h3>
+                            <p className="text-sm text-muted-foreground">
+                                Preencha o endereço completo da unidade (opcional)
+                            </p>
+                        </div>
+
+                        <AddressFormFields namePrefix="address_fields" />
+
+                        {/* Location Picker */}
+                        <div className="space-y-2 pt-2">
+                            <FormLabel>Localização no Mapa (opcional)</FormLabel>
+                            <p className="text-sm text-muted-foreground mb-2">
+                                Clique no mapa ou arraste o marcador para definir a localização exata
+                            </p>
+                            <LocationPicker
+                                latitude={form.watch('address_fields.latitude') || undefined}
+                                longitude={form.watch('address_fields.longitude') || undefined}
+                                onChange={(location) => {
+                                    form.setValue('address_fields.latitude', location.latitude || null);
+                                    form.setValue('address_fields.longitude', location.longitude || null);
+                                }}
+                            />
+                        </div>
+                    </div>
 
                     {/* Payment Configuration Section */}
                     <PaymentConfigSection control={form.control} />
@@ -481,14 +676,14 @@ export function FacilitySheet({
                     />
 
                     <div className="flex justify-end gap-4 pt-4">
-                        <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+                        <Button type="button" variant="outline" onClick={onClose} disabled={isLoading || isSavingAddress}>
                             Cancelar
                         </Button>
-                        <Button type="submit" disabled={isLoading}>
-                            {isLoading && (
+                        <Button type="submit" disabled={isLoading || isSavingAddress}>
+                            {(isLoading || isSavingAddress) && (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             )}
-                            {isEditing ? 'Salvar Alterações' : 'Cadastrar Unidade'}
+                            {isSavingAddress ? 'Salvando endereço...' : (isEditing ? 'Salvar Alterações' : 'Cadastrar Unidade')}
                         </Button>
                     </div>
                 </form>

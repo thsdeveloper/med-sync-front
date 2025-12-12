@@ -116,7 +116,7 @@
         "Error messages displayed for address validation failures",
         "Loading states shown during API calls"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F008",

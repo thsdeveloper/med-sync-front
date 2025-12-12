@@ -41,7 +41,86 @@ export const facilitySchema = z.object({
         .boolean(),
 });
 
+// CEP regex pattern - accepts both formats: XXXXX-XXX and XXXXXXXX
+const cepRegex = /^\d{5}-?\d{3}$/;
+
+// Brazilian state abbreviations (subset for validation)
+export const BRAZILIAN_STATES = [
+    'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
+    'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN',
+    'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
+] as const;
+
+// Address fields schema (optional for facility creation)
+export const facilityAddressFieldsSchema = z.object({
+    street: z
+        .string()
+        .min(3, 'Logradouro deve ter no mínimo 3 caracteres')
+        .max(255, 'Logradouro muito longo')
+        .optional()
+        .or(z.literal('')),
+    number: z
+        .string()
+        .max(20, 'Número muito longo')
+        .optional()
+        .or(z.literal('')),
+    complement: z
+        .string()
+        .max(100, 'Complemento muito longo')
+        .optional()
+        .or(z.literal('')),
+    neighborhood: z
+        .string()
+        .min(2, 'Bairro deve ter no mínimo 2 caracteres')
+        .max(100, 'Bairro muito longo')
+        .optional()
+        .or(z.literal('')),
+    city: z
+        .string()
+        .min(2, 'Cidade deve ter no mínimo 2 caracteres')
+        .max(100, 'Cidade muito longa')
+        .optional()
+        .or(z.literal('')),
+    state: z
+        .enum(BRAZILIAN_STATES, {
+            message: 'Selecione um estado válido',
+        })
+        .optional()
+        .or(z.literal('') as any),
+    postal_code: z
+        .string()
+        .refine(
+            (val) => !val || val === '' || cepRegex.test(val),
+            { message: 'CEP inválido. Use o formato XXXXX-XXX ou XXXXXXXX' }
+        )
+        .optional()
+        .or(z.literal('')),
+    country: z
+        .string()
+        .max(100, 'País muito longo')
+        .optional()
+        .or(z.literal('')),
+    latitude: z
+        .number()
+        .min(-90, 'Latitude deve estar entre -90 e 90')
+        .max(90, 'Latitude deve estar entre -90 e 90')
+        .optional()
+        .nullable(),
+    longitude: z
+        .number()
+        .min(-180, 'Longitude deve estar entre -180 e 180')
+        .max(180, 'Longitude deve estar entre -180 e 180')
+        .optional()
+        .nullable(),
+}).optional();
+
+// Extended facility schema with address fields
+export const facilityWithAddressSchema = facilitySchema.extend({
+    address_fields: facilityAddressFieldsSchema,
+});
+
 export type FacilityFormData = z.infer<typeof facilitySchema>;
+export type FacilityWithAddressFormData = z.infer<typeof facilityWithAddressSchema>;
 
 export type Facility = FacilityFormData & {
     id: string;
