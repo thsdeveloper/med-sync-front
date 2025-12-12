@@ -46,7 +46,7 @@
         "Latitude/longitude validated as optional numeric values within valid ranges",
         "TypeScript types exported for use in forms and API"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F003",
