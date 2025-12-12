@@ -18,3 +18,22 @@ Harness initialized in existing project on 2025-12-12
 - Applied unique constraint ensuring one address per facility
 - Migration successfully applied to Supabase production database
 - All 5 acceptance criteria verified and passing
+
+---
+
+[2025-12-12 14:56:30] [F002] Create address Zod validation schema - COMPLETED
+- Created comprehensive Zod schema in src/schemas/facility-address.schema.ts
+- Implemented CEP validation with flexible regex pattern /^\d{5}-?\d{3}$/ accepting both XXXXX-XXX and XXXXXXXX formats
+- Created Brazilian state enum (BRAZILIAN_STATES) with all 27 states including Federal District
+- Added BRAZILIAN_STATE_LABELS mapping for user-friendly state display
+- Implemented latitude validation: optional/nullable numeric values between -90 and 90
+- Implemented longitude validation: optional/nullable numeric values between -180 and 180
+- Validated all required address fields: street, number, neighborhood, city, state, postal_code, country
+- Made complement field optional to handle addresses without additional details
+- Exported TypeScript types: FacilityAddressFormData, CreateFacilityAddress, UpdateFacilityAddress, FacilityAddress
+- Created additional helper types: FacilityAddressDisplay for formatted address presentation
+- Added utility function formatAddress() to generate full, short, and city-state formatted strings
+- Added utility function formatCEP() to normalize CEP format with hyphen
+- Followed existing project patterns from facility.schema.ts and medical-staff.schema.ts
+- Build verified successfully with no TypeScript errors
+- All 5 acceptance criteria verified and passing
