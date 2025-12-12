@@ -486,3 +486,35 @@ MedSync Mobile initialized with Expo on 2025-12-12
   * Ready for frontend integration
 - Impact: Foundation for user profile image upload feature, enabling users to personalize their profiles with avatars
 
+---
+[2025-12-12] [F002] Add avatar_url column to profiles table schema - COMPLETED
+- Added database schema support for storing profile image URLs
+- Migration file created: supabase/migrations/20251212180000_add_avatar_url_to_medical_staff.sql
+  * Added nullable TEXT column 'avatar_url' to medical_staff table
+  * Column stores public URL to profile images in storage.profile-images bucket
+  * Added comprehensive documentation comment with URL format example
+  * Migration successfully applied to Supabase database (version 20251212200844)
+- Database schema implementation:
+  * Target table: public.medical_staff (app uses this as profiles table, not a separate profiles table)
+  * Column type: TEXT (nullable)
+  * Column allows NULL values for users without uploaded avatars
+  * Documented expected URL format: https://{project}.supabase.co/storage/v1/object/public/profile-images/{user_id}/avatar.jpg
+- TypeScript types generated and saved:
+  * Created lib/database.types.ts with complete Database type definitions
+  * Generated using Supabase MCP generate_typescript_types function
+  * Types include avatar_url field in medical_staff Row, Insert, and Update types
+  * Full type safety for all database tables, views, functions, and enums
+  * Over 1,700 lines of comprehensive TypeScript types
+- Verification completed:
+  * Column successfully added to medical_staff table
+  * Column configuration verified: data_type=text, is_nullable=YES, column_default=null
+  * Comment properly set on column with documentation
+  * Test query executed successfully on existing staff records (all show avatar_url as null)
+  * Migration registered in Supabase migrations list
+- Impact:
+  * Enables storage of profile image URLs in user profiles
+  * Foundation for upcoming profile image upload and display features (F003-F009)
+  * Maintains backward compatibility (nullable column, existing records unaffected)
+  * Proper type safety for TypeScript/React Native code
+  * Zero breaking changes to existing functionality
+
