@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Funnel, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,21 +20,32 @@ interface ReportFiltersProps {
     isRefreshing?: boolean;
 }
 
-const periodOptions = [
+interface FilterOption {
+    value: string;
+    label: string;
+}
+
+interface FacilityData {
+    id: string;
+    name: string;
+}
+
+const periodOptions: FilterOption[] = [
     { value: '7d', label: 'Últimos 7 dias' },
     { value: '30d', label: 'Últimos 30 dias' },
     { value: '90d', label: 'Últimos 90 dias' },
     { value: '180d', label: 'Últimos 6 meses' },
 ];
 
-const specialtyOptions = [
+// Fallback options in case API fails
+const defaultSpecialtyOptions: FilterOption[] = [
     { value: 'todas', label: 'Todas especialidades' },
     { value: 'clinica', label: 'Clínica geral' },
     { value: 'cardio', label: 'Cardiologia' },
     { value: 'pedia', label: 'Pediatria' },
 ];
 
-const unitOptions = [
+const defaultUnitOptions: FilterOption[] = [
     { value: 'todas', label: 'Todas unidades' },
     { value: 'paulista', label: 'Unidade Paulista' },
     { value: 'moema', label: 'Unidade Moema' },
@@ -41,6 +53,50 @@ const unitOptions = [
 ];
 
 export function ReportFilters({ filters, onFiltersChange, onRefresh, isRefreshing }: ReportFiltersProps) {
+    const [specialtyOptions, setSpecialtyOptions] = useState<FilterOption[]>(defaultSpecialtyOptions);
+    const [unitOptions, setUnitOptions] = useState<FilterOption[]>(defaultUnitOptions);
+
+    useEffect(() => {
+        // Fetch dynamic filter options from API
+        async function fetchFilterOptions() {
+            try {
+                const response = await fetch('/api/reports/filter-options');
+                if (!response.ok) {
+                    console.error('Failed to fetch filter options');
+                    return;
+                }
+
+                const result = await response.json();
+                if (result.ok && result.data) {
+                    // Build specialty options
+                    const dynamicSpecialties: FilterOption[] = [
+                        { value: 'todas', label: 'Todas especialidades' },
+                        ...result.data.specialties.map((specialty: string) => ({
+                            value: specialty,
+                            label: capitalize(specialty),
+                        })),
+                    ];
+                    setSpecialtyOptions(dynamicSpecialties);
+
+                    // Build facility/unit options
+                    const dynamicUnits: FilterOption[] = [
+                        { value: 'todas', label: 'Todas unidades' },
+                        ...result.data.facilities.map((facility: FacilityData) => ({
+                            value: facility.id,
+                            label: facility.name,
+                        })),
+                    ];
+                    setUnitOptions(dynamicUnits);
+                }
+            } catch (error) {
+                console.error('Error fetching filter options:', error);
+                // Keep using default/fallback options
+            }
+        }
+
+        fetchFilterOptions();
+    }, []);
+
     return (
         <Card className="border-dashed">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -117,4 +173,11 @@ export function ReportFilters({ filters, onFiltersChange, onRefresh, isRefreshin
     );
 }
 
+// Helper function to capitalize first letter of each word
+function capitalize(str: string): string {
+    return str
+        .split(' ')
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+}
 

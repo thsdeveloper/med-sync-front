@@ -284,7 +284,7 @@
         "ReportFilters component fetches options on mount",
         "Dropdowns populated with real facility names and specialties"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F020",
