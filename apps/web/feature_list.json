@@ -159,6 +159,146 @@
         "Edge cases handled gracefully with fallback values"
       ],
       "passes": true
+    },
+    {
+      "id": "F011",
+      "title": "Create Supabase RPC function for dashboard report metrics",
+      "type": "feature",
+      "description": "Create PostgreSQL function 'reports_dashboard_metrics' that aggregates real data from shifts, medical_staff, facilities, and payment_records tables. Function should accept parameters: p_period (text), p_specialty (text), p_unit (text/uuid). Return structure must match ReportMetricsBundle interface with summary metrics, specialty trends, efficiency trends, financial trends, and highlights based on actual database data.",
+      "acceptance_criteria": [
+        "PostgreSQL function reports_dashboard_metrics created with correct signature",
+        "Function queries shifts table grouped by date for trend data",
+        "Function calculates attendance volume from shifts by specialty",
+        "Function calculates financial metrics from payment_records table",
+        "Function returns JSON structure matching ReportMetricsBundle TypeScript interface"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F012",
+      "title": "Implement specialty-based filtering in report metrics",
+      "type": "feature",
+      "description": "Extend reports_dashboard_metrics RPC function to filter data by medical staff specialty. Query medical_staff table to filter shifts by staff specialty field. Handle 'todas' (all) option to return aggregated data across all specialties. Ensure specialty trend chart data is correctly filtered and grouped.",
+      "acceptance_criteria": [
+        "RPC function filters shifts by medical_staff.specialty when p_specialty != 'todas'",
+        "Specialty parameter properly joins shifts with medical_staff table",
+        "Returns aggregated data for all specialties when p_specialty = 'todas'",
+        "Specialty trend data correctly reflects filtered results",
+        "Handles NULL specialty values gracefully"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F013",
+      "title": "Implement facility-based filtering in report metrics",
+      "type": "feature",
+      "description": "Extend reports_dashboard_metrics RPC function to filter data by facility (unit). Query facilities table and filter shifts by facility_id. Handle 'todas' (all) option to return data across all facilities. Update highlights section to show top performers filtered by selected facility.",
+      "acceptance_criteria": [
+        "RPC function filters shifts by facility_id when p_unit != 'todas'",
+        "Facility parameter properly joins shifts with facilities table",
+        "Returns aggregated data for all facilities when p_unit = 'todas'",
+        "Highlights data reflects facility filtering",
+        "Validates facility_id exists in facilities table"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F014",
+      "title": "Calculate real summary metrics from database",
+      "type": "feature",
+      "description": "Implement summary metrics calculation in reports_dashboard_metrics function: total attendances from shifts count, average occupancy rate from shift_attendance, revenue from payment_records.total_amount sum, denial rate from payment_records. Calculate period-over-period deltas comparing current period with previous period of same length.",
+      "acceptance_criteria": [
+        "Total attendances calculated from shifts table count for period",
+        "Occupancy rate calculated from shift_attendance check-in/check-out data",
+        "Revenue sum calculated from payment_records.total_amount",
+        "Denial/glosa rate calculated from payment_records metadata or status",
+        "Delta percentages calculated comparing current vs previous period"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F015",
+      "title": "Generate specialty trend time series from shifts data",
+      "type": "feature",
+      "description": "Implement specialty trend chart data generation in RPC function. Query shifts joined with medical_staff, group by date and specialty. Generate time series data points with labels and counts for each specialty (geral, cardiologia, pediatria, etc). Handle dynamic date range based on period parameter (7d, 30d, 90d, 180d).",
+      "acceptance_criteria": [
+        "Shifts grouped by date using date_trunc based on period length",
+        "Data joined with medical_staff to get specialty field",
+        "Returns array of points with label and count per specialty",
+        "Handles all period options: 7d, 30d, 90d, 180d correctly",
+        "Date labels formatted appropriately for chart display"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F016",
+      "title": "Generate financial trend from payment records",
+      "type": "feature",
+      "description": "Implement financial trend calculation in RPC function. Query payment_records table grouped by date, calculate total revenue (sum of total_amount) and glosas/denials. Generate time series matching period parameter. Include weekend_bonus, night_shift_bonus, and holiday_bonus in revenue calculations.",
+      "acceptance_criteria": [
+        "Payment records grouped by date with proper date_trunc",
+        "Revenue calculated as sum of payment_records.total_amount",
+        "Glosas/denials extracted from payment metadata or calculated",
+        "Returns array with label, receita, and glosas fields",
+        "Handles cases where no payment records exist for dates"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F017",
+      "title": "Calculate efficiency metrics from attendance data",
+      "type": "feature",
+      "description": "Implement efficiency trend calculation in RPC function. Calculate occupancy rate from shift_attendance table (filled shifts / total shifts * 100). Calculate average SLA/wait time from shift timing data. Group by date to create time series for period. Handle cases where shift_attendance data is sparse.",
+      "acceptance_criteria": [
+        "Occupancy calculated as (shifts with attendance / total shifts) * 100",
+        "SLA calculated from average shift start delay or attendance metrics",
+        "Returns time series with label, ocupacao, and sla fields",
+        "Handles missing shift_attendance records gracefully",
+        "Groups data by appropriate date intervals based on period"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F018",
+      "title": "Generate top performers highlights from real data",
+      "type": "feature",
+      "description": "Implement highlights calculation in RPC function to show top performing medical staff. Query shifts joined with medical_staff and facilities, count shifts per staff member in period, calculate period-over-period variation. Return top 3-5 performers with name, specialty, unit, volume, and variation percentage.",
+      "acceptance_criteria": [
+        "Query returns top 3-5 medical staff by shift count in period",
+        "Joins with medical_staff for name and specialty",
+        "Joins with facilities for unit/facility name",
+        "Calculates variation comparing to previous period",
+        "Returns structure matching HighlightRow interface"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F019",
+      "title": "Update ReportFilters with dynamic facility and specialty options",
+      "type": "feature",
+      "description": "Create API endpoint /api/reports/filter-options that queries Supabase for distinct facilities and medical staff specialties. Update ReportFilters component to fetch and populate dropdown options dynamically. Replace hardcoded filter options with real data from database.",
+      "acceptance_criteria": [
+        "API route /api/reports/filter-options created",
+        "Endpoint queries facilities table for active facilities",
+        "Endpoint queries medical_staff for distinct specialties",
+        "ReportFilters component fetches options on mount",
+        "Dropdowns populated with real facility names and specialties"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F020",
+      "title": "Add organization-based RLS and filtering to reports",
+      "type": "feature",
+      "description": "Implement organization context filtering in reports. Update reports_dashboard_metrics to accept organization_id parameter. Apply RLS policies to ensure users only see data for their organization. Update frontend to pass current organization_id from OrganizationProvider context to API calls.",
+      "acceptance_criteria": [
+        "RPC function accepts p_organization_id parameter",
+        "All queries filtered by organization_id from shifts, facilities, medical_staff",
+        "Frontend passes organization_id from OrganizationProvider",
+        "RLS policies verified for all queried tables",
+        "Users cannot access reports from other organizations"
+      ],
+      "passes": false
     }
   ]
 }

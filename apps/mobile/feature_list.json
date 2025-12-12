@@ -75,7 +75,7 @@
         "useImagePicker hook created with permission request logic",
         "Permission denied scenario handled with user feedback"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F004",
