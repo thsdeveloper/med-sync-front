@@ -10,6 +10,8 @@
  */
 
 import { supabase } from './supabase';
+import * as FileSystem from 'expo-file-system';
+import { decode } from 'base64-arraybuffer';
 
 /**
  * Error codes for profile image operations
@@ -206,39 +208,53 @@ async function deleteOldAvatars(userId: string): Promise<void> {
 }
 
 /**
- * Converts an image URI to a Blob for upload
+ * Converts an image URI to an ArrayBuffer for upload
  *
- * This function handles both React Native file:// URIs and web URIs,
- * fetching the image data and converting it to a Blob suitable for
- * uploading to Supabase Storage.
+ * React Native's fetch API has incomplete Blob support for file:// URIs,
+ * resulting in empty uploads. This function uses the recommended pattern:
+ * file:// URI → base64 → ArrayBuffer, which works reliably in React Native.
  *
  * @param imageUri - The local URI of the image
- * @returns Promise resolving to a Blob
+ * @returns Promise resolving to an ArrayBuffer
  * @throws {ProfileImageError} If fetching or conversion fails
  *
+ * @see https://github.com/orgs/supabase/discussions/1268
  * @internal
  */
-async function imageUriToBlob(imageUri: string): Promise<Blob> {
+async function imageUriToArrayBuffer(imageUri: string): Promise<ArrayBuffer> {
   try {
-    console.log('[profile-image] Converting image URI to blob:', imageUri);
+    console.log('[profile-image] Converting image URI to ArrayBuffer:', imageUri);
 
-    const response = await fetch(imageUri);
+    // Step 1: Read file as base64 using expo-file-system (new API)
+    // This works reliably with file:// URIs from expo-image-manipulator
+    const file = new FileSystem.File(imageUri);
+    const base64 = await file.base64();
 
-    if (!response.ok) {
+    if (!base64 || base64.length === 0) {
       throw new ProfileImageError(
         ProfileImageErrorCode.FETCH_FAILED,
-        `Failed to fetch image: ${response.status} ${response.statusText}`
+        'File is empty or could not be read'
       );
     }
 
-    const blob = await response.blob();
+    console.log('[profile-image] Read file as base64, length:', base64.length);
 
-    console.log('[profile-image] Successfully converted to blob:', {
-      size: blob.size,
-      type: blob.type,
+    // Step 2: Decode base64 to ArrayBuffer
+    // This is what Supabase Storage expects for React Native
+    const arrayBuffer = decode(base64);
+
+    if (arrayBuffer.byteLength === 0) {
+      throw new ProfileImageError(
+        ProfileImageErrorCode.FETCH_FAILED,
+        'Converted ArrayBuffer is empty - file may be inaccessible'
+      );
+    }
+
+    console.log('[profile-image] Successfully converted to ArrayBuffer:', {
+      byteLength: arrayBuffer.byteLength,
     });
 
-    return blob;
+    return arrayBuffer;
   } catch (error) {
     if (error instanceof ProfileImageError) {
       throw error;
@@ -246,7 +262,7 @@ async function imageUriToBlob(imageUri: string): Promise<Blob> {
 
     throw new ProfileImageError(
       ProfileImageErrorCode.FETCH_FAILED,
-      'Failed to convert image URI to blob',
+      'Failed to convert image URI to ArrayBuffer',
       error
     );
   }
@@ -349,8 +365,8 @@ export async function uploadProfileImage(
     await deleteOldAvatars(userId);
   }
 
-  // Convert image URI to blob
-  const imageBlob = await imageUriToBlob(imageUri);
+  // Convert image URI to ArrayBuffer
+  const imageArrayBuffer = await imageUriToArrayBuffer(imageUri);
 
   // Generate unique filename with timestamp
   const timestamp = Date.now();
@@ -362,7 +378,7 @@ export async function uploadProfileImage(
   // Upload to Supabase Storage
   const { data: uploadData, error: uploadError } = await supabase.storage
     .from('profile-images')
-    .upload(filePath, imageBlob, {
+    .upload(filePath, imageArrayBuffer, {
       contentType: 'image/jpeg',
       cacheControl: '3600',
       upsert: false, // Don't overwrite existing files (timestamp ensures uniqueness)

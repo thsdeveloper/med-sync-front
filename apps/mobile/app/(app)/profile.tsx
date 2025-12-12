@@ -88,7 +88,7 @@ export default function ProfileScreen() {
               console.log('[ProfileScreen] Avatar upload complete, refreshing profile data');
               refreshStaff();
             }}
-            size={120}
+            size={160}
             color={staff.color || '#0066CC'}
             editable={true}
           />

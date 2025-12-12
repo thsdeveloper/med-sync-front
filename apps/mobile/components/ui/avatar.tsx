@@ -17,12 +17,16 @@ export function Avatar({ name, color = '#0066CC', size = 'md', style, imageUrl }
   // Show image if URL is provided and no error occurred
   const shouldShowImage = imageUrl && !imageError;
 
+  // If custom style is provided, use full width/height for image
+  const imageStyle = style ? styles.imageFull : [styles.image, styles[size]];
+  const textStyle = style ? styles.textCustom : [styles.text, styles[`text_${size}`]];
+
   return (
     <View style={[styles.avatar, styles[size], { backgroundColor: color }, style]}>
       {shouldShowImage ? (
         <Image
           source={{ uri: imageUrl }}
-          style={[styles.image, styles[size]]}
+          style={imageStyle}
           contentFit="cover"
           transition={200}
           onError={() => setImageError(true)}
@@ -31,7 +35,7 @@ export function Avatar({ name, color = '#0066CC', size = 'md', style, imageUrl }
           priority="high"
         />
       ) : (
-        <Text style={[styles.text, styles[`text_${size}`]]}>{initials}</Text>
+        <Text style={textStyle}>{initials}</Text>
       )}
     </View>
   );
@@ -54,6 +58,11 @@ const styles = StyleSheet.create({
   image: {
     borderRadius: 999,
   },
+  imageFull: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 999,
+  },
   sm: {
     width: 32,
     height: 32,
@@ -73,6 +82,11 @@ const styles = StyleSheet.create({
   text: {
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  textCustom: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 32,
   },
   text_sm: {
     fontSize: 12,

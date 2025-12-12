@@ -39,6 +39,7 @@ export type MedicalStaff = MedicalStaffFormData & {
     organization_id?: string | null;
     user_id?: string | null;
     auth_email?: string | null;
+    avatar_url?: string | null;
     created_at: string;
     updated_at: string;
 };

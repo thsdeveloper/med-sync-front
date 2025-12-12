@@ -279,18 +279,13 @@ export function ProfileAvatarUpload({
         activeOpacity={0.7}
         style={styles.avatarWrapper}
       >
-        {/* Avatar display - either image or initials */}
-        {avatarUrl ? (
-          <View style={[styles.imageContainer, { width: size, height: size }]}>
-            <View style={styles.imagePlaceholder}>
-              {/* TODO: Replace with Image component when implementing avatar image display */}
-              {/* For now, show initials as fallback */}
-              <Avatar name={userName} color={color} style={{ width: size, height: size }} />
-            </View>
-          </View>
-        ) : (
-          <Avatar name={userName} color={color} style={{ width: size, height: size }} />
-        )}
+        {/* Avatar display - shows image if URL exists, otherwise falls back to initials */}
+        <Avatar
+          name={userName}
+          color={color}
+          imageUrl={avatarUrl}
+          style={{ width: size, height: size }}
+        />
 
         {/* Loading overlay */}
         {isUploading && (
@@ -326,17 +321,6 @@ const styles = StyleSheet.create({
   },
   avatarWrapper: {
     position: 'relative',
-  },
-  imageContainer: {
-    borderRadius: 999,
-    overflow: 'hidden',
-    backgroundColor: '#E5E5E5',
-  },
-  imagePlaceholder: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   loadingOverlay: {
     position: 'absolute',
