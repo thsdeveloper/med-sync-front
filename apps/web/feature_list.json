@@ -130,7 +130,7 @@
         "New address created if facility has no existing address",
         "All form fields editable with proper validation"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F009",

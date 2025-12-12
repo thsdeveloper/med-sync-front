@@ -159,3 +159,30 @@ Harness initialized in existing project on 2025-12-12
   ✓ Marker dragging updates latitude/longitude in real-time
   ✓ Geocoding search box implemented for address lookup
   ✓ Component integrates with React Hook Form setValue/watch
+
+---
+
+[2025-12-12 20:30:00] [F007] Integrate address form into facility creation flow - COMPLETED
+- Extended shared facility.schema.ts with facilityAddressFieldsSchema and facilityWithAddressSchema for address validation
+- Added optional address_fields nested field to facility creation form with all Brazilian address fields
+- Integrated AddressFormFields molecule component with namePrefix="address_fields" for proper form nesting
+- Dynamically imported LocationPicker component to prevent SSR/build errors with Leaflet's window dependencies
+- Fixed import path to use direct import from AddressFormFields.tsx instead of molecules index to avoid SSR issues
+- Updated FacilitySheet.tsx form submission logic with two-step save process:
+  * Step 1: Save/update facility via Supabase direct query
+  * Step 2: Save/update address via API endpoints (POST for new, PATCH for existing)
+- Added isSavingAddress loading state separate from isLoading for granular UI feedback
+- Enhanced submit button to show "Salvando endereço..." text during address save operations
+- Implemented check for existing address to determine POST vs PATCH API call
+- Wrapped address section in styled border container with clear section heading and helper text
+- Added proper error handling with toast notifications for address save failures (non-blocking)
+- Form loads existing address data on edit and populates AddressFormFields and LocationPicker
+- LocationPicker receives latitude/longitude as controlled props and updates form via onChange callback
+- All address fields optional to maintain backward compatibility with facilities created before address feature
+- Build verified successfully with no TypeScript errors or SSR hydration issues
+- All 5 acceptance criteria verified and passing:
+  ✓ AddressFormFields component integrated into facility creation form with proper layout
+  ✓ LocationPicker component added with proper spacing, loading state, and instructions
+  ✓ Form submission saves complete address data including geolocation coordinates
+  ✓ Error messages displayed for address validation failures via Zod + FormMessage
+  ✓ Loading states shown during API calls (isLoading + isSavingAddress states)

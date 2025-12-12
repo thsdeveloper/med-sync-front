@@ -139,7 +139,41 @@ export function FacilitySheet({
 
     useEffect(() => {
         const loadFacilityData = async () => {
-            if (!facilityToEdit) return;
+            if (!facilityToEdit) {
+                // Reset form with empty values for new facility
+                form.reset({
+                    name: '',
+                    type: 'clinic',
+                    cnpj: '',
+                    address: '',
+                    phone: '',
+                    active: true,
+                    address_fields: {
+                        street: '',
+                        number: '',
+                        complement: '',
+                        neighborhood: '',
+                        city: '',
+                        state: '' as any,
+                        postal_code: '',
+                        country: 'Brasil',
+                        latitude: null,
+                        longitude: null,
+                    },
+                    payment_config: {
+                        payment_type: 'hourly',
+                        hourly_rate: undefined,
+                        night_shift_bonus_percent: 0,
+                        weekend_bonus_percent: 0,
+                        holiday_bonus_percent: 0,
+                        night_shift_start_hour: 22,
+                        night_shift_end_hour: 6,
+                        active: true,
+                        duration_rates: [],
+                    },
+                });
+                return;
+            }
 
             try {
                 // Fetch payment config
@@ -190,6 +224,19 @@ export function FacilitySheet({
                     longitude: null,
                 };
 
+                // Prepare payment config data
+                let paymentConfigData: any = {
+                    payment_type: 'hourly' as const,
+                    hourly_rate: undefined,
+                    night_shift_bonus_percent: 0,
+                    weekend_bonus_percent: 0,
+                    holiday_bonus_percent: 0,
+                    night_shift_start_hour: 22,
+                    night_shift_end_hour: 6,
+                    active: true,
+                    duration_rates: [],
+                };
+
                 if (paymentConfig) {
                     // Fetch duration rates if payment type is fixed_per_shift
                     let durationRates: any[] = [];
@@ -206,7 +253,7 @@ export function FacilitySheet({
                         }
                     }
 
-                    form.setValue('payment_config', {
+                    paymentConfigData = {
                         payment_type: paymentConfig.payment_type as 'hourly' | 'fixed_per_shift',
                         hourly_rate: paymentConfig.hourly_rate || undefined,
                         night_shift_bonus_percent: paymentConfig.night_shift_bonus_percent || 0,
@@ -219,17 +266,10 @@ export function FacilitySheet({
                             duration_hours: rate.duration_hours,
                             fixed_rate: rate.fixed_rate,
                         })),
-                    });
+                    };
                 }
 
-                form.setValue('address_fields', addressFields);
-            } catch (error) {
-                console.error('Error loading facility data:', error);
-            }
-        };
-
-        if (isOpen) {
-            if (facilityToEdit) {
+                // Reset form with all loaded data at once
                 form.reset({
                     name: facilityToEdit.name,
                     type: facilityToEdit.type,
@@ -237,64 +277,17 @@ export function FacilitySheet({
                     address: facilityToEdit.address || '',
                     phone: facilityToEdit.phone ? formatPhone(facilityToEdit.phone) : '',
                     active: facilityToEdit.active,
-                    address_fields: {
-                        street: '',
-                        number: '',
-                        complement: '',
-                        neighborhood: '',
-                        city: '',
-                        state: '' as any,
-                        postal_code: '',
-                        country: 'Brasil',
-                        latitude: null,
-                        longitude: null,
-                    },
-                    payment_config: {
-                        payment_type: 'hourly',
-                        hourly_rate: undefined,
-                        night_shift_bonus_percent: 0,
-                        weekend_bonus_percent: 0,
-                        holiday_bonus_percent: 0,
-                        night_shift_start_hour: 22,
-                        night_shift_end_hour: 6,
-                        active: true,
-                        duration_rates: [],
-                    },
+                    address_fields: addressFields,
+                    payment_config: paymentConfigData,
                 });
-                loadFacilityData();
-            } else {
-                form.reset({
-                    name: '',
-                    type: 'clinic',
-                    cnpj: '',
-                    address: '',
-                    phone: '',
-                    active: true,
-                    address_fields: {
-                        street: '',
-                        number: '',
-                        complement: '',
-                        neighborhood: '',
-                        city: '',
-                        state: '' as any,
-                        postal_code: '',
-                        country: 'Brasil',
-                        latitude: null,
-                        longitude: null,
-                    },
-                    payment_config: {
-                        payment_type: 'hourly',
-                        hourly_rate: undefined,
-                        night_shift_bonus_percent: 0,
-                        weekend_bonus_percent: 0,
-                        holiday_bonus_percent: 0,
-                        night_shift_start_hour: 22,
-                        night_shift_end_hour: 6,
-                        active: true,
-                        duration_rates: [],
-                    },
-                });
+            } catch (error) {
+                console.error('Error loading facility data:', error);
+                toast.error('Erro ao carregar dados da unidade');
             }
+        };
+
+        if (isOpen) {
+            loadFacilityData();
         }
     }, [isOpen, facilityToEdit, form]);
 
