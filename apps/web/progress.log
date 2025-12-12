@@ -79,3 +79,25 @@
 - Applied migration 20251212_generate_specialty_trend_time_series.sql via Supabase MCP successfully
 - All acceptance criteria met and tested with real database queries
 
+[2025-12-12T$(date +%H:%M:%S)] [F017] Calculate efficiency metrics from attendance data - COMPLETED
+- Updated efficiency_trend CTE in reports_dashboard_metrics RPC function
+- Implemented proper occupancy calculation: (attended_shifts / accepted_shifts) * 100
+- Attended shifts counted as those with BOTH check_in_at AND check_out_at timestamps
+- Implemented SLA calculation as average check-in delay in minutes
+- SLA formula: EXTRACT(EPOCH FROM (sa.check_in_at - s.start_time)) / 60
+- Negative SLA values indicate early check-in (e.g., -59.8 = ~1 hour early)
+- Positive SLA values indicate late check-in (e.g., +15.0 = 15 minutes late)
+- Groups data by date using same dynamic bucketing as other trends (7d/30d daily, 90d/180d weekly)
+- Handles sparse shift_attendance data gracefully via LEFT JOIN with COALESCE defaults to 0
+- Returns time series array with objects: {label: "DD/MM", ocupacao: number, sla: number}
+- Applied migration calculate_efficiency_metrics_from_attendance via Supabase MCP successfully
+- Updated function documentation to reflect SLA calculation method
+- Tested with real database queries across all periods:
+  * 7d period: 8 daily data points (05/12 to 12/12)
+  * 30d period: 31 daily data points
+  * 90d period: 14 weekly data points (08/09 to 08/12)
+  * 180d period: 27 weekly data points
+- Verified data structure: array of objects with string label, numeric ocupacao, numeric sla
+- Verified division by zero handling: returns 0 when no accepted shifts exist
+- Verified with current data: 25 accepted shifts, 0% occupancy (0 complete attendances), -59.8 min SLA on 09/12
+- All acceptance criteria met and tested

@@ -270,7 +270,7 @@
         "Calculates variation comparing to previous period",
         "Returns structure matching HighlightRow interface"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F019",
