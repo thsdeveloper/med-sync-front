@@ -4,3 +4,17 @@
 ---
 
 Harness initialized in existing project on 2025-12-12
+
+---
+
+[2025-12-12 19:00:00] [F001] Create address database schema and migration - COMPLETED
+- Created facility_addresses table with comprehensive address fields
+- Implemented all required fields: street, number, complement, neighborhood, city, state, postal_code, country
+- Added geolocation support with latitude (NUMERIC 10,8) and longitude (NUMERIC 11,8)
+- Established foreign key relationship to facilities table with CASCADE delete
+- Created performance indexes: facility_id, location (lat/lng), city, state, postal_code
+- Implemented RLS policies for organization-level secure access (admins can manage, users/staff can view)
+- Added auto-update trigger for updated_at timestamp
+- Applied unique constraint ensuring one address per facility
+- Migration successfully applied to Supabase production database
+- All 5 acceptance criteria verified and passing
