@@ -466,3 +466,26 @@
   ✅ Organization-based filtering enforced (organizationId prop required, RLS enforced via API)
   ✅ Page responsive and matches dashboard design patterns (consistent with reports page)
 
+[2025-12-12T$(date +%H:%M:%S)] [F028] Add calendar navigation to dashboard menu - COMPLETED
+- Updated AppSidebar component to support role-based navigation filtering
+- Imported CalendarDays icon from Lucide React for calendar navigation item
+- Created NavItem TypeScript type with optional requiresRole property: ('owner' | 'admin')[]
+- Renamed existing "Escalas" navigation item to "Calendário de Escalas"
+- Changed navigation icon from CalendarCheck2 to CalendarDays
+- Added requiresRole: ['owner', 'admin'] to calendar navigation item configuration
+- Implemented visibleNavItems computed value using useMemo to filter navigation based on activeRole
+- Filter logic: if no requiresRole specified, show to everyone; if requiresRole specified, only show if user's role matches
+- Members (role='member') will NOT see the calendar navigation link
+- Owners and admins (role='owner' or role='admin') WILL see the calendar navigation link
+- Updated SEGMENT_TITLES in dashboard/layout.tsx to change breadcrumb from "Escalas" to "Calendário de Escalas"
+- Active route highlighting already working correctly via existing isActive() function matching pathname.startsWith('/dashboard/escalas')
+- Calendar navigation positioned logically after "Visão Geral" and before "Trocas" in the "Gestão" section
+- Fixed TypeScript type error by casting activeRole to 'owner' | 'admin' in includes() check
+- Build completed successfully with no TypeScript errors
+- All acceptance criteria verified and met:
+  ✅ Calendar navigation link added to dashboard menu
+  ✅ CalendarDays icon from Lucide React used
+  ✅ Link only visible to users with owner or admin role (not members)
+  ✅ Active route highlighting works correctly for /dashboard/escalas route
+  ✅ Link positioned logically in menu structure (in "Gestão" section, after "Visão Geral", before "Trocas")
+
