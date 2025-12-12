@@ -89,3 +89,39 @@ Harness initialized in existing project on 2025-12-12
 - Build verified successfully - no TypeScript errors, no SSR hydration errors
 - Demo page (/map-demo) built and deployed successfully
 - All 5 acceptance criteria verified and passing
+
+---
+
+[2025-12-12 19:15:00] [F005] Create AddressFormFields component with all address inputs - COMPLETED
+- Created comprehensive AddressFormFields molecule component at src/components/molecules/AddressFormFields.tsx
+- Implemented all required address input fields following Brazilian address standards:
+  * postal_code (CEP) with automatic XXXXX-XXX mask formatting
+  * street (logradouro) - text input
+  * number - text input
+  * complement - optional text input
+  * neighborhood (bairro) - text input
+  * city (cidade) - text input
+  * state (estado) - dropdown with all 27 Brazilian states
+  * country (país) - text input with default "Brasil"
+- Integrated with React Hook Form using useFormContext for seamless form state management
+- Created formatCEP() utility function to apply CEP mask (XXXXX-XXX format)
+- Implemented ViaCEP API integration for automatic address auto-fill:
+  * fetchAddressFromCEP() async function for API calls
+  * 500ms debounce to minimize API requests
+  * Auto-fills street, neighborhood, city, state, and complement fields
+  * Loading indicator shown during API fetch
+  * Graceful error handling for invalid CEPs or network issues
+- Populated state dropdown with all 27 Brazilian states using BRAZILIAN_STATES enum and BRAZILIAN_STATE_LABELS mapping
+- Full TypeScript typing using FacilityAddressFormData from facility-address.schema.ts
+- Implemented responsive grid layout for optimal field arrangement (side-by-side for street/number and city/state)
+- Added support for nested form structures via optional namePrefix prop
+- Followed existing project patterns using Form, FormField, FormControl, FormItem, FormLabel, FormMessage components
+- Created comprehensive JSDoc documentation with usage examples for both simple and nested form scenarios
+- Created src/components/molecules/index.ts for centralized component exports
+- Build verified successfully with no TypeScript errors
+- All 5 acceptance criteria verified and passing:
+  ✓ AddressFormFields component created with all required input fields
+  ✓ React Hook Form integration implemented with proper typing
+  ✓ Brazilian state dropdown populated with all 27 states
+  ✓ CEP input mask applied (XXXXX-XXX format)
+  ✓ ViaCEP API integration auto-fills address fields on valid CEP
