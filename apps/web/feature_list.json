@@ -200,7 +200,7 @@
         "Highlights data reflects facility filtering",
         "Validates facility_id exists in facilities table"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F014",

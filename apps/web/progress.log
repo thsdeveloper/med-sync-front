@@ -1,3 +1,14 @@
+[2024-12-12T17:32:52] [F013] Implement facility-based filtering in report metrics - COMPLETED
+- Added facility_id validation to reports_dashboard_metrics RPC function
+- Validates facility exists in facilities table when p_unit != 'todas'
+- Raises helpful exception with hint when invalid facility_id is provided
+- Confirmed facility filtering already working correctly across all queries (shifts, payment_records, trends, highlights)
+- Added comprehensive documentation comments explaining facility filtering logic
+- Tested all scenarios: 'todas' (all facilities), specific facility_id, invalid facility_id, combined specialty+facility filters
+- Verified highlights section correctly shows only staff from selected facility
+- Applied migration via Supabase MCP successfully
+- All acceptance criteria met and tested with real database queries
+
 [2024-12-12T$(date +%H:%M:%S)] [F012] Implement specialty-based filtering in report metrics - COMPLETED
 - Extended reports_dashboard_metrics RPC function to filter by medical_staff.specialty
 - Added COALESCE handling for NULL specialty values (defaults to 'geral')
