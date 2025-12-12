@@ -145,7 +145,7 @@
         "Profile data refreshed after successful upload",
         "Error scenarios display appropriate user feedback"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F009",
