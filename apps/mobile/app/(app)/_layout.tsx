@@ -36,6 +36,7 @@ export default function AppLayout() {
           presentation: 'modal',
           headerShown: true,
           title: 'Solicitação de Troca',
+          headerBackTitle: 'Voltar',
         }}
       />
       <Stack.Screen
@@ -43,6 +44,7 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           title: 'Conversa',
+          headerBackTitle: 'Voltar',
         }}
       />
       <Stack.Screen
@@ -50,6 +52,7 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           title: 'Meu Perfil',
+          headerBackTitle: 'Voltar',
         }}
       />
     </Stack>

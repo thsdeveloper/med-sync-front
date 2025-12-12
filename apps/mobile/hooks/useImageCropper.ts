@@ -105,59 +105,11 @@ export function useImageCropper(): UseImageCropperReturn {
       setError(null);
 
       try {
-        // Step 1: Get image info to determine dimensions
-        const imageInfo = await ImageManipulator.manipulateAsync(
-          imageUri,
-          [], // No transformations, just getting info
-          { compress: 1, format: ImageManipulator.SaveFormat.JPEG }
-        );
-
-        const { width: originalWidth, height: originalHeight } = imageInfo;
-
-        console.log(
-          `[useImageCropper] Original image dimensions: ${originalWidth}x${originalHeight}`
-        );
-
-        // Step 2: Calculate crop parameters for center square
-        // We want to extract the largest possible square from the center of the image
-        const cropSize = Math.min(originalWidth, originalHeight);
-
-        // Calculate origin point to center the crop
-        const originX = (originalWidth - cropSize) / 2;
-        const originY = (originalHeight - cropSize) / 2;
-
-        console.log(
-          `[useImageCropper] Crop parameters: size=${cropSize}, origin=(${originX}, ${originY})`
-        );
-
-        // Step 3: Apply transformations
-        const transformations: ImageManipulator.Action[] = [];
-
-        // Only crop if image is not already square
-        if (originalWidth !== originalHeight) {
-          transformations.push({
-            crop: {
-              originX,
-              originY,
-              width: cropSize,
-              height: cropSize,
-            },
-          });
-        }
-
-        // Always resize to target dimensions for consistency
-        // This ensures all avatars are exactly the same size
-        transformations.push({
-          resize: {
-            width: targetSize,
-            height: targetSize,
-          },
-        });
-
-        // Step 4: Execute manipulation
+        // ✅ PERFORMANCE OPTIMIZATION: Assume image picker already cropped to 1:1
+        // Just resize to target size - no need to get dimensions or crop again
         const result = await ImageManipulator.manipulateAsync(
           imageUri,
-          transformations,
+          [{ resize: { width: targetSize, height: targetSize } }],
           {
             compress: quality,
             format: ImageManipulator.SaveFormat.JPEG,
@@ -165,7 +117,7 @@ export function useImageCropper(): UseImageCropperReturn {
         );
 
         console.log(
-          `[useImageCropper] Cropping successful: ${result.width}x${result.height}`
+          `[useImageCropper] Resizing successful: ${result.width}x${result.height}`
         );
 
         // Validate result

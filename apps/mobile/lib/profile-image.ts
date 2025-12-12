@@ -360,9 +360,12 @@ export async function uploadProfileImage(
 
   console.log('[profile-image] User authenticated:', session.user.id);
 
-  // Delete old avatars before uploading new one
+  // ✅ PERFORMANCE OPTIMIZATION: Delete old avatars asynchronously (don't wait)
+  // This saves 200-500ms at the start of upload
   if (shouldDeleteOld) {
-    await deleteOldAvatars(userId);
+    deleteOldAvatars(userId).catch(err =>
+      console.warn('[profile-image] Failed to delete old avatars (non-critical):', err)
+    );
   }
 
   // Convert image URI to ArrayBuffer

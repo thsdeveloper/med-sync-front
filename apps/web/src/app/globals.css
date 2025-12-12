@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "leaflet/dist/leaflet.css";
+@import "react-big-calendar/lib/css/react-big-calendar.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -231,4 +232,226 @@
 
 .leaflet-popup-tip-container {
   z-index: 1;
+}
+
+/* React Big Calendar Custom Styles */
+.calendar-wrapper {
+  font-family: var(--font-sans);
+}
+
+.rbc-calendar {
+  font-family: var(--font-sans);
+}
+
+/* Calendar toolbar */
+.rbc-toolbar {
+  @apply flex flex-wrap items-center justify-between gap-4 mb-4 pb-4 border-b border-border;
+}
+
+.rbc-toolbar button {
+  @apply px-4 py-2 rounded-md text-sm font-medium transition-colors;
+  @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
+  @apply border border-border;
+}
+
+.rbc-toolbar button:active,
+.rbc-toolbar button.rbc-active {
+  @apply bg-primary text-primary-foreground;
+}
+
+.rbc-toolbar button:focus {
+  @apply outline-none ring-2 ring-ring ring-offset-2;
+}
+
+.rbc-toolbar-label {
+  @apply text-lg font-semibold text-foreground;
+}
+
+/* Month view */
+.rbc-month-view {
+  @apply border border-border rounded-md overflow-hidden;
+}
+
+.rbc-month-header {
+  @apply bg-muted;
+}
+
+.rbc-header {
+  @apply py-3 px-2 text-sm font-semibold text-muted-foreground border-b border-border;
+}
+
+.rbc-header + .rbc-header {
+  @apply border-l border-border;
+}
+
+.rbc-month-row {
+  @apply border-b border-border;
+}
+
+.rbc-day-bg {
+  @apply border-r border-border;
+}
+
+.rbc-day-bg:hover {
+  @apply bg-accent;
+}
+
+.rbc-off-range-bg {
+  @apply bg-muted/30;
+}
+
+.rbc-today {
+  @apply bg-primary/10;
+}
+
+.rbc-date-cell {
+  @apply p-2 text-sm;
+}
+
+.rbc-now .rbc-button-link {
+  @apply font-bold text-primary;
+}
+
+.rbc-off-range {
+  @apply text-muted-foreground/50;
+}
+
+/* Event styling */
+.rbc-event {
+  @apply rounded-md text-xs font-medium;
+  @apply cursor-pointer transition-opacity;
+}
+
+.rbc-event:hover {
+  @apply opacity-90;
+}
+
+.rbc-event.rbc-selected {
+  @apply ring-2 ring-ring ring-offset-1;
+}
+
+.rbc-event-label {
+  @apply text-xs font-normal;
+}
+
+.rbc-event-content {
+  @apply overflow-hidden text-ellipsis whitespace-nowrap;
+}
+
+.rbc-show-more {
+  @apply text-xs text-primary hover:underline cursor-pointer;
+}
+
+/* Week and Day views */
+.rbc-time-view {
+  @apply border border-border rounded-md overflow-hidden;
+}
+
+.rbc-time-header {
+  @apply bg-muted;
+}
+
+.rbc-time-header-content {
+  @apply border-l border-border;
+}
+
+.rbc-time-content {
+  @apply border-t border-border;
+}
+
+.rbc-time-column {
+  @apply border-l border-border;
+}
+
+.rbc-timeslot-group {
+  @apply border-b border-border/50;
+}
+
+.rbc-time-slot {
+  @apply text-xs text-muted-foreground;
+}
+
+.rbc-current-time-indicator {
+  @apply bg-destructive;
+}
+
+.rbc-time-header-gutter {
+  @apply bg-muted;
+}
+
+.rbc-label {
+  @apply text-xs text-muted-foreground px-2;
+}
+
+.rbc-allday-cell {
+  @apply bg-muted/50 border-b border-border;
+}
+
+/* Agenda view */
+.rbc-agenda-view {
+  @apply border border-border rounded-md overflow-hidden;
+}
+
+.rbc-agenda-view table {
+  @apply w-full;
+}
+
+.rbc-agenda-view table thead tr {
+  @apply bg-muted;
+}
+
+.rbc-agenda-view table thead tr th {
+  @apply py-3 px-4 text-left text-sm font-semibold text-muted-foreground border-b border-border;
+}
+
+.rbc-agenda-view table tbody tr {
+  @apply border-b border-border hover:bg-accent transition-colors;
+}
+
+.rbc-agenda-view table tbody tr td {
+  @apply py-3 px-4 text-sm;
+}
+
+.rbc-agenda-date-cell {
+  @apply font-medium;
+}
+
+.rbc-agenda-time-cell {
+  @apply text-muted-foreground;
+}
+
+.rbc-agenda-event-cell {
+  @apply font-normal;
+}
+
+/* Popup overlay */
+.rbc-overlay {
+  @apply bg-popover text-popover-foreground border border-border rounded-md shadow-lg;
+  @apply z-50 p-2;
+}
+
+.rbc-overlay-header {
+  @apply text-sm font-semibold mb-2 pb-2 border-b border-border;
+}
+
+/* Selection */
+.rbc-slot-selection {
+  @apply bg-primary/20 border border-primary;
+}
+
+/* Dark mode adjustments */
+.dark .rbc-off-range-bg {
+  @apply bg-slate-850;
+}
+
+.dark .rbc-today {
+  @apply bg-primary/20;
+}
+
+.dark .rbc-event {
+  @apply shadow-sm;
+}
+
+.dark .rbc-current-time-indicator {
+  @apply bg-destructive/80;
 }

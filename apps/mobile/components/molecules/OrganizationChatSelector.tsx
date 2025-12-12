@@ -87,6 +87,7 @@ export function OrganizationChatSelector({
         name={item.name}
         color="#0066CC"
         size="lg"
+        imageUrl={item.logo_url || null}
       />
       <View style={styles.organizationInfo}>
         <Text style={styles.organizationName}>{item.name}</Text>
