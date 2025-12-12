@@ -3,6 +3,7 @@ export { AddressFormFields } from './AddressFormFields';
 export { BaseSheet } from './BaseSheet';
 export { ColorPicker } from './ColorPicker';
 export { CRMInput } from './CRMInput';
+export { FacilityLocationDisplay } from './FacilityLocationDisplay';
 export { FeatureCard } from './FeatureCard';
 export { FormSection } from './FormSection';
 export { InputField } from './InputField';
