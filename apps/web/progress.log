@@ -151,3 +151,25 @@
 - Verified API route appears in Next.js build output as dynamic route
 - All acceptance criteria met and tested with real database queries
 
+[2025-12-12T18:15:02-03:00] [F020] Add organization-based RLS and filtering to reports - COMPLETED
+- Created migration 20251212_add_organization_filtering_to_reports.sql to add p_organization_id parameter to reports_dashboard_metrics RPC function
+- Added organization_id validation: raises exception if NULL or non-existent organization_id is provided
+- Updated facility validation to check facility belongs to the specified organization
+- Added organization_id filtering to ALL database queries: shifts, payment_records, shift_attendance, medical_staff, facilities
+- Applied organization filter with `s.organization_id = p_organization_id` to current and previous period calculations
+- Applied organization filter to all CTEs: summary_metrics, specialty_trend, efficiency_trend, financial_trend, highlights
+- Updated /api/reports/filter-options API route to accept organization_id query parameter (required)
+- Filter facilities by `.eq('organization_id', organizationId)` in API endpoint
+- Filter medical_staff specialties using staff_organizations relationship with `.eq('staff_organizations.organization_id', organizationId)`
+- Updated ReportFilters component to accept organizationId prop and pass it to filter-options API
+- Updated reports page.tsx to import and use useOrganization() hook from OrganizationProvider
+- Pass activeOrganization.id to reports_dashboard_metrics RPC call as p_organization_id parameter
+- Pass activeOrganization.id to ReportFilters component as organizationId prop
+- Added early return in loadMetrics if no activeOrganization is selected
+- Verified existing RLS policies on all queried tables (shifts, facilities, medical_staff, shift_attendance, payment_records, organizations)
+- RLS policies enforce organization-based filtering: users can only view data from organizations they belong to
+- Tested function with valid organization_id: successfully returns filtered data (28 accepted shifts for test org)
+- Tested function with NULL organization_id: correctly rejects with exception "organization_id parameter is required"
+- Applied migration via Supabase MCP successfully (dropped old function signature and created new one with 4 parameters)
+- Build completed successfully with no TypeScript errors
+- All acceptance criteria met and verified

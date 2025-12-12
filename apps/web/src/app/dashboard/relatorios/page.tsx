@@ -12,6 +12,7 @@ import { ReportAreaChart } from '@/components/organisms/reports/ReportAreaChart'
 import { ReportHighlights } from '@/components/organisms/reports/ReportHighlights';
 import { ReportEmailSheet } from '@/components/organisms/reports/ReportEmailSheet';
 import { useReportExport } from '@/hooks/useReportExport';
+import { useOrganization } from '@/providers/OrganizationProvider';
 import {
     DEFAULT_REPORT_FILTERS,
     ReportFiltersState,
@@ -30,6 +31,7 @@ const periodLabels: Record<ReportFiltersState['period'], string> = {
 };
 
 export default function ReportsPage() {
+    const { activeOrganization } = useOrganization();
     const [filters, setFilters] = useState<ReportFiltersState>(DEFAULT_REPORT_FILTERS);
     const [metrics, setMetrics] = useState<ReportMetricsBundle>(() => generateReportMetrics(DEFAULT_REPORT_FILTERS));
     const [isLoading, setIsLoading] = useState(false);
@@ -48,12 +50,19 @@ export default function ReportsPage() {
     };
 
     const loadMetrics = useCallback(async () => {
+        if (!activeOrganization?.id) {
+            console.warn('No active organization selected');
+            setMetrics(generateReportMetrics(filters));
+            return;
+        }
+
         setIsLoading(true);
         try {
             const { data, error } = await supabase.rpc('reports_dashboard_metrics', {
                 p_period: filters.period,
                 p_specialty: filters.specialty,
                 p_unit: filters.unit,
+                p_organization_id: activeOrganization.id,
             });
 
             if (error) {
@@ -71,7 +80,7 @@ export default function ReportsPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [filters]);
+    }, [filters, activeOrganization?.id]);
 
     useEffect(() => {
         loadMetrics();
@@ -173,7 +182,13 @@ export default function ReportsPage() {
                     }
                 />
 
-                <ReportFilters filters={filters} onFiltersChange={handleFiltersChange} onRefresh={loadMetrics} isRefreshing={isLoading} />
+                <ReportFilters
+                    filters={filters}
+                    onFiltersChange={handleFiltersChange}
+                    onRefresh={loadMetrics}
+                    isRefreshing={isLoading}
+                    organizationId={activeOrganization?.id}
+                />
 
                 <section aria-busy={isLoading ? 'true' : 'false'}>
                     <ReportSummaryCards metrics={metrics.summary} />

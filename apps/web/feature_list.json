@@ -298,7 +298,7 @@
         "RLS policies verified for all queried tables",
         "Users cannot access reports from other organizations"
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }

@@ -1,13 +1,25 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
     try {
-        // Query active facilities
+        // Extract organization_id from query parameters
+        const { searchParams } = new URL(request.url);
+        const organizationId = searchParams.get('organization_id');
+
+        if (!organizationId) {
+            return NextResponse.json(
+                { ok: false, message: 'organization_id parameter is required' },
+                { status: 400 }
+            );
+        }
+
+        // Query active facilities filtered by organization_id
         const { data: facilities, error: facilitiesError } = await supabase
             .from('facilities')
             .select('id, name')
             .eq('active', true)
+            .eq('organization_id', organizationId)
             .order('name', { ascending: true });
 
         if (facilitiesError) {
@@ -18,10 +30,13 @@ export async function GET() {
             );
         }
 
-        // Query distinct specialties from medical_staff
+        // Query distinct specialties from medical_staff filtered by organization
+        // Use staff_organizations table for proper N:N relationship filtering
         const { data: staffData, error: specialtiesError } = await supabase
             .from('medical_staff')
-            .select('specialty')
+            .select('specialty, staff_organizations!inner(organization_id)')
+            .eq('staff_organizations.organization_id', organizationId)
+            .eq('staff_organizations.active', true)
             .not('specialty', 'is', null);
 
         if (specialtiesError) {
@@ -36,7 +51,7 @@ export async function GET() {
         const specialtiesSet = new Set<string>();
         staffData?.forEach((staff) => {
             if (staff.specialty) {
-                // Normalize: trim whitespace and lowercase for consistency
+                // Normalize: trim whitespace and convert to lowercase for consistency
                 const normalized = staff.specialty.trim().toLowerCase();
                 if (normalized) {
                     specialtiesSet.add(normalized);

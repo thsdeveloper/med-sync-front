@@ -18,6 +18,7 @@ interface ReportFiltersProps {
     onFiltersChange: (partial: Partial<ReportFiltersState>) => void;
     onRefresh?: () => void;
     isRefreshing?: boolean;
+    organizationId?: string | null;
 }
 
 interface FilterOption {
@@ -52,15 +53,20 @@ const defaultUnitOptions: FilterOption[] = [
     { value: 'campinas', label: 'Unidade Campinas' },
 ];
 
-export function ReportFilters({ filters, onFiltersChange, onRefresh, isRefreshing }: ReportFiltersProps) {
+export function ReportFilters({ filters, onFiltersChange, onRefresh, isRefreshing, organizationId }: ReportFiltersProps) {
     const [specialtyOptions, setSpecialtyOptions] = useState<FilterOption[]>(defaultSpecialtyOptions);
     const [unitOptions, setUnitOptions] = useState<FilterOption[]>(defaultUnitOptions);
 
     useEffect(() => {
+        // Only fetch filter options if we have an organization_id
+        if (!organizationId) {
+            return;
+        }
+
         // Fetch dynamic filter options from API
         async function fetchFilterOptions() {
             try {
-                const response = await fetch('/api/reports/filter-options');
+                const response = await fetch(`/api/reports/filter-options?organization_id=${organizationId}`);
                 if (!response.ok) {
                     console.error('Failed to fetch filter options');
                     return;
@@ -95,7 +101,7 @@ export function ReportFilters({ filters, onFiltersChange, onRefresh, isRefreshin
         }
 
         fetchFilterOptions();
-    }, []);
+    }, [organizationId]);
 
     return (
         <Card className="border-dashed">
