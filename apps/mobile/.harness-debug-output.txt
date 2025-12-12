@@ -1,0 +1,25 @@
+=== Debug Output (2025-12-12T19:23:44.071Z) ===
+SUCCESS: true
+ERROR: none
+OUTPUT LENGTH: 1272
+
+OUTPUT:
+```json
+{
+  "id": "R001",
+  "title": "Refactor shift detail modal to add interactive location with map integration",
+  "type": "refactoring",
+  "description": "The shift detail screen (app/(app)/shift/[id].tsx) currently displays facility address as static text. Refactor the Location section to include interactive map icons that allow doctors to open the facility address in Google Maps, Waze, and Apple Maps. The address data should be fetched from the facility_addresses table (with coordinates from latitude/longitude fields) and displayed with actionable buttons to launch navigation apps with the route.",
+  "acceptance_criteria": [
+    "Location section displays map icons (Google Maps, Waze, Apple Maps) as touchable buttons",
+    "Clicking each icon opens the respective navigation app with the facility address pre-filled",
+    "Address details modal or expandable section shows full structured address from facility_addresses table",
+    "Uses latitude/longitude from facility_addresses when available for precise navigation coordinates",
+    "Graceful fallback to text-based address if coordinates are null or facility_addresses record doesn't exist",
+    "All existing shift detail functionality remains unchanged and tests pass"
+  ],
+  "passes": false
+}
+```
+
+=== End of Output ===

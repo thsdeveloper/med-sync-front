@@ -1,0 +1,138 @@
+=== Atomizer Debug Output (2025-12-12T19:59:45.730Z) ===
+SUCCESS: true
+ERROR: none
+OUTPUT LENGTH: 7121
+
+OUTPUT:
+```json
+[
+  {
+    "id": "F001",
+    "title": "Configure Supabase Storage bucket for profile images",
+    "type": "feature",
+    "description": "Create a new Storage bucket in Supabase named 'profile-images' with public read access. Configure bucket policies to allow authenticated users to upload images. Set up RLS policies to ensure users can only upload to their own profile folder structure (user_id/avatar.jpg). Document bucket configuration and access patterns.",
+    "acceptance_criteria": [
+      "Storage bucket 'profile-images' created in Supabase",
+      "Public read access configured for the bucket",
+      "RLS policies implemented to restrict uploads to authenticated users only",
+      "Folder structure pattern documented (user_id/avatar.jpg)",
+      "Bucket configuration validated with test upload"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F002",
+    "title": "Add avatar_url column to profiles table schema",
+    "type": "feature",
+    "description": "Create Supabase migration to add avatar_url column to the profiles/users table. The column should be nullable text type to store the Storage public URL. Update TypeScript types to include avatar_url field. Create migration file and apply it to database.",
+    "acceptance_criteria": [
+      "Migration file created with avatar_url column addition",
+      "Column type set as nullable text/varchar",
+      "Migration successfully applied to Supabase database",
+      "TypeScript types updated to reflect new avatar_url field",
+      "Database schema verified with query test"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F003",
+    "title": "Install and configure expo-image-picker with permissions",
+    "type": "feature",
+    "description": "Install expo-image-picker package and configure permissions in app.json for iOS and Android. Add permission request logic for camera roll/media library access. Create useImagePicker hook to encapsulate image selection logic with proper error handling and permission checks.",
+    "acceptance_criteria": [
+      "expo-image-picker package installed",
+      "iOS NSPhotoLibraryUsageDescription added to app.json",
+      "Android READ_MEDIA_IMAGES permission configured",
+      "useImagePicker hook created with permission request logic",
+      "Permission denied scenario handled with user feedback"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F004",
+    "title": "Implement image cropping functionality with expo-image-manipulator",
+    "type": "feature",
+    "description": "Install expo-image-manipulator package. Create useImageCropper hook that accepts selected image and returns cropped circular avatar (1:1 aspect ratio, 512x512px). Implement resize and crop transformations to ensure consistent avatar format. Add error handling for crop failures.",
+    "acceptance_criteria": [
+      "expo-image-manipulator package installed",
+      "useImageCropper hook created with crop logic",
+      "Images cropped to 1:1 aspect ratio (512x512px)",
+      "Circular crop mask applied for avatar format",
+      "Error handling implemented for manipulation failures"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F005",
+    "title": "Create uploadProfileImage utility function for Supabase Storage",
+    "type": "feature",
+    "description": "Create lib/profile-image.ts utility with uploadProfileImage function. Function should upload cropped image to Supabase Storage bucket using user_id as folder name. Generate unique filename with timestamp, upload blob/file, and return public URL. Implement proper error handling and cleanup for failed uploads.",
+    "acceptance_criteria": [
+      "lib/profile-image.ts file created with uploadProfileImage function",
+      "Function uploads to correct bucket path (user_id/avatar-{timestamp}.jpg)",
+      "Public URL returned upon successful upload",
+      "Old avatar images deleted before uploading new one",
+      "Comprehensive error handling with typed errors"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F006",
+    "title": "Create updateUserAvatar API function to update profile table",
+    "type": "feature",
+    "description": "Create lib/profile-image.ts function updateUserAvatar that updates the avatar_url column in profiles table via Supabase client. Function should accept userId and avatarUrl, perform authenticated update, and return success/error status. Add optimistic update support for UI.",
+    "acceptance_criteria": [
+      "updateUserAvatar function created in lib/profile-image.ts",
+      "Function updates avatar_url column for authenticated user",
+      "Proper error handling with typed return values",
+      "Function validates user can only update their own profile",
+      "Success response includes updated profile data"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F007",
+    "title": "Build ProfileAvatarUpload component with picker and upload flow",
+    "type": "feature",
+    "description": "Create components/molecules/ProfileAvatarUpload.tsx component that displays current avatar using Avatar UI component. On tap, trigger image picker, show loading state during crop and upload, handle errors with toast/alert. Component should manage entire upload flow and emit onUploadComplete event.",
+    "acceptance_criteria": [
+      "ProfileAvatarUpload component created in components/molecules",
+      "Component displays current avatar or placeholder",
+      "Tap triggers image picker with permission handling",
+      "Loading state shown during upload process",
+      "Success and error states handled with user feedback"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F008",
+    "title": "Integrate ProfileAvatarUpload into profile.tsx screen",
+    "type": "feature",
+    "description": "Integrate ProfileAvatarUpload component into app/(app)/profile.tsx screen. Position component prominently at top of profile view. Connect to AuthProvider to get current user data and avatar_url. Handle upload completion by refreshing user profile data. Add loading and error states.",
+    "acceptance_criteria": [
+      "ProfileAvatarUpload component integrated into profile.tsx",
+      "Component positioned at top of profile screen",
+      "Current user avatar loaded from auth context",
+      "Profile data refreshed after successful upload",
+      "Error scenarios display appropriate user feedback"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F009",
+    "title": "Add avatar display throughout app using uploaded profile image",
+    "type": "feature",
+    "description": "Update Avatar component usage across the app to display user's uploaded avatar_url from profile. Update AuthProvider to include avatar_url in user session data. Ensure avatar displays in navigation, chat, and any other user profile references with proper fallback to initials.",
+    "acceptance_criteria": [
+      "AuthProvider updated to include avatar_url in user context",
+      "Avatar component displays uploaded image when available",
+      "Fallback to user initials when no avatar uploaded",
+      "Avatar displayed consistently across all app screens",
+      "Image caching configured for performance"
+    ],
+    "passes": false
+  }
+]
+```
+
+=== End of Output ===
