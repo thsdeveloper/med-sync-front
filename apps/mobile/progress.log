@@ -912,3 +912,62 @@ MedSync Mobile initialized with Expo on 2025-12-12
   * Foundation for profile screen integration (F008)
   * Enables users to personalize their profiles with photos
 
+
+---
+[2025-12-12] [F008] Integrate ProfileAvatarUpload into profile.tsx screen - COMPLETED
+- Integrated ProfileAvatarUpload molecule component into profile screen
+- Component Integration:
+  * Imported ProfileAvatarUpload from components/molecules
+  * Replaced static Avatar with interactive ProfileAvatarUpload in profile header
+  * Positioned prominently at top of profile screen (first component)
+  * Receives props from AuthProvider context:
+    - userId: staff.user_id (for upload authorization)
+    - userName: staff.name (for initials fallback)
+    - currentAvatarUrl: staff.avatar_url (displays current uploaded avatar)
+    - size: 120px (matches original Avatar size)
+    - color: staff.color (consistent branding)
+    - editable: true (enables upload functionality)
+- Upload Completion Flow:
+  * onUploadComplete callback implemented to refresh profile data
+  * Calls refreshStaff() method from AuthProvider
+  * Triggers database query to fetch updated avatar_url
+  * Updates UI automatically after successful upload
+  * Console logging for debugging workflow
+- Loading States:
+  * Added loading state while profile data is being fetched (isLoading from AuthProvider)
+  * Displays ActivityIndicator with "Carregando perfil..." message
+  * Centers content vertically and horizontally
+  * Prevents rendering of profile content until data loaded
+- Error States:
+  * Added error state for when staff data fails to load (!staff)
+  * Displays alert icon (Ionicons alert-circle-outline, 64px)
+  * Shows "Erro ao Carregar Perfil" title
+  * Error message: "Não foi possível carregar seus dados. Tente novamente."
+  * Retry button calls refreshStaff() for manual refresh
+  * Proper styling consistent with app design
+- User Experience:
+  * ProfileAvatarUpload manages internal upload states (from F007):
+    - Haptic feedback on tap
+    - Loading overlay during upload
+    - Success/error alerts with retry options
+    - "Tap to change photo" helper text
+  * Seamless integration with existing profile screen layout
+  * All existing profile features preserved (info cards, settings, logout)
+  * Zero breaking changes to existing functionality
+- Verification:
+  * TypeScript compilation successful (npx expo export)
+  * All platforms build successfully (iOS, Android, Web)
+  * Zero linting errors introduced
+  * All acceptance criteria met:
+    ✅ ProfileAvatarUpload component integrated into profile.tsx
+    ✅ Component positioned at top of profile screen
+    ✅ Current user avatar loaded from auth context
+    ✅ Profile data refreshed after successful upload
+    ✅ Error scenarios display appropriate user feedback
+- Impact:
+  * Users can now upload and change their profile pictures from profile screen
+  * Complete upload workflow accessible with single tap
+  * Seamless integration with existing AuthProvider and Supabase backend
+  * Foundation for displaying avatars throughout app (F009)
+  * Production-ready feature with comprehensive error handling
+
