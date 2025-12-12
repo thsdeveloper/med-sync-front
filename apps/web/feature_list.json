@@ -102,7 +102,7 @@
         "Geocoding search box implemented for address lookup",
         "Component integrates with React Hook Form setValue/watch"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F007",

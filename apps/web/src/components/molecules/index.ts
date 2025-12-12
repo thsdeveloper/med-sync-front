@@ -6,6 +6,7 @@ export { CRMInput } from './CRMInput';
 export { FeatureCard } from './FeatureCard';
 export { FormSection } from './FormSection';
 export { InputField } from './InputField';
+export { LocationPicker } from './LocationPicker';
 export { MapContainer } from './MapContainer';
 export { PasswordField } from './PasswordField';
 export { PhoneMockup } from './PhoneMockup';
