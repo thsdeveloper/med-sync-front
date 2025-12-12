@@ -664,3 +664,98 @@ MedSync Mobile initialized with Expo on 2025-12-12
   ✅ Circular crop mask applied for avatar format (note: square prepared here, circular masking in UI)
   ✅ Error handling implemented for manipulation failures
 
+[2025-12-12] [F005] Create uploadProfileImage utility function for Supabase Storage - COMPLETED
+- Created lib/profile-image.ts utility module (441 lines)
+- Main Functions Implemented:
+  * uploadProfileImage(): Complete upload workflow with authentication and cleanup
+  * deleteProfileImage(): Delete specific profile image
+  * getProfileImageUrl(): Convenience function to get public URL
+  * deleteOldAvatars(): Internal helper to clean up old avatar files
+  * imageUriToBlob(): Internal helper to convert image URI to blob for upload
+- TypeScript Types and Error Handling:
+  * ProfileImageErrorCode enum: UPLOAD_FAILED, DELETE_FAILED, INVALID_INPUT, UNAUTHORIZED, FETCH_FAILED, SESSION_NOT_FOUND
+  * ProfileImageError class: Custom error with error codes and original error tracking
+  * ProfileImageUploadOptions interface: userId, imageUri, filenameSuffix (default: 'avatar'), deleteOldAvatars (default: true)
+  * ProfileImageUploadResult interface: publicUrl, path, fullPath
+- uploadProfileImage() Workflow:
+  1. Input Validation: Validates userId and imageUri are non-empty strings
+  2. Authentication Check: Verifies user session exists via Supabase auth
+  3. Authorization Check: Ensures userId matches authenticated user (security)
+  4. Old Avatar Cleanup: Lists and deletes existing avatar-*.jpg files in user folder
+  5. Image Conversion: Fetches image from URI and converts to Blob
+  6. Filename Generation: Creates unique filename with timestamp (avatar-{timestamp}.jpg)
+  7. Upload to Storage: Uploads to profile-images/{userId}/avatar-{timestamp}.jpg
+  8. Public URL Generation: Gets public URL using getPublicUrl method
+  9. Return Result: Returns { publicUrl, path, fullPath }
+- Upload Configuration:
+  * Bucket: profile-images (created in F001)
+  * Path pattern: {userId}/avatar-{timestamp}.jpg
+  * Content-Type: image/jpeg
+  * Cache-Control: 3600 seconds (1 hour)
+  * Upsert: false (timestamp ensures uniqueness)
+- Old Avatar Cleanup Logic:
+  * Lists all files in user folder with limit 100
+  * Filters for files matching pattern: avatar-*.jpg
+  * Deletes all matching files before upload
+  * Graceful error handling: logs errors but doesn't block upload
+  * Prevents accumulation of old avatar files
+- Error Handling:
+  * Comprehensive try-catch blocks in all async functions
+  * Custom ProfileImageError class with error codes
+  * Input validation with typed error messages
+  * Authentication verification with SESSION_NOT_FOUND error
+  * Authorization check with UNAUTHORIZED error
+  * Upload failure handling with UPLOAD_FAILED error
+  * Delete failure handling with DELETE_FAILED error
+  * Fetch failure handling for URI to blob conversion
+  * All errors include original error for debugging
+- Security Features:
+  * User can only upload to their own folder (userId must match session.user.id)
+  * RLS policies enforce folder-level access control (configured in F001)
+  * Session validation on every operation
+  * No cross-user uploads possible
+- Additional Helper Functions:
+  * getProfileImageUrl(userId, filename): Gets public URL for existing image
+  * deleteProfileImage(userId, filename): Deletes specific image with auth check
+  * Both include input validation and authorization checks
+- Logging and Debugging:
+  * Comprehensive console logging throughout workflow
+  * [profile-image] prefix for easy log filtering
+  * Logs include: upload start, user auth, old avatar cleanup, conversion, upload success, URL generation
+  * Error logs include full error details for debugging
+- React Native Compatibility:
+  * Handles both file:// URIs (React Native) and web URIs
+  * Uses fetch() API for universal blob conversion
+  * Works seamlessly with expo-image-picker and expo-image-manipulator outputs
+- Integration Points:
+  * Works with profile-images bucket (F001)
+  * Accepts images from expo-image-picker (F003)
+  * Accepts cropped images from expo-image-manipulator (F004)
+  * Ready for use in ProfileAvatarUpload component (F007)
+  * Returns URL for updating medical_staff.avatar_url column (F002, F006)
+- Verification:
+  * File created successfully: lib/profile-image.ts
+  * TypeScript compilation successful (verified with expo export)
+  * All exports properly typed and documented
+  * Zero breaking changes to existing functionality
+  * Project builds successfully for iOS, Android, and Web
+- Documentation:
+  * Comprehensive JSDoc comments for all interfaces and functions
+  * Detailed function documentation with examples
+  * Parameter and return type descriptions
+  * Remarks about security, behavior, and error handling
+  * Usage examples in code comments
+- Impact:
+  * Foundation for profile image upload feature (F006-F009)
+  * Reusable utility for any image upload needs
+  * Proper separation of concerns: upload logic separate from UI
+  * Type-safe error handling throughout
+  * Production-ready with comprehensive error handling and logging
+- All Acceptance Criteria Met:
+  ✅ lib/profile-image.ts file created with uploadProfileImage function
+  ✅ Function uploads to correct bucket path (user_id/avatar-{timestamp}.jpg)
+  ✅ Public URL returned upon successful upload
+  ✅ Old avatar images deleted before uploading new one
+  ✅ Comprehensive error handling with typed errors
+
+---
