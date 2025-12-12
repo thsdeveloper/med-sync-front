@@ -400,7 +400,7 @@
         "Organization-based filtering enforced (RLS or client-side)",
         "Page responsive and matches dashboard design patterns"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F028",

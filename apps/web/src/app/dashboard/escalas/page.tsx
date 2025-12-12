@@ -1,224 +1,123 @@
+/**
+ * Escalas (Shifts) Calendar Page
+ *
+ * Main calendar page for viewing and managing shifts.
+ * Integrates ShiftsCalendar, CalendarFilters, and ShiftDetailModal components.
+ * Implements organization-based access control and responsive layout.
+ */
+
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
-import { toast } from 'sonner';
-import { CalendarDays, Loader2, Plus } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { CalendarDays, Loader2 } from 'lucide-react';
+import { startOfMonth, endOfMonth } from 'date-fns';
 
 import { PageHeader } from '@/components/organisms/page';
-import { FixedScheduleList } from '@/components/organisms/shifts/FixedScheduleList';
-import { FixedScheduleDialog } from '@/components/organisms/shifts/FixedScheduleDialog';
-import { SectorsDialog } from '@/components/organisms/shifts/SectorsDialog';
-import { Button } from '@/components/atoms/Button';
-import type { Sector, MedicalStaff, Facility, FixedSchedule } from '@medsync/shared';
+import { ShiftsCalendar } from '@/components/organisms/ShiftsCalendar';
+import { CalendarFilters } from '@/components/molecules/CalendarFilters';
 import { useOrganization } from '@/providers/OrganizationProvider';
 
+/**
+ * Filter state for the calendar page
+ */
+interface CalendarPageFilters {
+  startDate: string;
+  endDate: string;
+  facilityId: string;
+  specialty: string;
+}
+
+/**
+ * Default filter values - current month, all facilities, all specialties
+ */
+const DEFAULT_FILTERS: CalendarPageFilters = {
+  startDate: startOfMonth(new Date()).toISOString(),
+  endDate: endOfMonth(new Date()).toISOString(),
+  facilityId: 'todas',
+  specialty: 'todas',
+};
+
+/**
+ * Escalas Page Component
+ *
+ * Displays the main shifts calendar with filtering capabilities.
+ * Users can filter by date range, facility, and specialty.
+ * Organization-based access control ensures users only see their organization's shifts.
+ */
 export default function EscalasPage() {
-    const { activeOrganization, loading: orgLoading } = useOrganization();
-    const [isLoading, setIsLoading] = useState(true);
+  const { activeOrganization, loading: orgLoading } = useOrganization();
+  const [filters, setFilters] = useState<CalendarPageFilters>(DEFAULT_FILTERS);
 
-    const organizationId = activeOrganization?.id ?? null;
+  // Extract organization ID (null if no organization selected)
+  const organizationId = activeOrganization?.id ?? null;
 
-    // Data
-    const [sectors, setSectors] = useState<Sector[]>([]);
-    const [staff, setStaff] = useState<MedicalStaff[]>([]);
-    const [facilities, setFacilities] = useState<Facility[]>([]);
-    const [fixedSchedules, setFixedSchedules] = useState<FixedSchedule[]>([]);
+  /**
+   * Handle filter changes from CalendarFilters component
+   */
+  const handleFiltersChange = (partial: Partial<CalendarPageFilters>) => {
+    setFilters((prev) => ({ ...prev, ...partial }));
+  };
 
-    // Fixed Schedule Dialog States
-    const [isFixedScheduleDialogOpen, setIsFixedScheduleDialogOpen] = useState(false);
-    const [editingFixedSchedule, setEditingFixedSchedule] = useState<FixedSchedule | null>(null);
+  /**
+   * Calculate date range values for calendar display
+   * Handles empty date strings from filter clear action
+   */
+  const { startDate, endDate } = useMemo(() => {
+    // If filters have empty dates, use current month as fallback
+    const start = filters.startDate || startOfMonth(new Date()).toISOString();
+    const end = filters.endDate || endOfMonth(new Date()).toISOString();
+    return { startDate: start, endDate: end };
+  }, [filters.startDate, filters.endDate]);
 
-    // Fetch base data (Sectors, Staff, Facilities) when org changes
-    const fetchBaseData = useCallback(async () => {
-        if (!organizationId) {
-            setSectors([]);
-            setStaff([]);
-            setFacilities([]);
-            return;
-        }
-
-        try {
-            // Fetch Sectors
-            const { data: sectorsData } = await supabase
-                .from('sectors')
-                .select('*')
-                .eq('organization_id', organizationId)
-                .order('name');
-            setSectors(sectorsData as Sector[] || []);
-
-            // Fetch Staff via staff_organizations (apenas ativos nesta org)
-            const { data: staffOrgsData } = await supabase
-                .from('staff_organizations')
-                .select(`
-                    medical_staff (
-                        id, name, email, phone, crm, specialty, role, color, active, created_at, updated_at
-                    )
-                `)
-                .eq('organization_id', organizationId)
-                .eq('active', true);
-
-            const staffList = (staffOrgsData || [])
-                .map((so: any) => so.medical_staff)
-                .filter((s: any): s is MedicalStaff => s !== null && typeof s === 'object' && !Array.isArray(s))
-                .sort((a, b) => a.name.localeCompare(b.name));
-
-            setStaff(staffList);
-
-            // Fetch Facilities
-            const { data: facilitiesData } = await supabase
-                .from('facilities')
-                .select('*')
-                .eq('organization_id', organizationId)
-                .eq('active', true)
-                .order('name');
-            setFacilities(facilitiesData as Facility[] || []);
-        } catch (error) {
-            console.error('Error loading base data:', error);
-        }
-    }, [organizationId]);
-
-    // Fetch Fixed Schedules
-    const fetchFixedSchedules = useCallback(async () => {
-        if (!organizationId) {
-            setFixedSchedules([]);
-            setIsLoading(false);
-            return;
-        }
-
-        try {
-            setIsLoading(true);
-            const { data, error } = await supabase
-                .from('fixed_schedules')
-                .select(`
-                    *,
-                    facilities (*),
-                    medical_staff (id, name, role, color),
-                    sectors (*)
-                `)
-                .eq('organization_id', organizationId)
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-
-            setFixedSchedules(data as FixedSchedule[]);
-        } catch (error) {
-            console.error('Error loading fixed schedules:', error);
-            toast.error('Erro ao carregar escalas fixas.');
-        } finally {
-            setIsLoading(false);
-        }
-    }, [organizationId]);
-
-    useEffect(() => {
-        if (!orgLoading) {
-            fetchBaseData();
-        }
-    }, [orgLoading, fetchBaseData]);
-
-    useEffect(() => {
-        if (!orgLoading) {
-            fetchFixedSchedules();
-        }
-    }, [orgLoading, fetchFixedSchedules]);
-
-    const handleSectorUpdate = () => {
-        if (organizationId) {
-            supabase
-                .from('sectors')
-                .select('*')
-                .eq('organization_id', organizationId)
-                .order('name')
-                .then(({ data }) => {
-                    if (data) setSectors(data as Sector[]);
-                });
-        }
-    };
-
-    // Handlers - Fixed Schedules
-    const handleAddFixedSchedule = () => {
-        setEditingFixedSchedule(null);
-        setIsFixedScheduleDialogOpen(true);
-    };
-
-    const handleEditFixedSchedule = (schedule: FixedSchedule) => {
-        setEditingFixedSchedule(schedule);
-        setIsFixedScheduleDialogOpen(true);
-    };
-
-    const handleFixedScheduleSuccess = () => {
-        fetchFixedSchedules();
-    };
-
-    const handleFixedScheduleDelete = () => {
-        fetchFixedSchedules();
-    };
-
-    const loading = orgLoading || isLoading;
-
-    if (loading && !organizationId) {
-        return (
-            <div className="flex items-center justify-center h-full">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-            </div>
-        );
-    }
-
+  // Show loading spinner while organization context is initializing
+  if (orgLoading && !organizationId) {
     return (
-        <div className="flex flex-col gap-6 min-h-[calc(100vh-4rem)]">
-            <PageHeader
-                icon={<CalendarDays className="h-6 w-6" />}
-                title="Escalas Fixas"
-                description="Gerencie as escalas fixas da sua equipe médica."
-                actions={
-                    organizationId ? (
-                        <div className="flex items-center gap-2">
-                            <Button onClick={handleAddFixedSchedule}>
-                                <Plus className="mr-2 h-4 w-4" />
-                                Nova Escala Fixa
-                            </Button>
-                            <SectorsDialog
-                                organizationId={organizationId}
-                                sectors={sectors}
-                                onUpdate={handleSectorUpdate}
-                            />
-                        </div>
-                    ) : undefined
-                }
-            />
-
-            {organizationId ? (
-                <div className="flex-1 min-h-0">
-                    <FixedScheduleList
-                        schedules={fixedSchedules}
-                        facilities={facilities}
-                        isLoading={loading}
-                        onEdit={handleEditFixedSchedule}
-                        onDelete={handleFixedScheduleDelete}
-                    />
-                </div>
-            ) : (
-                !loading && (
-                    <div className="flex-1 flex items-center justify-center border-2 border-dashed rounded-lg">
-                        <p className="text-muted-foreground">Selecione ou crie uma organização para gerenciar as escalas.</p>
-                    </div>
-                )
-            )}
-
-            {/* Fixed Schedule Dialog */}
-            {organizationId && (
-                <FixedScheduleDialog
-                    isOpen={isFixedScheduleDialogOpen}
-                    onClose={() => setIsFixedScheduleDialogOpen(false)}
-                    onSuccess={handleFixedScheduleSuccess}
-                    organizationId={organizationId}
-                    facilities={facilities}
-                    staff={staff}
-                    sectors={sectors}
-                    scheduleToEdit={editingFixedSchedule}
-                    onStaffRefresh={fetchBaseData}
-                />
-            )}
-        </div>
+      <div className="flex items-center justify-center h-full min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
     );
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Page Header */}
+      <PageHeader
+        icon={<CalendarDays className="h-6 w-6" />}
+        title="Calendário de Escalas"
+        description="Visualize e gerencie os plantões da sua equipe médica em um calendário intuitivo."
+      />
+
+      {/* Calendar Filters */}
+      {organizationId && (
+        <CalendarFilters
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+          organizationId={organizationId}
+          onClear={() => setFilters(DEFAULT_FILTERS)}
+        />
+      )}
+
+      {/* Calendar Display or Empty State */}
+      {organizationId ? (
+        <div className="flex-1">
+          <ShiftsCalendar
+            organizationId={organizationId}
+            facilityId={filters.facilityId}
+            specialty={filters.specialty}
+            defaultView="month"
+            defaultDate={new Date()}
+            height="700px"
+          />
+        </div>
+      ) : (
+        !orgLoading && (
+          <div className="flex-1 flex items-center justify-center border-2 border-dashed rounded-lg min-h-[400px]">
+            <p className="text-muted-foreground">
+              Selecione ou crie uma organização para visualizar as escalas.
+            </p>
+          </div>
+        )
+      )}
+    </div>
+  );
 }
