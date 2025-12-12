@@ -212,3 +212,38 @@ Harness initialized in existing project on 2025-12-12
   ✓ New address created if facility has no existing address
   ✓ All form fields editable with proper validation
 
+
+---
+
+[2025-12-12 20:45:00] [F009] Create facility location display component for read-only views - COMPLETED
+- Created FacilityLocationDisplay molecule component at src/components/molecules/FacilityLocationDisplay.tsx
+- Implemented comprehensive read-only address display with formatted Brazilian address layout:
+  * Line 1: Street, Number, Complement (with proper comma separation)
+  * Line 2: Neighborhood
+  * Line 3: City - State (full name from BRAZILIAN_STATE_LABELS), CEP (formatted with hyphen)
+  * Line 4: Country
+- Integrated static Leaflet map with all interactions disabled (scrollWheelZoom, dragging, zoomControl, doubleClickZoom, touchZoom, keyboard)
+- Set map zoom level to 15 for detailed city-level view
+- Fixed Leaflet marker icons using CDN URLs (unpkg.com) matching LocationPicker pattern
+- Added map marker with popup showing facility name and address details
+- Implemented "Open in Google Maps" link with proper URL format: https://www.google.com/maps/search/?api=1&query={lat},{lng}
+- Link opens in new tab with security attributes (target="_blank", rel="noopener noreferrer")
+- Added ExternalLink icon from lucide-react for visual indication
+- Implemented responsive grid layout:
+  * Mobile: Address and map stacked vertically (grid-cols-1)
+  * Desktop: Side-by-side layout (lg:grid-cols-2)
+- Added MapPin icon for visual clarity in address section
+- Included coordinates display (latitude/longitude to 6 decimal precision) for reference
+- Graceful handling of missing data (address fields or coordinates)
+- Map rendered with border and rounded corners for clean appearance
+- Customizable props: mapHeight (default 300px), showMap (default true), className
+- Used 'use client' directive for Leaflet client-side rendering compatibility
+- Exported component from src/components/molecules/index.ts for centralized imports
+- Full TypeScript typing using FacilityAddressFormData from facility-address.schema.ts
+- Build verified successfully with no TypeScript errors
+- All 5 acceptance criteria verified and passing:
+  ✓ FacilityLocationDisplay component created for read-only views
+  ✓ Complete address displayed in formatted, readable layout
+  ✓ Static map rendered with marker at correct coordinates
+  ✓ Google Maps link opens facility location in new tab
+  ✓ Component responsive on mobile and desktop devices
