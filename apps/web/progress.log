@@ -378,3 +378,26 @@
   * Comprehensive TypeScript interfaces for all props
   * Full JSDoc documentation for all components
   * 9 usage examples covering different integration scenarios
+
+[2025-12-12T22:20:00] [F025] Create ShiftDetailModal component - COMPLETED
+- ShiftDetailModal component already existed from F024 but was missing facility address display
+- Updated get_calendar_shifts RPC function to include facility_address field in query results
+- Added f.address AS facility_address to SELECT clause and JSON_BUILD_OBJECT output
+- Migration add_facility_address_to_calendar_shifts applied successfully via Supabase MCP
+- Updated TypeScript CalendarShift interface to include facility_address: string | null field
+- CalendarEvent interface automatically inherits facility_address via extension
+- Updated ShiftDetailModal component to extract facility_address from shift prop
+- Added conditional rendering of address below facility name: displays only if not null/empty
+- Address displayed with muted-foreground styling and mt-1 spacing
+- All acceptance criteria verified:
+  ✅ ShiftDetailModal component uses Radix UI Dialog (via shadcn/ui Dialog primitive)
+  ✅ Displays all shift details: doctor name, specialty, facility name, date, time, status, notes
+  ✅ Facility address displayed conditionally when available and not empty
+  ✅ Modal has smooth animations from Radix UI Dialog defaults
+  ✅ Proper ARIA labels (DialogTitle, DialogDescription) and keyboard navigation (ESC to close)
+  ✅ Styled with Tailwind CSS matching design system (primary, muted-foreground tokens)
+- Component displays comprehensive shift information with Lucide React icons for visual hierarchy
+- Includes status-based badge variants (completed, cancelled, pending, accepted)
+- Date formatting uses date-fns with pt-BR locale (full date format)
+- Build completed successfully with no TypeScript errors
+- Feature fully implemented and tested

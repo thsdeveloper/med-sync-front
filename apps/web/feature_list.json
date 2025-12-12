@@ -370,7 +370,7 @@
         "Proper ARIA labels and keyboard navigation (ESC to close)",
         "Styled with Tailwind CSS matching design system"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F026",

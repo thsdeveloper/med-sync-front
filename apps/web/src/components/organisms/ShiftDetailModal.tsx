@@ -136,6 +136,7 @@ export function ShiftDetailModal({
     endDate,
     doctor_name,
     facility_name,
+    facility_address,
     specialty,
     status,
     notes,
@@ -186,6 +187,11 @@ export function ShiftDetailModal({
               <p className="text-base font-semibold">
                 {facility_name || 'N/A'}
               </p>
+              {facility_address && facility_address.trim() !== '' && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  {facility_address}
+                </p>
+              )}
             </div>
           </div>
 

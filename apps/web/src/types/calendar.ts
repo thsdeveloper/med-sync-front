@@ -26,6 +26,8 @@ export interface CalendarShift {
   facility_name: string;
   /** UUID of the facility */
   facility_id: string;
+  /** Physical address of the facility (optional) */
+  facility_address: string | null;
   /** Medical specialty (e.g., "cardio", "neuro") */
   specialty: string;
   /** Shift status (e.g., "pending", "accepted", "completed") */
