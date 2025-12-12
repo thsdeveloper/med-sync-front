@@ -125,3 +125,37 @@ Harness initialized in existing project on 2025-12-12
   ✓ Brazilian state dropdown populated with all 27 states
   ✓ CEP input mask applied (XXXXX-XXX format)
   ✓ ViaCEP API integration auto-fills address fields on valid CEP
+
+---
+
+[2025-12-12 15:17:12] [F006] Create interactive LocationPicker map component - COMPLETED
+- Created comprehensive LocationPicker component at src/components/molecules/LocationPicker.tsx with full Leaflet integration
+- Installed leaflet-geosearch package (v4.2.2) for geocoding and address search functionality
+- Implemented click-to-place marker functionality allowing users to click anywhere on map to set location
+- Added draggable marker with real-time coordinate updates via dragend event handler
+- Integrated OpenStreetMap Nominatim provider for free geocoding search without API key requirements
+- Created custom search control with Portuguese labels ("Digite um endereço...")
+- Implemented real-time coordinate display overlay showing current latitude/longitude with 6 decimal precision
+- Added helpful instruction overlay for users when no location is selected
+- Configured default center to Brazil's geographic center (-14.235, -51.9253) with zoom level 4
+- Automatic zoom to level 13 when marker is placed for better detail view
+- Full React Hook Form integration via onChange callback accepting LocationData structure
+- Proper TypeScript interfaces: LocationPickerProps, LocationData, MapClickHandlerProps, SearchControlProps
+- Fixed Leaflet marker icons using CDN URLs (unpkg.com) for production builds
+- Implemented responsive design with customizable height/width props (default 400px height)
+- Used 'use client' directive to ensure client-side only rendering
+- Created separate MapClickHandler component using useMapEvents hook for click event handling
+- Created separate SearchControl component with proper cleanup on unmount
+- Coordinates formatted to 8 decimal places for latitude and longitude (precision ~1mm)
+- Added coordinate display card with styled overlay (white background, shadow, border, z-index 1000)
+- Exported LocationPicker from src/components/molecules/index.ts for centralized imports
+- Created comprehensive demo page at src/app/location-picker-demo/page.tsx showcasing all features
+- Demo includes live coordinate display panel and usage instructions
+- Added code examples showing React Hook Form integration patterns
+- Build verified successfully with no TypeScript errors
+- All 5 acceptance criteria verified and passing:
+  ✓ LocationPicker component created with Leaflet map integration
+  ✓ Click-to-place marker functionality working correctly
+  ✓ Marker dragging updates latitude/longitude in real-time
+  ✓ Geocoding search box implemented for address lookup
+  ✓ Component integrates with React Hook Form setValue/watch
