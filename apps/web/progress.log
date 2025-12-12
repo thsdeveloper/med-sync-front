@@ -129,3 +129,25 @@
 - Fixed SQL syntax issue: moved ORDER BY and LIMIT into top_performers CTE subquery
 - All acceptance criteria verified and met
 
+[2025-12-12T21:05:45] [F019] Update ReportFilters with dynamic facility and specialty options - COMPLETED
+- Created API endpoint /api/reports/filter-options that queries Supabase for real filter data
+- Endpoint queries facilities table filtering by active = true, orders by name alphabetically
+- Returns 4 active facilities: Clínica VIVA, Hospital São Carlos, TrataTudo, Viva Mais
+- Endpoint queries medical_staff table for distinct specialties (handles NULL values)
+- Normalizes specialties by trimming whitespace and converting to lowercase for consistency
+- Returns 5 distinct specialties: anestesia, anestesiologia, cardio, cardiologista, neuro
+- API response structure: {ok: true, data: {facilities: [...], specialties: [...]}}
+- Updated ReportFilters component to fetch options dynamically on mount using useEffect
+- Replaced hardcoded specialtyOptions and unitOptions with dynamic state
+- Kept period options static (not database-driven)
+- Added fallback to default options if API fetch fails (graceful degradation)
+- Implemented capitalize() helper function to format specialty labels (Anestesia, Cardio, etc.)
+- Facility options use facility.id as value and facility.name as label
+- Specialty options use normalized lowercase as value and capitalized as label
+- Maintains "Todas" options at the start of each dropdown list
+- Component initializes with default options then updates when API responds
+- All error handling implemented to prevent UI breaks on API failures
+- Verified build succeeds with no TypeScript errors
+- Verified API route appears in Next.js build output as dynamic route
+- All acceptance criteria met and tested with real database queries
+
