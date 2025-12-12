@@ -88,7 +88,7 @@
         "CEP input mask applied (XXXXX-XXX format)",
         "ViaCEP API integration auto-fills address fields on valid CEP"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F006",
