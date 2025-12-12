@@ -7,14 +7,16 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar, Card, Button } from '@/components/ui';
+import { ProfileAvatarUpload } from '@/components/molecules';
 import { useAuth } from '@/providers/auth-provider';
 
 export default function ProfileScreen() {
-  const { staff, signOut } = useAuth();
+  const { staff, signOut, refreshStaff, isLoading } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = () => {
@@ -36,6 +38,38 @@ export default function ProfileScreen() {
     );
   };
 
+  // Handle loading state
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#0066CC" />
+          <Text style={styles.loadingText}>Carregando perfil...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Handle error state (no staff data)
+  if (!staff) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+          <Text style={styles.errorTitle}>Erro ao Carregar Perfil</Text>
+          <Text style={styles.errorMessage}>
+            Não foi possível carregar seus dados. Tente novamente.
+          </Text>
+          <Button
+            title="Tentar Novamente"
+            onPress={refreshStaff}
+            style={styles.retryButton}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -43,16 +77,24 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Profile Header */}
+        {/* Profile Header with Avatar Upload */}
         <View style={styles.profileHeader}>
-          <Avatar
-            name={staff?.name || '?'}
-            color={staff?.color || '#0066CC'}
-            size="xl"
+          <ProfileAvatarUpload
+            userId={staff.user_id || ''}
+            userName={staff.name}
+            currentAvatarUrl={staff.avatar_url}
+            onUploadComplete={() => {
+              // Refresh profile data to get updated avatar_url from database
+              console.log('[ProfileScreen] Avatar upload complete, refreshing profile data');
+              refreshStaff();
+            }}
+            size={120}
+            color={staff.color || '#0066CC'}
+            editable={true}
           />
-          <Text style={styles.profileName}>{staff?.name || 'Médico(a)'}</Text>
-          <Text style={styles.profileRole}>{staff?.role || 'Profissional de Saúde'}</Text>
-          {staff?.specialty && (
+          <Text style={styles.profileName}>{staff.name}</Text>
+          <Text style={styles.profileRole}>{staff.role || 'Profissional de Saúde'}</Text>
+          {staff.specialty && (
             <Text style={styles.profileSpecialty}>{staff.specialty}</Text>
           )}
         </View>
@@ -157,6 +199,41 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     paddingBottom: 32,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginTop: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  errorMessage: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 8,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  retryButton: {
+    marginTop: 24,
+    minWidth: 200,
   },
   profileHeader: {
     alignItems: 'center',

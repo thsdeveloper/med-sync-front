@@ -214,7 +214,7 @@
         "Denial/glosa rate calculated from payment_records metadata or status",
         "Delta percentages calculated comparing current vs previous period"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F015",
