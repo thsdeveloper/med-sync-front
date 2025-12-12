@@ -8,3 +8,7 @@ export { AttendanceTimeInfo } from './AttendanceTimeInfo';
 
 // Chat components
 export { OrganizationChatSelector } from './OrganizationChatSelector';
+
+// Location components
+export { FacilityLocationActions } from './FacilityLocationActions';
+export { AddressDetailsCollapsible } from './AddressDetailsCollapsible';

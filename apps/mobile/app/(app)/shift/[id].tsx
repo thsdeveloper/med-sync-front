@@ -6,7 +6,6 @@ import {
   SafeAreaView,
   Alert,
   ActivityIndicator,
-  TouchableOpacity
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,18 +13,42 @@ import { differenceInHours, parseISO } from 'date-fns';
 import { Button, Card } from '@/components/ui';
 import { ShiftDetailHeader } from '@/components/organisms/ShiftDetailHeader';
 import { AttendanceStatusBadge } from '@/components/atoms';
-import { CheckInOutButton, AttendanceTimeInfo } from '@/components/molecules';
+import {
+  CheckInOutButton,
+  AttendanceTimeInfo,
+  FacilityLocationActions,
+  AddressDetailsCollapsible,
+} from '@/components/molecules';
 import { useAuth } from '@/providers/auth-provider';
 import { useShiftAttendance } from '@/hooks';
 import { supabase } from '@/lib/supabase';
 import type { Shift, ShiftStatus } from '@medsync/shared';
+
+type FacilityAddress = {
+  id: string;
+  street: string;
+  number: string;
+  complement?: string | null;
+  neighborhood: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  country: string;
+  latitude?: number | null;
+  longitude?: number | null;
+};
 
 type ShiftWithRelations = Shift & {
   sectors?: { name: string; color: string };
   organizations?: { name: string };
   fixed_schedules?: {
     facility_id: string;
-    facilities: { name: string; type: string; address?: string };
+    facilities: {
+      name: string;
+      type: string;
+      address?: string;
+      facility_addresses?: FacilityAddress | null;
+    };
   };
 };
 
@@ -71,7 +94,24 @@ export default function ShiftDetailScreen() {
           medical_staff (name, role, color),
           fixed_schedules (
             facility_id,
-            facilities (name, type, address)
+            facilities (
+              name,
+              type,
+              address,
+              facility_addresses (
+                id,
+                street,
+                number,
+                complement,
+                neighborhood,
+                city,
+                state,
+                postal_code,
+                country,
+                latitude,
+                longitude
+              )
+            )
           )
         `)
         .eq('id', id)
@@ -326,17 +366,48 @@ export default function ShiftDetailScreen() {
               <Text style={styles.infoValue}>{shift.fixed_schedules?.facilities?.name}</Text>
             </View>
           </View>
-          {shift.fixed_schedules?.facilities?.address && (
-            <View style={[styles.row, { marginTop: 12 }]}>
-              <View style={[styles.iconCircle, { backgroundColor: '#F3F4F6' }]}>
-                <Ionicons name="location" size={20} color="#4B5563" />
+
+          {/* Address Details - Structured from facility_addresses or fallback to old address field */}
+          {shift.fixed_schedules?.facilities?.facility_addresses ? (
+            <>
+              <View style={[styles.row, { marginTop: 12 }]}>
+                <View style={[styles.iconCircle, { backgroundColor: '#F3F4F6' }]}>
+                  <Ionicons name="location" size={20} color="#4B5563" />
+                </View>
+                <View style={styles.infoTextContainer}>
+                  <Text style={styles.infoLabel}>Endereço</Text>
+                  <Text style={styles.infoValueAddress}>
+                    {shift.fixed_schedules.facilities.facility_addresses.street}, {shift.fixed_schedules.facilities.facility_addresses.number}
+                    {shift.fixed_schedules.facilities.facility_addresses.complement && ` - ${shift.fixed_schedules.facilities.facility_addresses.complement}`}
+                  </Text>
+                  <Text style={styles.infoValueAddress}>
+                    {shift.fixed_schedules.facilities.facility_addresses.neighborhood} - {shift.fixed_schedules.facilities.facility_addresses.city}/{shift.fixed_schedules.facilities.facility_addresses.state}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Endereço</Text>
-                <Text style={styles.infoValueAddress}>{shift.fixed_schedules?.facilities?.address}</Text>
+              <AddressDetailsCollapsible address={shift.fixed_schedules.facilities.facility_addresses} />
+              <FacilityLocationActions
+                facilityAddress={shift.fixed_schedules.facilities.facility_addresses}
+                facilityName={shift.fixed_schedules.facilities.name}
+              />
+            </>
+          ) : shift.fixed_schedules?.facilities?.address ? (
+            <>
+              <View style={[styles.row, { marginTop: 12 }]}>
+                <View style={[styles.iconCircle, { backgroundColor: '#F3F4F6' }]}>
+                  <Ionicons name="location" size={20} color="#4B5563" />
+                </View>
+                <View style={styles.infoTextContainer}>
+                  <Text style={styles.infoLabel}>Endereço</Text>
+                  <Text style={styles.infoValueAddress}>{shift.fixed_schedules.facilities.address}</Text>
+                </View>
               </View>
-            </View>
-          )}
+              <FacilityLocationActions
+                fallbackAddress={shift.fixed_schedules.facilities.address}
+                facilityName={shift.fixed_schedules.facilities.name}
+              />
+            </>
+          ) : null}
         </Card>
 
         {/* Sector & Org Info */}

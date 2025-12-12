@@ -1,0 +1,39 @@
+{
+  "project_name": "MedSync App Expo",
+  "description": "App gestão de escala médica",
+  "tech_stack": [
+    "Expo SDK 54",
+    "React Native 0.81",
+    "React 19",
+    "TypeScript",
+    "Expo Router",
+    "Supabase",
+    "React Hook Form",
+    "Expo Notifications",
+    "Expo SecureStore",
+    "React Navigation",
+    "React Native Calendars",
+    "React Native Reanimated",
+    "React Native Gesture Handler",
+    "Expo Linear Gradient",
+    "Expo Vector Icons",
+    "date-fns"
+  ],
+  "features": [
+    {
+      "id": "R001",
+      "title": "Refactor shift detail modal to add interactive location with map integration",
+      "type": "refactoring",
+      "description": "The shift detail screen (app/(app)/shift/[id].tsx) currently displays facility address as static text. Refactor the Location section to include interactive map icons that allow doctors to open the facility address in Google Maps, Waze, and Apple Maps. The address data should be fetched from the facility_addresses table (with coordinates from latitude/longitude fields) and displayed with actionable buttons to launch navigation apps with the route.",
+      "acceptance_criteria": [
+        "Location section displays map icons (Google Maps, Waze, Apple Maps) as touchable buttons",
+        "Clicking each icon opens the respective navigation app with the facility address pre-filled",
+        "Address details modal or expandable section shows full structured address from facility_addresses table",
+        "Uses latitude/longitude from facility_addresses when available for precise navigation coordinates",
+        "Graceful fallback to text-based address if coordinates are null or facility_addresses record doesn't exist",
+        "All existing shift detail functionality remains unchanged and tests pass"
+      ],
+      "passes": true
+    }
+  ]
+}
