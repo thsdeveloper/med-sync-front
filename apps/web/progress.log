@@ -1,3 +1,20 @@
+[2025-12-12T17:47:55] [F016] Generate financial trend from payment records - COMPLETED
+- Verified financial_trend CTE already fully implemented in migration 20251212_generate_specialty_trend_time_series.sql
+- Payment records grouped by date using DATE_TRUNC(v_trunc_unit, pr.shift_start_time) with dynamic bucketing
+- Revenue calculated as COALESCE(SUM(pr.total_amount), 0) which includes weekend_bonus, night_shift_bonus, and holiday_bonus
+- Glosas extracted from payment_records.calculation_metadata->>'glosa_amount' with COALESCE handling for NULL values
+- Returns JSON array with objects containing label (DD/MM format), receita (numeric), and glosas (numeric) fields
+- Handles missing payment records gracefully via LEFT JOIN with date_series (returns 0 for dates with no data)
+- Date series generation uses same dynamic bucketing as specialty_trend (daily for 7d/30d, weekly for 90d/180d)
+- Respects all filters: date range (v_start_date to v_end_date), specialty (p_specialty), and facility (p_unit)
+- Tested with real database queries:
+  * 7d period: 8 daily data points
+  * 30d period: 31 daily data points
+  * 90d period: 14 weekly data points
+  * 180d period: 27 weekly data points
+- All data points have correct structure: {label: "DD/MM", receita: number, glosas: number}
+- All acceptance criteria verified and met
+
 [2025-12-12T17:38:19] [F014] Calculate real summary metrics from database - COMPLETED
 - Implemented real total attendances calculation from shifts table count (current: 25 accepted shifts)
 - Replaced coverage rate proxy with actual occupancy calculation from shift_attendance table (check-in AND check-out records)
@@ -40,3 +57,25 @@
 - Verified filtering works correctly: 'todas' returns all data, specific specialty filters properly
 - Applied migration via Supabase MCP successfully
 - All acceptance criteria met and tested with real database queries
+[2025-12-12T17:45:22-03:00] [F015] Generate specialty trend time series from shifts data - COMPLETED
+- Implemented dynamic date bucketing strategy based on period length (daily for 7d/30d, weekly for 90d/180d)
+- Added new DECLARE variables: v_use_daily_buckets (BOOLEAN), v_date_interval (INTERVAL), v_trunc_unit (TEXT)
+- Updated CASE statement to set truncation unit and interval per period:
+  * 7d: daily buckets (1 day interval, 'day' truncation)
+  * 30d: daily buckets (1 day interval, 'day' truncation)
+  * 90d: weekly buckets (7 day interval, 'week' truncation)
+  * 180d: weekly buckets (7 day interval, 'week' truncation)
+- Refactored specialty_trend CTE to use dynamic date_trunc(v_trunc_unit, ...) instead of hardcoded intervals
+- Updated date_series generation to use v_date_interval for proper time series granularity
+- Changed specialty_counts join logic to use DATE_TRUNC(v_trunc_unit, s.start_time) = ds.period_start for accurate bucketing
+- Updated date label formatting from TO_CHAR(period_start, 'Mon') to TO_CHAR(period_start, 'DD/MM') for chart display
+- Applied same dynamic bucketing to efficiency_trend and financial_trend CTEs for consistency
+- Improved specialty pivoting with LIKE patterns for flexible matching (geral, cardiologia, pediatria)
+- All WHERE clauses properly filter by date range, specialty parameter, and facility parameter
+- Tested with real database queries:
+  * 7d period: Returns 8 daily data points with DD/MM labels (05/12 to 12/12)
+  * 90d period: Returns 14 weekly data points with DD/MM labels (08/09 to 08/12)
+  * Specialty filtering: When p_specialty='cardiologia', only cardiologia shifts included
+- Applied migration 20251212_generate_specialty_trend_time_series.sql via Supabase MCP successfully
+- All acceptance criteria met and tested with real database queries
+
