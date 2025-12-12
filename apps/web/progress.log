@@ -186,3 +186,29 @@ Harness initialized in existing project on 2025-12-12
   ✓ Form submission saves complete address data including geolocation coordinates
   ✓ Error messages displayed for address validation failures via Zod + FormMessage
   ✓ Loading states shown during API calls (isLoading + isSavingAddress states)
+---
+
+[2025-12-12 15:29:06] [F008] Integrate address form into facility edit flow - COMPLETED
+- Fixed critical race condition in facility edit form data loading process
+- Refactored useEffect hook to consolidate all async data fetching into single loadFacilityData() function
+- Address data now loads synchronously with facility and payment config data before form.reset() is called
+- Eliminated bug where form.reset() would overwrite address data loaded via setValue()
+- Existing address data properly fetched from facility_addresses table using facility_id foreign key
+- All address fields correctly populated in form on edit: street, number, complement, neighborhood, city, state, postal_code, country
+- Geolocation coordinates (latitude, longitude) loaded and passed to LocationPicker component
+- LocationPicker map marker correctly positioned at existing facility coordinates on load
+- Map marker shows at correct position via controlled props: latitude={form.watch('address_fields.latitude')} 
+- PATCH API endpoint called when updating existing facility with existing address (lines 383-397)
+- POST API endpoint called when facility has no existing address (lines 399-413)
+- Form validation working correctly for all address fields using Zod schema from F002
+- All form fields editable with real-time updates to form state
+- Error handling implemented with toast notifications for address save failures
+- Loading states preserved (isLoading for facility, isSavingAddress for address operations)
+- Build verified successfully with no TypeScript errors
+- All 5 acceptance criteria verified and passing:
+  ✓ Existing address data loaded and populated in form fields
+  ✓ Map marker positioned at existing coordinates on load
+  ✓ PATCH API updates address when editing existing facility
+  ✓ New address created if facility has no existing address
+  ✓ All form fields editable with proper validation
+
