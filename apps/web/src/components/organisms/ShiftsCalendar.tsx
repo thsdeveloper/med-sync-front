@@ -1,0 +1,241 @@
+/**
+ * ShiftsCalendar Organism Component
+ *
+ * Main calendar component that integrates shift data fetching, display, and interaction.
+ * Renders shifts in a calendar with month, week, and day views.
+ * Includes color coding by specialty, loading states, empty states, and detail modal.
+ *
+ * Usage:
+ * ```tsx
+ * import { ShiftsCalendar } from '@/components/organisms/ShiftsCalendar';
+ *
+ * function MyPage() {
+ *   const { activeOrganization } = useOrganization();
+ *
+ *   return (
+ *     <ShiftsCalendar
+ *       organizationId={activeOrganization.id}
+ *       facilityId="todas"
+ *       specialty="todas"
+ *     />
+ *   );
+ * }
+ * ```
+ */
+
+'use client';
+
+import React, { useState, useMemo, useCallback } from 'react';
+import { View } from 'react-big-calendar';
+import { startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
+import { CalendarWrapper, CalendarWrapperEvent } from './CalendarWrapper';
+import { CalendarLoadingSkeleton } from './CalendarLoadingSkeleton';
+import { CalendarEmptyState } from '../molecules/CalendarEmptyState';
+import { ShiftDetailModal } from './ShiftDetailModal';
+import { useShiftsCalendar } from '@/hooks/useShiftsCalendar';
+import type { CalendarEvent } from '@/types/calendar';
+
+/**
+ * Props for the ShiftsCalendar component
+ */
+export interface ShiftsCalendarProps {
+  /** Organization UUID (required) */
+  organizationId: string;
+  /** Optional facility filter (UUID or 'todas' for all) */
+  facilityId?: string;
+  /** Optional specialty filter (lowercase string or 'todas' for all) */
+  specialty?: string;
+  /** Default view to display (default: 'month') */
+  defaultView?: View;
+  /** Default date to show (default: today) */
+  defaultDate?: Date;
+  /** Height of the calendar (default: '700px') */
+  height?: string | number;
+  /** Custom CSS class name */
+  className?: string;
+}
+
+/**
+ * Transforms CalendarEvent to CalendarWrapperEvent format
+ */
+function transformToWrapperEvents(
+  events: CalendarEvent[]
+): CalendarWrapperEvent[] {
+  return events.map((event) => ({
+    id: event.id,
+    title: event.title,
+    start: event.startDate,
+    end: event.endDate,
+    resource: {
+      doctorId: event.doctor_id,
+      doctorName: event.doctor_name,
+      facilityId: event.facility_id,
+      facilityName: event.facility_name,
+      specialty: event.specialty,
+      status: event.status,
+      notes: event.notes,
+    },
+  }));
+}
+
+/**
+ * ShiftsCalendar - Main calendar display component for shifts
+ *
+ * This organism component provides a complete calendar interface for viewing
+ * and interacting with shifts. It integrates data fetching, multiple views,
+ * color coding, loading states, empty states, and a detail modal.
+ *
+ * Features:
+ * - Month, week, and day views
+ * - Color coding by specialty
+ * - Click to view shift details
+ * - Loading skeleton during data fetch
+ * - Empty state when no shifts found
+ * - Organization-based filtering
+ * - Facility and specialty filters
+ * - Date navigation
+ *
+ * @param props - Calendar configuration props
+ * @returns Complete calendar component
+ */
+export function ShiftsCalendar({
+  organizationId,
+  facilityId = 'todas',
+  specialty = 'todas',
+  defaultView = 'month',
+  defaultDate = new Date(),
+  height = '700px',
+  className = '',
+}: ShiftsCalendarProps) {
+  // State for calendar view and date
+  const [currentView, setCurrentView] = useState<View>(defaultView);
+  const [currentDate, setCurrentDate] = useState<Date>(defaultDate);
+
+  // State for selected shift (for detail modal)
+  const [selectedShift, setSelectedShift] = useState<CalendarEvent | null>(
+    null
+  );
+
+  // Calculate date range based on current view and date
+  const { startDate, endDate } = useMemo(() => {
+    let start: Date;
+    let end: Date;
+
+    if (currentView === 'month') {
+      // For month view, get entire month
+      start = startOfMonth(currentDate);
+      end = endOfMonth(currentDate);
+    } else if (currentView === 'week') {
+      // For week view, get a week range (could be refined with startOfWeek/endOfWeek)
+      start = startOfMonth(currentDate);
+      end = endOfMonth(currentDate);
+    } else {
+      // For day/agenda view, get entire month to have data available
+      start = startOfMonth(currentDate);
+      end = endOfMonth(currentDate);
+    }
+
+    return {
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+    };
+  }, [currentDate, currentView]);
+
+  // Fetch shifts data using the custom hook
+  const { events, isLoading, error } = useShiftsCalendar({
+    organizationId,
+    startDate,
+    endDate,
+    facilityId,
+    specialty,
+  });
+
+  // Transform events for CalendarWrapper
+  const calendarEvents = useMemo(
+    () => transformToWrapperEvents(events),
+    [events]
+  );
+
+  // Handle event click - open detail modal
+  const handleSelectEvent = useCallback(
+    (event: CalendarWrapperEvent) => {
+      // Find the full event data from events array
+      const fullEvent = events.find((e) => e.id === event.id);
+      if (fullEvent) {
+        setSelectedShift(fullEvent);
+      }
+    },
+    [events]
+  );
+
+  // Handle view change
+  const handleViewChange = useCallback((view: View) => {
+    setCurrentView(view);
+  }, []);
+
+  // Handle date navigation
+  const handleNavigate = useCallback((date: Date) => {
+    setCurrentDate(date);
+  }, []);
+
+  // Handle modal close
+  const handleModalClose = useCallback((open: boolean) => {
+    if (!open) {
+      setSelectedShift(null);
+    }
+  }, []);
+
+  // Show loading skeleton while fetching
+  if (isLoading) {
+    return <CalendarLoadingSkeleton height={height} className={className} />;
+  }
+
+  // Show error state (could be enhanced with proper error component)
+  if (error) {
+    return (
+      <CalendarEmptyState
+        title="Erro ao carregar plantões"
+        description={
+          error.message ||
+          'Ocorreu um erro ao carregar os plantões. Por favor, tente novamente.'
+        }
+        height={height}
+        className={className}
+      />
+    );
+  }
+
+  // Show empty state when no shifts found
+  if (calendarEvents.length === 0) {
+    return <CalendarEmptyState height={height} className={className} />;
+  }
+
+  return (
+    <>
+      {/* Calendar Component */}
+      <CalendarWrapper
+        events={calendarEvents}
+        onSelectEvent={handleSelectEvent}
+        onView={handleViewChange}
+        onNavigate={handleNavigate}
+        defaultView={currentView}
+        defaultDate={currentDate}
+        height={height}
+        className={className}
+        selectable={false} // Disable slot selection for read-only view
+      />
+
+      {/* Shift Detail Modal */}
+      <ShiftDetailModal
+        shift={selectedShift}
+        open={!!selectedShift}
+        onOpenChange={handleModalClose}
+      />
+    </>
+  );
+}
+
+/**
+ * Export component as default
+ */
+export default ShiftsCalendar;

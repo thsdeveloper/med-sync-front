@@ -355,7 +355,7 @@
         "Click handlers implemented for shift events",
         "Loading skeleton and empty state UI included"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F025",

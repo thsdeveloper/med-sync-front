@@ -246,3 +246,135 @@
 - Hook includes full JSDoc documentation with usage example
 - Build completed successfully with no errors
 - All acceptance criteria verified and met
+[2025-12-12T22:15:00] [F023] Install and configure calendar library - COMPLETED
+- Installed react-big-calendar ^1.19.4 and @types/react-big-calendar ^1.16.3
+- Confirmed date-fns ^4.1.0 available with pt-BR locale support
+- Created src/lib/calendar-config.ts with date-fns localizer configuration:
+  * Configured Portuguese (pt-BR) locale using date-fns/locale/pt-BR
+  * Defined custom date formats for calendar display (DD/MM/YYYY, HH:mm, etc.)
+  * Exported Portuguese translations for all calendar UI elements (Mês, Semana, Dia, Agenda, etc.)
+  * Set up date parsing and formatting functions with locale support
+- Created src/components/organisms/CalendarWrapper.tsx as base calendar component:
+  * Implemented as organism following Atomic Design methodology
+  * Created CalendarWrapperEvent and CalendarWrapperProps TypeScript interfaces
+  * Configured react-big-calendar with Portuguese locale and custom formats
+  * Implemented default event styling based on specialty (cardio, neuro, anestesia, pediatria)
+  * Added status-based styling (accepted, completed, cancelled)
+  * Supports all calendar views: month, week, day, agenda
+  * Includes event handlers: onSelectEvent, onSelectSlot, onView, onNavigate
+  * Configurable height, className, style, and custom event style getter
+  * Full TypeScript type safety with proper prop validation
+- Created src/components/organisms/__examples__/CalendarWrapper.example.tsx:
+  * 6 comprehensive usage examples demonstrating all features
+  * Basic calendar with sample events
+  * Interactive calendar with event and slot handlers
+  * Controlled calendar with view state management
+  * Custom event styling patterns
+  * Integration example with useShiftsCalendar hook
+  * Custom sizing and styling examples
+- Updated src/app/globals.css with extensive Tailwind CSS customizations:
+  * Imported react-big-calendar base CSS
+  * Added 200+ lines of custom Tailwind styles for all calendar components
+  * Styled toolbar: buttons, labels, navigation controls
+  * Styled month view: headers, cells, date cells, today indicator
+  * Styled events: hover states, selection, colors
+  * Styled week/day views: time slots, time headers, current time indicator
+  * Styled agenda view: table layout, headers, rows
+  * Styled popup overlay for event details
+  * Implemented dark mode support for all calendar elements
+  * Matched project design system colors (primary, secondary, muted, destructive, etc.)
+  * Ensured responsive design with proper spacing and borders
+- Specialty-based color coding implemented:
+  * Cardiologia/Cardio/Cardiologista: Red (#DC2626)
+  * Neurologia/Neuro: Purple (#7C3AED)
+  * Anestesia/Anestesiologia: Green (#059669)
+  * Pediatria: Amber (#F59E0B)
+  * Default: Primary Blue (#2563EB)
+- Status-based styling overrides:
+  * Cancelled/Cancelado: Gray with reduced opacity
+  * Completed/Concluído: Success green
+  * Default: Specialty color
+- Build verification:
+  * TypeScript compilation successful with no errors
+  * Next.js production build completed successfully
+  * All imports and dependencies resolved correctly
+  * No warnings or type errors in calendar components
+- All acceptance criteria met:
+  ✅ Calendar library installed (react-big-calendar)
+  ✅ Library configured to use date-fns as date adapter
+  ✅ Portuguese locale (pt-BR) configured for calendar
+  ✅ Base CalendarWrapper component created with proper TypeScript types
+  ✅ Tailwind CSS custom styles applied to match design system
+
+[2025-12-12T$(date +%H:%M:%S)] [F024] Create ShiftsCalendar display component - COMPLETED
+- Created ShiftDetailModal component in src/components/organisms/ShiftDetailModal.tsx:
+  * Displays comprehensive shift details: doctor name, facility, date/time, specialty, status, notes
+  * Uses shadcn Dialog component with Portuguese translations
+  * Implements status-based badge variants (completed, cancelled, pending, accepted)
+  * Includes Lucide React icons for visual hierarchy (User, MapPin, Calendar, Clock, Activity, FileText)
+  * Formats dates using date-fns with pt-BR locale (full date format: "Sexta-feira, 13 de Dezembro de 2024")
+  * Conditional rendering for notes section (only shows if notes exist)
+  * TypeScript interface: ShiftDetailModalProps with shift, open, onOpenChange props
+- Created CalendarLoadingSkeleton component in src/components/organisms/CalendarLoadingSkeleton.tsx:
+  * Mimics calendar layout structure with toolbar and grid cells
+  * Uses shadcn Skeleton component for animated loading state
+  * Displays 3 view button skeletons, date label skeleton, navigation button skeletons
+  * Shows 7-column grid for weekday headers plus 5 weeks of calendar cells
+  * Configurable height prop (default: 700px)
+  * Loading indicator placeholder at bottom
+- Created CalendarEmptyState component in src/components/molecules/CalendarEmptyState.tsx:
+  * Displays friendly empty state when no shifts found
+  * Uses Lucide React CalendarX icon in muted background
+  * Default message: "Nenhum plantão encontrado"
+  * Default description: "Não há plantões cadastrados para o período selecionado..."
+  * Customizable title, description, height, and className props
+  * Centered layout with max-width constraint for readability
+- Created ShiftsCalendar main component in src/components/organisms/ShiftsCalendar.tsx:
+  * Integrates CalendarWrapper with useShiftsCalendar hook for data fetching
+  * Manages calendar view state (month/week/day) using useState
+  * Manages current date navigation state
+  * Calculates date range dynamically based on view and current date (startOfMonth/endOfMonth)
+  * Transforms CalendarEvent[] to CalendarWrapperEvent[] format for rendering
+  * Implements click handler to open ShiftDetailModal with full event data
+  * Shows CalendarLoadingSkeleton during data fetch (isLoading state)
+  * Shows CalendarEmptyState when no shifts found or on error
+  * Props: organizationId (required), facilityId, specialty, defaultView, defaultDate, height, className
+  * Supports all filter parameters passed through to useShiftsCalendar hook
+  * Implements view change and date navigation callbacks
+  * Disables slot selection (selectable={false}) for read-only calendar view
+- Created comprehensive example file src/components/organisms/__examples__/ShiftsCalendar.example.tsx:
+  * Example 1: Basic calendar with just organizationId
+  * Example 2: Calendar with facility filter
+  * Example 3: Calendar with specialty filter
+  * Example 4: Calendar with both facility and specialty filters
+  * Example 5: Calendar with default week view
+  * Example 6: Calendar with custom height and styling
+  * Example 7: Integration with OrganizationProvider context
+  * Example 8: Calendar with dynamic filters using state management
+  * Example 9: Compact calendar for dashboard widgets (400px height, week view)
+- All components follow Atomic Design methodology:
+  * CalendarEmptyState: Molecule (simple UI component)
+  * ShiftDetailModal: Organism (complex component with business logic)
+  * CalendarLoadingSkeleton: Organism (complex layout structure)
+  * ShiftsCalendar: Organism (integrates multiple components and data fetching)
+- Build verification:
+  * TypeScript compilation successful with no errors
+  * Next.js production build completed successfully (6.5s compile time)
+  * All imports resolved correctly (CalendarWrapper, useShiftsCalendar, Dialog, Badge, Skeleton)
+  * No type errors or warnings
+  * All components use 'use client' directive for client-side rendering
+- All acceptance criteria verified and met:
+  ✅ ShiftsCalendar component created in src/components/organisms/
+  ✅ Calendar displays shifts with doctor and facility information (title format: "Doctor Name - Specialty")
+  ✅ Month, week, and day views implemented and switchable (via onView callback)
+  ✅ Color coding applied by specialty (inherited from CalendarWrapper: cardio=red, neuro=purple, anestesia=green, pediatria=amber)
+  ✅ Click handlers implemented for shift events (opens ShiftDetailModal with full event data)
+  ✅ Loading skeleton and empty state UI included (CalendarLoadingSkeleton, CalendarEmptyState)
+- Additional features implemented beyond requirements:
+  * Error state handling with user-friendly message
+  * Modal state management with proper open/close callbacks
+  * Date range calculation based on calendar view (month/week/day)
+  * Data transformation layer between API and calendar component
+  * Comprehensive TypeScript interfaces for all props
+  * Full JSDoc documentation for all components
+  * 9 usage examples covering different integration scenarios
