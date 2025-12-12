@@ -242,7 +242,7 @@
         "Returns array with label, receita, and glosas fields",
         "Handles cases where no payment records exist for dates"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F017",
