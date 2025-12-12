@@ -97,6 +97,10 @@ export const facilityAddressSchema = z.object({
         .max(180, 'Longitude deve estar entre -180 e 180')
         .optional()
         .nullable(),
+    is_migrated: z
+        .boolean()
+        .default(false)
+        .optional(),
 });
 
 // Schema for creating a new facility address (without facility_id if it's provided by context)
