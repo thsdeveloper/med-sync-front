@@ -37,3 +37,30 @@ Harness initialized in existing project on 2025-12-12
 - Followed existing project patterns from facility.schema.ts and medical-staff.schema.ts
 - Build verified successfully with no TypeScript errors
 - All 5 acceptance criteria verified and passing
+
+---
+
+[2025-12-12 15:02:00] [F003] Implement facility address API endpoints - COMPLETED
+- Created comprehensive REST API route handler at src/app/api/facilities/[id]/address/route.ts
+- Implemented GET endpoint to retrieve facility addresses with proper error handling
+- Implemented POST endpoint to create new facility addresses with conflict detection
+- Implemented PATCH endpoint to update existing facility addresses
+- Integrated Zod validation using createFacilityAddressSchema and updateFacilityAddressSchema from F002
+- Added robust authentication verification using Supabase auth.getUser() with Bearer tokens
+- Implemented organization-level access control by verifying facility ownership through user_organizations
+- Proper HTTP status codes implemented for all scenarios:
+  * 200: Successful GET/PATCH operations
+  * 201: Successful POST (resource created)
+  * 400: Validation errors, invalid UUID format, malformed JSON
+  * 401: Unauthorized (missing or invalid authorization header)
+  * 403: Forbidden (facility doesn't belong to user's organization)
+  * 404: Resource not found (facility or address)
+  * 409: Conflict (address already exists when trying to POST)
+  * 500: Internal server errors with proper logging
+- Leveraged existing RLS policies created in F001 for database-level security
+- Fixed Next.js 16 async params compatibility (params is now a Promise)
+- Added comprehensive error handling for database operations, JSON parsing, and unexpected errors
+- Validated UUID format for facility IDs before processing
+- Prevented duplicate addresses with conflict checking
+- Build verified successfully with no TypeScript errors
+- All 5 acceptance criteria verified and passing
