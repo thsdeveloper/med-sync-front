@@ -103,7 +103,7 @@
         "Old avatar images deleted before uploading new one",
         "Comprehensive error handling with typed errors"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F006",
