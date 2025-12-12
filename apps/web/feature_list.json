@@ -74,7 +74,7 @@
         "Default map configuration set to Brazil's geographic center",
         "Component renders correctly without SSR hydration errors"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F005",
