@@ -131,7 +131,7 @@
         "Loading state shown during upload process",
         "Success and error states handled with user feedback"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F008",

@@ -12,3 +12,6 @@ export { OrganizationChatSelector } from './OrganizationChatSelector';
 // Location components
 export { FacilityLocationActions } from './FacilityLocationActions';
 export { AddressDetailsCollapsible } from './AddressDetailsCollapsible';
+
+// Profile components
+export { ProfileAvatarUpload, type ProfileAvatarUploadProps } from './ProfileAvatarUpload';
