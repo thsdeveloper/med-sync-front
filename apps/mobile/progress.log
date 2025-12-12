@@ -759,3 +759,72 @@ MedSync Mobile initialized with Expo on 2025-12-12
   ✅ Comprehensive error handling with typed errors
 
 ---
+[2025-12-12] [F006] Create updateUserAvatar API function to update profile table - COMPLETED
+- Created updateUserAvatar function in lib/profile-image.ts (208 lines)
+- Function Implementation:
+  * Accepts UpdateUserAvatarOptions: userId and avatarUrl parameters
+  * Returns UpdateUserAvatarResult with success status and profile data
+  * Updates avatar_url column in medical_staff table via Supabase client
+  * Also updates updated_at timestamp for cache invalidation
+- Input Validation:
+  * Validates userId is non-empty string
+  * Validates avatarUrl is non-empty string
+  * Returns typed error response for invalid inputs
+- Authentication & Authorization:
+  * Gets current user session via supabase.auth.getSession()
+  * Returns SESSION_NOT_FOUND error if no active session
+  * Verifies session.user.id matches userId parameter (security check)
+  * Returns UNAUTHORIZED error if user tries to update another user's profile
+  * Leverages RLS policies on medical_staff table for additional security layer
+- Database Update:
+  * Updates medical_staff table using .eq('user_id', userId)
+  * Sets avatar_url to provided public URL
+  * Updates updated_at to current ISO timestamp
+  * Returns full profile data with .select().single()
+- Error Handling:
+  * Added UPDATE_FAILED to ProfileImageErrorCode enum
+  * Try-catch wrapper for unexpected errors
+  * Returns success: false with error object on failure
+  * Does NOT throw errors - returns typed result for easier UI handling
+  * Comprehensive console logging with [profile-image] prefix for debugging
+- Optimistic Update Support:
+  * Returns full updated profile object on success
+  * Profile includes: id, name, avatar_url, email, phone, role, specialty, updated_at
+  * Enables immediate UI updates without additional fetch
+  * Returns null check if profile not found for user
+- TypeScript Types:
+  * UpdateUserAvatarOptions interface: userId, avatarUrl
+  * UpdateUserAvatarResult interface: success, profile, error
+  * ProfileImageErrorCode enum extended with UPDATE_FAILED
+  * Full JSDoc documentation with usage examples
+- Integration Points:
+  * Works with uploaded images from uploadProfileImage (F005)
+  * Updates avatar_url column added in medical_staff table (F002)
+  * Ready for use in ProfileAvatarUpload component (F007)
+  * Integrates seamlessly with existing Supabase client and auth flow
+- Verification:
+  * Function properly exported from lib/profile-image.ts
+  * TypeScript compilation successful (verified with expo export)
+  * All types properly defined and documented
+  * Zero breaking changes to existing functionality
+  * Project builds successfully for iOS, Android, and Web
+- Security Features:
+  * User can only update their own profile (session.user.id === userId)
+  * RLS policies on medical_staff table enforce row-level security
+  * Input validation prevents injection attacks
+  * Session validation on every operation
+  * Proper error messages without leaking sensitive information
+- Impact:
+  * Completes backend API layer for profile image upload feature
+  * Enables atomic database updates with optimistic UI pattern
+  * Proper separation of concerns: storage (F005) vs database (F006)
+  * Type-safe error handling for robust React component integration
+  * Foundation for ProfileAvatarUpload component (F007)
+- All Acceptance Criteria Met:
+  ✅ updateUserAvatar function created in lib/profile-image.ts
+  ✅ Function updates avatar_url column for authenticated user
+  ✅ Proper error handling with typed return values
+  ✅ Function validates user can only update their own profile
+  ✅ Success response includes updated profile data
+
+---
