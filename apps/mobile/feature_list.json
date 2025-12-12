@@ -159,7 +159,7 @@
         "Avatar displayed consistently across all app screens",
         "Image caching configured for performance"
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }

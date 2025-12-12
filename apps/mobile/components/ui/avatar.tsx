@@ -1,19 +1,38 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { Image } from 'expo-image';
 
 interface AvatarProps {
   name: string;
   color?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   style?: ViewStyle;
+  imageUrl?: string | null;
 }
 
-export function Avatar({ name, color = '#0066CC', size = 'md', style }: AvatarProps) {
+export function Avatar({ name, color = '#0066CC', size = 'md', style, imageUrl }: AvatarProps) {
+  const [imageError, setImageError] = useState(false);
   const initials = getInitials(name);
+
+  // Show image if URL is provided and no error occurred
+  const shouldShowImage = imageUrl && !imageError;
 
   return (
     <View style={[styles.avatar, styles[size], { backgroundColor: color }, style]}>
-      <Text style={[styles.text, styles[`text_${size}`]]}>{initials}</Text>
+      {shouldShowImage ? (
+        <Image
+          source={{ uri: imageUrl }}
+          style={[styles.image, styles[size]]}
+          contentFit="cover"
+          transition={200}
+          onError={() => setImageError(true)}
+          // Caching configuration for performance
+          cachePolicy="memory-disk"
+          priority="high"
+        />
+      ) : (
+        <Text style={[styles.text, styles[`text_${size}`]]}>{initials}</Text>
+      )}
     </View>
   );
 }
@@ -30,6 +49,10 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden', // Ensure image respects border radius
+  },
+  image: {
+    borderRadius: 999,
   },
   sm: {
     width: 32,

@@ -157,6 +157,7 @@ export default function HomeScreen() {
                     name={staff?.name || '?'}
                     color={staff?.color || '#FFFFFF'}
                     size="md"
+                    imageUrl={staff?.avatar_url || null}
                   />
                 </View>
                 <View style={styles.onlineIndicator} />

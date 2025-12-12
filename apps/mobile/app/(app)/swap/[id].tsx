@@ -47,8 +47,8 @@ export default function SwapDetailScreen() {
         .from('shift_swap_requests')
         .select(`
           *,
-          requester:medical_staff!shift_swap_requests_requester_id_fkey (id, name, color, specialty),
-          target_staff:medical_staff!shift_swap_requests_target_staff_id_fkey (id, name, color, specialty),
+          requester:medical_staff!shift_swap_requests_requester_id_fkey (id, name, color, specialty, avatar_url),
+          target_staff:medical_staff!shift_swap_requests_target_staff_id_fkey (id, name, color, specialty, avatar_url),
           original_shift:shifts!shift_swap_requests_original_shift_id_fkey (
             id, start_time, end_time, status,
             sectors (name, color)
@@ -352,6 +352,7 @@ export default function SwapDetailScreen() {
               name={request.requester?.name || '?'}
               color={request.requester?.color || '#6B7280'}
               size="lg"
+              imageUrl={request.requester?.avatar_url || null}
             />
             <View style={styles.personInfo}>
               <Text style={styles.personName}>{request.requester?.name}</Text>
@@ -376,6 +377,7 @@ export default function SwapDetailScreen() {
                 name={request.target_staff.name || '?'}
                 color={request.target_staff.color || '#6B7280'}
                 size="lg"
+                imageUrl={request.target_staff.avatar_url || null}
               />
               <View style={styles.personInfo}>
                 <Text style={styles.personName}>{request.target_staff.name}</Text>

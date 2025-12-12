@@ -41,7 +41,7 @@ export default function ChatConversationScreen() {
           *,
           participants:chat_participants (
             staff_id,
-            staff:medical_staff (id, name, color)
+            staff:medical_staff (id, name, color, avatar_url)
           ),
           organization:organizations (id, name, logo_url)
         `)
@@ -57,7 +57,7 @@ export default function ChatConversationScreen() {
         .from('chat_messages')
         .select(`
           *,
-          sender:medical_staff (id, name, color)
+          sender:medical_staff (id, name, color, avatar_url)
         `)
         .eq('conversation_id', id)
         .order('created_at', { ascending: true });
@@ -109,7 +109,7 @@ export default function ChatConversationScreen() {
             .from('chat_messages')
             .select(`
               *,
-              sender:medical_staff (id, name, color)
+              sender:medical_staff (id, name, color, avatar_url)
             `)
             .eq('id', payload.new.id)
             .single();
@@ -220,6 +220,7 @@ export default function ChatConversationScreen() {
               color={item.sender?.color || '#6B7280'}
               size="sm"
               style={styles.messageAvatar}
+              imageUrl={item.sender?.avatar_url || null}
             />
           )}
           <View

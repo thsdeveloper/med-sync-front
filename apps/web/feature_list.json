@@ -228,7 +228,7 @@
         "Handles all period options: 7d, 30d, 90d, 180d correctly",
         "Date labels formatted appropriately for chart display"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F016",

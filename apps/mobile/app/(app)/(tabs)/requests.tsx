@@ -59,8 +59,8 @@ export default function RequestsScreen() {
         .from('shift_swap_requests')
         .select(`
           *,
-          requester:medical_staff!requester_id (id, name, color, specialty),
-          target_staff:medical_staff!target_staff_id (id, name, color, specialty),
+          requester:medical_staff!requester_id (id, name, color, specialty, avatar_url),
+          target_staff:medical_staff!target_staff_id (id, name, color, specialty, avatar_url),
           original_shift:shifts!original_shift_id (
             id, start_time, end_time, status,
             sectors (name, color)
@@ -132,6 +132,7 @@ export default function RequestsScreen() {
               name={otherPerson?.name || '?'}
               color={otherPerson?.color || '#6B7280'}
               size="md"
+              imageUrl={otherPerson?.avatar_url || null}
             />
             <View style={styles.requestInfo}>
               <Text style={styles.requestName}>

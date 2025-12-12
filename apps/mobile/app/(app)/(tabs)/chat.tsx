@@ -63,7 +63,7 @@ export default function ChatScreen() {
           participants:chat_participants (
             staff_id,
             last_read_at,
-            staff:medical_staff (id, name, color)
+            staff:medical_staff (id, name, color, avatar_url)
           )
         `)
         .in('id', conversationIds)
@@ -165,7 +165,7 @@ export default function ChatScreen() {
 
   const getConversationAvatar = (conv: ConversationWithDetails) => {
     if (conv.type === 'group') {
-      return { name: conv.name || 'Grupo', color: '#6B7280' };
+      return { name: conv.name || 'Grupo', color: '#6B7280', avatarUrl: null };
     }
 
     const otherParticipant = conv.participants.find(
@@ -174,6 +174,7 @@ export default function ChatScreen() {
     return {
       name: otherParticipant?.staff?.name || '?',
       color: otherParticipant?.staff?.color || '#0066CC',
+      avatarUrl: otherParticipant?.staff?.avatar_url || null,
     };
   };
 
@@ -243,7 +244,7 @@ export default function ChatScreen() {
             <Ionicons name="business" size={24} color="#FFFFFF" />
           </View>
         ) : (
-          <Avatar name={avatar.name} color={avatar.color} size="lg" />
+          <Avatar name={avatar.name} color={avatar.color} size="lg" imageUrl={avatar.avatarUrl} />
         )}
 
         <View style={styles.conversationContent}>
