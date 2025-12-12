@@ -117,7 +117,7 @@
         "Function validates user can only update their own profile",
         "Success response includes updated profile data"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F007",
