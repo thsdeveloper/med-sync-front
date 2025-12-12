@@ -326,7 +326,7 @@
         "Data cached and refetched appropriately",
         "TypeScript interfaces defined for calendar data structure"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F023",

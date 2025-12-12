@@ -173,3 +173,76 @@
 - Applied migration via Supabase MCP successfully (dropped old function signature and created new one with 4 parameters)
 - Build completed successfully with no TypeScript errors
 - All acceptance criteria met and verified
+[2025-12-12T22:00:15] [F021] Create calendar view database query function - COMPLETED
+- Created Supabase RPC function get_calendar_shifts to fetch shifts data formatted for calendar display
+- Function signature: get_calendar_shifts(p_organization_id UUID, p_start_date TIMESTAMPTZ, p_end_date TIMESTAMPTZ, p_facility_id TEXT DEFAULT 'todas', p_specialty TEXT DEFAULT 'todas')
+- Returns JSON object with shifts array containing all necessary calendar data
+- Joins shifts table with medical_staff (via staff_id column) and facilities tables for complete information
+- Each shift includes: id, title (doctor name - specialty), start, end, doctor_name, doctor_id, facility_name, facility_id, specialty, status, notes, date
+- Organization-based filtering enforced for RLS compliance (validates organization_id exists)
+- Date range filtering with validation (start_date and end_date required, end >= start)
+- Optional facility filtering: validates facility exists and belongs to organization when not 'todas'
+- Optional specialty filtering: matches TRIM(LOWER(specialty)) for case-insensitive comparison
+- Handles NULL values gracefully: medical_staff and facility can be NULL (returns 'N/A' for missing data)
+- Query uses LEFT JOIN for medical_staff and facilities to handle orphaned shifts
+- Specialty normalization: COALESCE(TRIM(LOWER(ms.specialty)), 'geral') for consistent filtering
+- Title field auto-generated: doctor_name || ' - ' || INITCAP(specialty) for display
+- Date field extracted: DATE(s.start_time) for grouping and filtering by calendar date
+- Results ordered by start_time ASC for chronological display
+- Created API endpoint /api/calendar/shifts as wrapper around RPC function
+- API validates all required parameters: organization_id, start_date, end_date
+- API validates date formats (ISO 8601) and date range logic (end >= start)
+- API passes optional filters: facility_id and specialty default to 'todas'
+- API returns standardized response: {ok: true, data: {shifts: [...]}} on success
+- API handles errors gracefully with appropriate HTTP status codes (400 for validation, 500 for server errors)
+- Applied migration 20251212_create_calendar_shifts_query.sql via Supabase MCP successfully
+- Fixed column name: shifts.staff_id (not medical_staff_id)
+- Fixed missing column: removed shift_type, added notes field instead
+- Tested with real database data:
+  * 30-day range: Returns 67 shifts with all fields populated correctly
+  * Specialty filter 'cardio': Returns 25 shifts (only cardio specialty)
+  * Facility filter (Clínica VIVA): Returns 27 shifts (only from specified facility)
+  * Multiple doctors: Amanda olveita, Joquebete de Silva, Thiago Soares, Calebe Carvalho, etc.
+  * Multiple facilities: Clínica VIVA, TrataTudo, some with NULL (shows 'N/A')
+  * Multiple specialties: cardiologista, cardio, neuro, anestesia, anestesiologia
+- Verified data structure matches calendar requirements: ISO timestamps, date strings, all metadata present
+- Build successful with no TypeScript errors
+- API route registered in Next.js build output: ƒ /api/calendar/shifts
+- All acceptance criteria met and verified with real database queries
+
+[2025-12-12T22:10:30] [F022] Create shifts calendar data hook - COMPLETED
+- Installed @tanstack/react-query ^5.90.12 dependency for data fetching and caching
+- Created comprehensive TypeScript interfaces in src/types/calendar.ts:
+  * CalendarShift: Raw shift data from API
+  * CalendarShiftsResponse: API response structure
+  * CalendarFilters: Filter parameters (organizationId, startDate, endDate, facilityId, specialty)
+  * CalendarEvent: Transformed shift with parsed Date objects
+  * GroupedCalendarData: Shifts grouped by date for calendar rendering
+  * UseShiftsCalendarResult: Hook return type with all states and methods
+- Implemented useShiftsCalendar custom hook in src/hooks/useShiftsCalendar.ts:
+  * Uses React Query (useQuery) for data fetching and caching
+  * Fetches from /api/calendar/shifts endpoint created in F021
+  * Supports all filter parameters: organizationId, startDate, endDate, facilityId, specialty
+  * Manages loading, error, fetching, and refetching states
+  * Implements automatic caching with 5-minute stale time
+  * Implements background refetching on window focus
+  * Retry logic with exponential backoff (max 2 retries)
+  * Data transformation functions: transformShiftsToEvents (adds parsed Date objects)
+  * Grouping helper: groupEventsByDate for calendar grid rendering
+  * Returns comprehensive result object: shifts, events, groupedByDate, isLoading, error, isFetching, isRefetching, refetch
+- Updated src/app/providers.tsx to wrap app with QueryClientProvider:
+  * Created QueryClient instance with useState to ensure single instance
+  * Configured default query options: 5min stale time, 10min cache time, refetch on focus
+  * Positioned QueryClientProvider as outermost provider (wraps SupabaseAuthProvider)
+- Created example file src/hooks/__tests__/useShiftsCalendar.example.tsx with 7 usage patterns:
+  * Basic usage with required parameters
+  * Filtered usage (facility + specialty filters)
+  * Using transformed events with Date objects
+  * Using grouped data for calendar grid
+  * Advanced usage with refetch and loading states
+  * On-demand fetching with disabled query
+  * Integration with OrganizationProvider context
+- All TypeScript interfaces include comprehensive JSDoc comments
+- Hook includes full JSDoc documentation with usage example
+- Build completed successfully with no errors
+- All acceptance criteria verified and met
