@@ -181,10 +181,9 @@ export function FacilitySheet({
                     .from('facility_payment_config')
                     .select('*')
                     .eq('facility_id', facilityToEdit.id)
-                    .single();
+                    .maybeSingle();
 
-                if (configError && configError.code !== 'PGRST116') {
-                    // PGRST116 = no rows returned
+                if (configError) {
                     console.error('Error loading payment config:', configError);
                 }
 
@@ -193,9 +192,9 @@ export function FacilitySheet({
                     .from('facility_addresses')
                     .select('*')
                     .eq('facility_id', facilityToEdit.id)
-                    .single();
+                    .maybeSingle();
 
-                if (addressError && addressError.code !== 'PGRST116') {
+                if (addressError) {
                     console.error('Error loading address:', addressError);
                 }
 
@@ -345,12 +344,6 @@ export function FacilitySheet({
                 if (hasAddressData) {
                     setIsSavingAddress(true);
                     try {
-                        // Get auth token
-                        const { data: { session } } = await supabase.auth.getSession();
-                        if (!session) {
-                            throw new Error('Não autenticado');
-                        }
-
                         // Prepare address payload
                         const addressPayload = {
                             facility_id: facilityId,
@@ -371,37 +364,26 @@ export function FacilitySheet({
                             .from('facility_addresses')
                             .select('id')
                             .eq('facility_id', facilityId)
-                            .single();
+                            .maybeSingle();
 
                         if (existingAddress) {
-                            // Update existing address via API
-                            const response = await fetch(`/api/facilities/${facilityId}/address`, {
-                                method: 'PATCH',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${session.access_token}`,
-                                },
-                                body: JSON.stringify(addressPayload),
-                            });
+                            // Update existing address
+                            const { error: updateError } = await supabase
+                                .from('facility_addresses')
+                                .update(addressPayload)
+                                .eq('facility_id', facilityId);
 
-                            if (!response.ok) {
-                                const errorData = await response.json();
-                                throw new Error(errorData.error || 'Erro ao atualizar endereço');
+                            if (updateError) {
+                                throw new Error(updateError.message || 'Erro ao atualizar endereço');
                             }
                         } else {
-                            // Create new address via API
-                            const response = await fetch(`/api/facilities/${facilityId}/address`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${session.access_token}`,
-                                },
-                                body: JSON.stringify(addressPayload),
-                            });
+                            // Create new address
+                            const { error: insertError } = await supabase
+                                .from('facility_addresses')
+                                .insert([addressPayload]);
 
-                            if (!response.ok) {
-                                const errorData = await response.json();
-                                throw new Error(errorData.error || 'Erro ao salvar endereço');
+                            if (insertError) {
+                                throw new Error(insertError.message || 'Erro ao salvar endereço');
                             }
                         }
                     } catch (addressError: any) {
@@ -435,7 +417,7 @@ export function FacilitySheet({
                     .from('facility_payment_config')
                     .select('id')
                     .eq('facility_id', facilityId)
-                    .single();
+                    .maybeSingle();
 
                 let paymentConfigId: string;
 
