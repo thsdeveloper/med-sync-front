@@ -1,0 +1,439 @@
+# Progress Log - MedSync Mobile
+# This file tracks the development history of the mobile application
+
+---
+
+MedSync Mobile initialized with Expo on 2025-12-12
+
+---
+
+[2025-12-12] [MOBILE-INIT] Initial Expo project setup - COMPLETED
+- Created React Native project using Expo SDK 54
+- Configured app.json with app name "MedSync", slug "medsync"
+- Set up project owner (thsdeveloper) and EAS project ID
+- Configured iOS and Android adaptive icons with custom branding
+- Enabled Expo Router for file-based navigation
+- Configured splash screen with custom icon and dual theme support (light/dark)
+- Enabled experimental features: typed routes and React Compiler
+- Set up runtime version policy based on app version
+- Configured OTA updates via Expo Updates
+- All platform configurations verified (iOS, Android, Web)
+
+---
+
+[2025-12-12] [MOBILE-AUTH] Authentication system implementation - COMPLETED
+- Integrated Supabase client with custom storage adapter
+- Created ExpoSecureStoreAdapter for secure credential storage
+  * iOS/Android: uses Expo SecureStore for encrypted storage
+  * Web: falls back to localStorage
+- Configured Supabase auth with auto-refresh tokens and persistent sessions
+- Implemented AuthProvider context (providers/auth-provider.tsx)
+  * Session state management
+  * Staff data loading from medical_staff table
+  * Sign in/sign out functionality
+  * Loading states and error handling
+- Created authentication flow screens:
+  * (auth)/index.tsx - Initial CRM input screen
+  * (auth)/login.tsx - Password login for existing users
+  * (auth)/register.tsx - New user registration
+  * (auth)/setup-password.tsx - Password setup for first-time users
+- Implemented CRM lookup functionality (lookupStaffByCrm)
+  * Validates CRM against medical_staff table
+  * Checks if user already has auth credentials (user_id)
+  * Returns staff details for registration flow
+- Created getCurrentStaff() helper function
+  * Fetches medical_staff record for authenticated user
+  * Used throughout app for staff data access
+- Built CRMInput UI component with input masking
+- Implemented secure password input fields
+- Added loading states and error messages throughout auth flow
+- Protected routes with auth state checks
+- Automatic redirect to auth screens if not authenticated
+
+---
+
+[2025-12-12] [MOBILE-SHIFTS] Shift management system - COMPLETED
+- Created shift listing and calendar views
+- Implemented HomeScreen (app/(app)/(tabs)/index.tsx)
+  * Elegant gradient header with user greeting (Bom dia/Boa tarde/Boa noite)
+  * Dynamic greeting icons (sun/partly-sunny/moon) based on time of day
+  * Display of next 3 upcoming shifts with ShiftCard components
+  * Pending actions alert card showing pending accepts and swap requests
+  * Quick action buttons (Escalas, Trocas, Chat, Perfil)
+  * Pull-to-refresh functionality
+  * Real-time shift updates via useRealtimeShifts hook
+  * Badge notifications for pending shifts and swap requests
+- Implemented ScheduleScreen (app/(app)/(tabs)/schedule.tsx)
+  * Full calendar view using react-native-calendars
+  * Multi-dot markers showing shifts by status (pending=yellow, accepted=green)
+  * Filter by status (all, pending, accepted)
+  * Day selection showing shifts for selected date
+  * Month navigation with automatic data loading
+  * Bulk actions banner for pending shifts
+  * "Accept All" and "Decline All" bulk operations
+  * Individual shift cards with compact variant
+  * Real-time updates for shift changes
+- Created ShiftDetailScreen (app/(app)/shift/[id].tsx)
+  * Complete shift information display
+  * ShiftDetailHeader component with animated sky scene
+  * ShiftDetails component with all shift metadata
+  * Check-in/Check-out functionality integration
+  * Request Swap button for creating swap requests
+  * Accept/Decline actions for pending shifts
+  * Navigation to related swap requests
+- Built ShiftCard organism component
+  * Two variants: "full" and "compact"
+  * Status badges (pending, accepted, declined)
+  * Period badges (manhã, tarde, noite)
+  * Sector color indicators
+  * Facility information
+  * Date and time display with duration
+  * Tap to navigate to shift details
+- Implemented shift data fetching with Supabase
+  * Queries with relations: sectors, organizations, facilities, attendance
+  * Filtered by staff_id for current user
+  * Ordered by start_time
+  * Date range filtering for calendar view
+- Created useRealtimeShifts custom hook
+  * Subscribes to shift table changes
+  * Automatically updates shift list on INSERT/UPDATE/DELETE
+  * Calculates pending count for badges
+  * Merges realtime updates with fetched data
+
+---
+
+[2025-12-12] [MOBILE-SWAPS] Shift swap request system - COMPLETED
+- Implemented RequestsScreen (app/(app)/(tabs)/requests.tsx)
+  * Tabbed interface: "Recebidas" and "Enviadas"
+  * Badge counter for pending incoming requests
+  * Request cards showing requester/target info with Avatar
+  * Status badges (pendente, aceita, recusada, cancelada)
+  * Preview of both shifts involved in swap
+  * Requester notes display
+  * "Tap to respond" hint for pending received requests
+  * Pull-to-refresh functionality
+  * Empty states with helpful messages
+- Created SwapDetailScreen (app/(app)/swap/[id].tsx)
+  * Complete swap request information
+  * Both shifts displayed with full details
+  * Requester and target staff information
+  * Status tracking with colored badges
+  * Accept/Decline buttons for received requests
+  * Cancel button for sent requests
+  * Confirmation dialogs for all actions
+  * Success/error toast messages
+- Implemented RequestSwapScreen (app/(app)/shift/[id]/request-swap.tsx)
+  * Form to create new swap request
+  * Original shift display (the one being swapped)
+  * Optional target shift selection (shift desired in return)
+  * Notes/justification text input
+  * Validation before submission
+  * Success feedback and navigation
+- Built useRealtimeSwapRequests custom hook
+  * Subscribes to shift_swap_requests table changes
+  * Real-time updates for new requests and status changes
+  * Calculates pending incoming count for notifications
+  * Filters requests by requester and target staff
+- Implemented swap request database operations
+  * Create swap request with shift IDs and notes
+  * Accept swap: updates both shifts' staff assignments
+  * Decline swap: updates request status to declined
+  * Cancel swap: allows requester to cancel pending requests
+- Added swap request validations
+  * Prevents swapping already swapped shifts
+  * Validates shift ownership
+  * Ensures target shift belongs to target staff
+  * Prevents duplicate active swap requests
+
+---
+
+[2025-12-12] [MOBILE-ATTENDANCE] Check-in/Check-out system - COMPLETED
+- Created CheckInOutButton molecule component
+  * Intelligent button state management
+  * Shows "Check-in" when shift is active and not checked in
+  * Shows "Check-out" when checked in but not checked out
+  * Shows "Completed" when fully checked out
+  * Disabled state for shifts not yet active
+  * Loading state during API operations
+  * Visual feedback with icons (enter/exit)
+- Implemented AttendanceTimeInfo component
+  * Displays check-in and check-out times
+  * Shows duration worked
+  * Formatted time display (HH:mm)
+  * Duration calculation in hours and minutes
+- Built AttendanceStatusBadge atom component
+  * Visual status indicator (not started, in progress, completed)
+  * Color coding: gray (not started), blue (in progress), green (completed)
+  * Icons for each status
+- Created shift_attendance table operations
+  * Insert check-in record with timestamp
+  * Update check-out record with timestamp
+  * Calculate duration automatically
+  * Link to shift via shift_id foreign key
+- Added validation logic
+  * Check-in only allowed within time window before/after shift start
+  * Check-out only allowed after check-in
+  * Prevents duplicate check-ins
+- Integrated attendance into ShiftDetailScreen
+  * Displays current attendance status
+  * Shows check-in/out times if available
+  * Prominently placed CheckInOutButton
+  * Real-time status updates
+
+---
+
+[2025-12-12] [MOBILE-CHAT] Chat and messaging system - COMPLETED
+- Implemented ChatListScreen (app/(app)/(tabs)/chat.tsx)
+  * OrganizationChatSelector component for organization selection
+  * List of organizations user belongs to
+  * Organization logos/avatars
+  * Tap to open conversation with organization
+  * Empty state when no organizations
+- Created ChatScreen (app/(app)/chat/[id].tsx)
+  * Individual conversation view by organization ID
+  * Message list with sender identification
+  * Message input field
+  * Send button
+  * Auto-scroll to latest message
+  * Real-time message updates
+  * Timestamp display for each message
+- Built OrganizationChatSelector molecule component
+  * Displays organization cards
+  * Organization name and logo
+  * Member count display
+  * Navigation to chat on selection
+- Implemented basic messaging functionality
+  * Send messages to organization channel
+  * Receive messages from organization members
+  * Message persistence in Supabase
+  * Real-time message synchronization
+
+---
+
+[2025-12-12] [MOBILE-PROFILE] User profile screen - COMPLETED
+- Created ProfileScreen (app/(app)/profile.tsx)
+  * User avatar with initials and custom color
+  * Display of staff name, CRM, specialty
+  * Role/position display
+  * Organization memberships
+  * Logout button with confirmation
+  * Clean, card-based layout
+- Implemented logout functionality
+  * Sign out from Supabase auth
+  * Clear secure storage
+  * Reset auth context state
+  * Redirect to auth flow
+  * Confirmation dialog before logout
+
+---
+
+[2025-12-12] [MOBILE-REALTIME] Real-time synchronization system - COMPLETED
+- Created RealtimeProvider context (providers/realtime-provider.tsx)
+  * Manages Supabase Realtime connection
+  * Connection status tracking (connected/disconnected)
+  * Auto-reconnect on failure
+  * Channel management
+  * Cleanup on unmount
+- Implemented useRealtimeShifts hook (hooks/useRealtimeShifts.ts)
+  * Subscribes to shifts table for current user
+  * Handles INSERT, UPDATE, DELETE events
+  * Merges realtime changes with fetched data
+  * Maintains local state with real-time updates
+  * Calculates pending shift count
+  * Automatic re-sorting by start_time
+- Implemented useRealtimeSwapRequests hook (hooks/useRealtimeSwapRequests.ts)
+  * Subscribes to shift_swap_requests table
+  * Filters for user's incoming and outgoing requests
+  * Handles status changes in real-time
+  * Calculates pending incoming request count
+  * Updates UI instantly on changes
+- Integrated realtime hooks throughout app
+  * HomeScreen uses realtime shifts and swap requests
+  * ScheduleScreen uses realtime shifts for calendar updates
+  * RequestsScreen uses realtime swap requests
+  * All screens automatically update without manual refresh
+- Configured Supabase Realtime channels
+  * Enabled row-level security (RLS) for realtime
+  * Set up proper authentication for subscriptions
+  * Optimized payload size with column selection
+
+---
+
+[2025-12-12] [MOBILE-NOTIFICATIONS] Push notifications system - COMPLETED
+- Created NotificationProvider context (providers/notification-provider.tsx)
+  * Request and manage notification permissions
+  * Register device for push notifications
+  * Handle incoming notifications
+  * Background and foreground notification handling
+  * Store notification token in Supabase
+- Implemented notification handlers
+  * Handle notification tap to navigate to relevant screen
+  * Display in-app alerts for foreground notifications
+  * Badge count management
+  * Notification channels (Android)
+- Integrated Expo Notifications
+  * expo-notifications for push capabilities
+  * expo-device for device identification
+  * expo-constants for project configuration
+- Configured notification triggers
+  * New shift assigned
+  * Shift swap request received
+  * Shift swap accepted/declined
+  * Check-in/check-out reminders
+  * Schedule changes
+
+---
+
+[2025-12-12] [MOBILE-UI] UI components and design system - COMPLETED
+- Created comprehensive atomic design component library
+- Atoms (basic building blocks):
+  * StatusBadge - Shift status indicators
+  * PeriodBadge - Time period badges (manhã/tarde/noite)
+  * ShiftTime - Formatted time display
+  * AttendanceStatusBadge - Attendance status indicator
+  * AnimatedSun - Animated sun for day scenes
+  * AnimatedMoon - Animated moon for night scenes
+  * AnimatedCloud - Floating cloud animations
+- Molecules (composite components):
+  * ShiftCard - Shift display card with all info
+  * ShiftDetails - Detailed shift information panel
+  * ShiftDateHeader - Formatted date header
+  * CheckInOutButton - Check-in/out action button
+  * AttendanceTimeInfo - Time tracking info display
+  * OrganizationChatSelector - Organization selection for chat
+  * SkyScene - Animated sky background (day/night/sunset)
+- Organisms (complex components):
+  * ShiftDetailHeader - Complete shift detail header with sky scene
+- Base UI components:
+  * Button - Customizable button with variants (primary, secondary, ghost)
+  * Card - Card container with variants (elevated, outlined, flat)
+  * Input - Text input with label and error states
+  * Avatar - Circular avatar with initials and color
+  * CRMInput - Specialized CRM input with masking
+- Design system:
+  * Consistent color palette (primary, success, warning, danger, neutral)
+  * Typography scale
+  * Spacing system
+  * Border radius standards
+  * Shadow/elevation levels
+- Implemented custom animations
+  * Smooth transitions using react-native-reanimated
+  * Gesture handling with react-native-gesture-handler
+  * Haptic feedback on interactions
+  * Sky animations with sun/moon/clouds
+
+---
+
+[2025-12-12] [MOBILE-ROUTING] Expo Router file-based navigation - COMPLETED
+- Configured Expo Router for type-safe navigation
+- Implemented layout-based route structure
+  * _layout.tsx - Root layout with providers
+  * (auth)/_layout.tsx - Auth flow layout
+  * (app)/_layout.tsx - Authenticated app layout
+  * (app)/(tabs)/_layout.tsx - Bottom tab navigation
+- Created route groups:
+  * (auth) - Authentication screens (public)
+  * (app) - Authenticated screens (protected)
+  * (tabs) - Bottom tab navigation (home, schedule, requests, chat)
+- Implemented navigation features:
+  * Type-safe navigation with typed routes
+  * Deep linking support with custom scheme (medsync://)
+  * Back button handling
+  * Tab bar customization with icons and labels
+  * Route params typing
+  * Automatic screen transitions
+- Protected routes with auth guards
+  * Redirect to auth if not authenticated
+  * Redirect to app if already authenticated
+- Configured tab bar:
+  * Custom tab bar with haptic feedback
+  * Icons from Expo Vector Icons (Ionicons)
+  * Active/inactive states with color changes
+  * Badge support for notifications
+
+---
+
+[2025-12-12] [MOBILE-BUILD] EAS Build configuration - COMPLETED
+- Created eas.json configuration file
+- Configured build profiles:
+  * development - Development builds with dev client
+  * preview - Preview builds for testing
+  * production - Production builds for store submission
+- Set up platform-specific configs (iOS and Android)
+- Configured auto-increment build numbers
+- Set up environment variables for different builds
+- Integrated with Expo Updates for OTA updates
+- Configured runtime versioning policy
+- Ready for deployment to App Store and Play Store
+
+---
+
+[COMPLETED] Core Features Status:
+✅ Authentication and registration flow
+✅ Shift management (listing, calendar, details)
+✅ Shift swap request system
+✅ Check-in/Check-out attendance tracking
+✅ Real-time synchronization (Supabase Realtime)
+✅ Push notifications
+✅ Chat/messaging system
+✅ User profile management
+✅ Atomic design component library
+✅ File-based routing with Expo Router
+✅ EAS Build and deployment configuration
+
+---
+
+[PENDING] Future Enhancements:
+⏳ Offline mode with local storage sync
+⏳ Advanced calendar features (week view, month view options)
+⏳ Shift statistics and analytics
+⏳ Document upload for attendance proof
+⏳ Time tracking reports and exports
+⏳ Multi-language support (i18n)
+⏳ Dark mode theming
+⏳ Biometric authentication (Face ID/Touch ID)
+⏳ Voice notes in chat
+⏳ File sharing in chat
+⏳ Push notification preferences/settings
+⏳ Calendar sync (Google Calendar, Apple Calendar)
+
+---
+[2025-12-12] [R001] Refactor shift detail modal to add interactive location with map integration - COMPLETED
+- Refactored Location section in shift detail screen to add interactive map navigation
+- Created FacilityLocationActions molecule component
+  * Interactive buttons for Google Maps, Waze, and Apple Maps
+  * Uses Linking API with proper URL schemes for each navigation app
+  * Platform-specific behavior (Apple Maps on iOS, Google Maps fallback on Android)
+  * Prioritizes latitude/longitude coordinates for precise navigation
+  * Graceful fallback to formatted text addresses when coordinates unavailable
+  * Haptic feedback on button interactions
+  * Proper URL encoding for all address strings
+- Created AddressDetailsCollapsible molecule component
+  * Expandable/collapsible section showing full structured address details
+  * Displays all facility_addresses fields (street, number, complement, neighborhood, city, state, postal_code)
+  * Shows coordinates when available with monospace formatting
+  * Smooth expand/collapse animation using react-native-reanimated
+  * Chevron icon rotation animation
+- Updated shift detail screen query
+  * Added facility_addresses join to facilities relation
+  * Fetches all address fields including latitude and longitude
+  * Maintains backward compatibility with existing queries
+- Refactored Location section UI
+  * Three-tier rendering strategy:
+    1. facility_addresses with coordinates → Best UX (structured address + map buttons with precise coords)
+    2. facility_addresses without coordinates → Good UX (structured address + map buttons with text search)
+    3. No facility_addresses → Fallback UX (legacy facilities.address + map buttons with text search)
+  * Preserved facility name and icon display
+  * Added expandable address details below facility info
+  * Map navigation buttons positioned below address
+  * All existing shift detail functionality unchanged
+- Impact metrics:
+  * 2 new reusable molecule components (300+ lines)
+  * Enhanced user experience with one-tap navigation to any map app
+  * Zero breaking changes - all existing functionality preserved
+  * Proper TypeScript typing throughout
+  * No linting errors introduced
+  * Follows Atomic Design methodology (molecules)
+
+---
+
