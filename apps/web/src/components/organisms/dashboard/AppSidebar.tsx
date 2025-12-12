@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import {
   ArrowLeftRight,
   CalendarCheck2,
+  CalendarDays,
   ChevronRight,
   ChevronsUpDown,
   FileText,
@@ -56,16 +57,24 @@ import { useSupabaseSignedUrl } from "@/hooks/useSupabaseSignedUrl";
 
 const STORAGE_BUCKET = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET ?? "med-sync-bucket";
 
-const mainNavItems = [
+type NavItem = {
+  title: string;
+  url: string;
+  icon: React.ComponentType<{ className?: string }>;
+  requiresRole?: ('owner' | 'admin')[];
+};
+
+const mainNavItems: NavItem[] = [
   {
     title: "Visão Geral",
     url: "/dashboard",
     icon: LayoutDashboard,
   },
   {
-    title: "Escalas",
+    title: "Calendário de Escalas",
     url: "/dashboard/escalas",
-    icon: CalendarCheck2,
+    icon: CalendarDays,
+    requiresRole: ['owner', 'admin'],
   },
   {
     title: "Trocas",
@@ -205,6 +214,18 @@ export function AppSidebar() {
     }
   };
 
+  // Filter navigation items based on user role
+  const visibleNavItems = useMemo(() => {
+    return mainNavItems.filter((item) => {
+      // If no role requirement, show to everyone
+      if (!item.requiresRole) return true;
+      // If user has no role, hide items with role requirements
+      if (!activeRole) return false;
+      // Check if user's role matches any required role
+      return item.requiresRole.includes(activeRole as 'owner' | 'admin');
+    });
+  }, [activeRole]);
+
   return (
     <>
       <Sidebar collapsible="icon">
@@ -302,7 +323,7 @@ export function AppSidebar() {
             <SidebarGroupLabel>Gestão</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {mainNavItems.map((item) => (
+                {visibleNavItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild tooltip={item.title} isActive={isActive(item.url)}>
                       <Link href={item.url}>

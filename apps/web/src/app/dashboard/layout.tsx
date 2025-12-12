@@ -26,7 +26,7 @@ import { ChatProvider } from "@/providers/ChatProvider";
 import { NotificationProvider } from "@/providers/NotificationProvider";
 
 const SEGMENT_TITLES: Record<string, string> = {
-  escalas: "Escalas",
+  escalas: "Calendário de Escalas",
   equipe: "Corpo Clínico",
   relatorios: "Relatórios",
   configuracoes: "Configurações",

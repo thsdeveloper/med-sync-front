@@ -414,7 +414,7 @@
         "Active route highlighting works correctly",
         "Link positioned logically in menu structure"
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }

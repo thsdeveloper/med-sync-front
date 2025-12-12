@@ -435,3 +435,34 @@
 - Graceful error handling with fallback to default options if API fails
 - Build completed successfully with no TypeScript errors
 - All acceptance criteria verified and met
+[2025-12-12T$(date +%H:%M:%S)] [F027] Create Escalas (Shifts) calendar page - COMPLETED
+- Created main Escalas page at src/app/dashboard/escalas/page.tsx replacing old fixed schedules page
+- Integrated ShiftsCalendar organism component for calendar display with organization-based data fetching
+- Integrated CalendarFilters molecule component for date range, facility, and specialty filtering
+- Added PageHeader with CalendarDays icon, "Calendário de Escalas" title, and descriptive text
+- Implemented organization-based access control using OrganizationProvider context hook
+- Modal state automatically managed by ShiftsCalendar component (opens on shift click via ShiftDetailModal)
+- Filter state management implemented with useState:
+  * Default values: current month date range, facilityId='todas', specialty='todas'
+  * Date range fallback handling when filters cleared (empty strings → current month)
+  * Filter changes passed to ShiftsCalendar via props
+- Added loading state with Loader2 spinner while organization context initializes
+- Added empty state when no organization selected: border-dashed card with helpful message
+- Layout structure matches dashboard design patterns:
+  * flex-col with gap-6 spacing
+  * PageHeader → CalendarFilters → ShiftsCalendar vertical flow
+  * Conditional rendering based on organizationId presence
+- Page fully responsive with proper min-height constraints (min-h-[400px])
+- CalendarFilters only rendered when organizationId exists (prevents API errors)
+- Calendar displays with 700px height in month view by default
+- All components properly typed with TypeScript interfaces
+- Build verification successful with no errors or warnings
+- Route registered in Next.js build output: ○ /dashboard/escalas
+- All acceptance criteria verified and met:
+  ✅ Escalas page created at src/app/dashboard/escalas/page.tsx
+  ✅ Page header with 'Calendário de Escalas' title
+  ✅ ShiftsCalendar and CalendarFilters integrated in proper layout
+  ✅ Modal state properly managed (ShiftDetailModal opens/closes on shift click)
+  ✅ Organization-based filtering enforced (organizationId prop required, RLS enforced via API)
+  ✅ Page responsive and matches dashboard design patterns (consistent with reports page)
+
