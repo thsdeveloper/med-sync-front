@@ -1,0 +1,152 @@
+=== Atomizer Debug Output (2025-12-12T17:40:16.139Z) ===
+SUCCESS: true
+ERROR: none
+OUTPUT LENGTH: 8582
+
+OUTPUT:
+```json
+[
+  {
+    "id": "F001",
+    "title": "Create address database schema and migration",
+    "type": "feature",
+    "description": "Expand Supabase database schema to include comprehensive address fields for clinics/hospitals. Create new table 'facility_addresses' with fields: facility_id (FK), street, number, complement, neighborhood, city, state, postal_code, country, latitude, longitude, created_at, updated_at. Add foreign key relationship to facilities table. Create and apply migration.",
+    "acceptance_criteria": [
+      "facility_addresses table created with all required fields",
+      "Foreign key relationship established with facilities table",
+      "Migration file created and successfully applied to Supabase",
+      "Latitude and longitude fields configured as numeric types",
+      "Indexes created for facility_id and location queries"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F002",
+    "title": "Create address Zod validation schema",
+    "type": "feature",
+    "description": "Create comprehensive Zod validation schema for facility addresses in schemas/facility-address.schema.ts. Include validation for all address fields with Brazilian address patterns (CEP format, state abbreviations). Add optional latitude/longitude validation. Export schema types for TypeScript usage throughout the application.",
+    "acceptance_criteria": [
+      "Zod schema created in schemas/facility-address.schema.ts",
+      "CEP validation implemented with regex pattern (XXXXX-XXX)",
+      "Brazilian state abbreviations validated against enum",
+      "Latitude/longitude validated as optional numeric values within valid ranges",
+      "TypeScript types exported for use in forms and API"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F003",
+    "title": "Implement facility address API endpoints",
+    "type": "feature",
+    "description": "Create API routes for facility address CRUD operations. Implement POST /api/facilities/[id]/address, PATCH /api/facilities/[id]/address, and GET /api/facilities/[id]/address. Add Zod validation, error handling, and Supabase integration. Include RLS policies for organization-level access control.",
+    "acceptance_criteria": [
+      "API routes created for POST, PATCH, and GET operations",
+      "Zod schema validation applied to all request bodies",
+      "Supabase queries implemented with proper error handling",
+      "RLS policies configured for organization-level data isolation",
+      "Appropriate HTTP status codes returned for all scenarios"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F004",
+    "title": "Install and configure Leaflet.js for maps",
+    "type": "feature",
+    "description": "Install react-leaflet and leaflet packages. Configure Leaflet CSS imports in globals.css. Create TypeScript type declarations for Leaflet if needed. Set up basic map configuration with default center coordinates (Brazil center). Create base MapContainer wrapper component in components/molecules with proper Next.js dynamic import to avoid SSR issues.",
+    "acceptance_criteria": [
+      "react-leaflet and leaflet packages installed via npm",
+      "Leaflet CSS imported and styled correctly in globals.css",
+      "MapContainer wrapper component created with dynamic import",
+      "Default map configuration set to Brazil's geographic center",
+      "Component renders correctly without SSR hydration errors"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F005",
+    "title": "Create AddressFormFields component with all address inputs",
+    "type": "feature",
+    "description": "Build comprehensive AddressFormFields component in components/molecules using React Hook Form integration. Include inputs for street, number, complement, neighborhood, city, state (dropdown), postal_code (with mask), and country. Implement CEP auto-complete using ViaCEP API. Apply Zod validation schema. Follow existing form patterns in the project.",
+    "acceptance_criteria": [
+      "AddressFormFields component created with all required input fields",
+      "React Hook Form integration implemented with proper typing",
+      "Brazilian state dropdown populated with all 27 states",
+      "CEP input mask applied (XXXXX-XXX format)",
+      "ViaCEP API integration auto-fills address fields on valid CEP"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F006",
+    "title": "Create interactive LocationPicker map component",
+    "type": "feature",
+    "description": "Build LocationPicker component in components/molecules using Leaflet.js. Implement click-to-place marker functionality to set latitude/longitude. Add drag marker feature to adjust location. Include search box for address lookup with geocoding. Display current coordinates. Integrate with React Hook Form to update latitude/longitude fields. Add responsive design for mobile devices.",
+    "acceptance_criteria": [
+      "LocationPicker component created with Leaflet map integration",
+      "Click-to-place marker functionality working correctly",
+      "Marker dragging updates latitude/longitude in real-time",
+      "Geocoding search box implemented for address lookup",
+      "Component integrates with React Hook Form setValue/watch"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F007",
+    "title": "Integrate address form into facility creation flow",
+    "type": "feature",
+    "description": "Update facility creation form to include AddressFormFields and LocationPicker components. Modify facility.schema.ts to include address validation. Update form submission logic to save address data via API. Ensure proper form state management and error handling. Add loading states during address save operations.",
+    "acceptance_criteria": [
+      "AddressFormFields component integrated into facility creation form",
+      "LocationPicker component added with proper spacing and layout",
+      "Form submission saves complete address data including geolocation",
+      "Error messages displayed for address validation failures",
+      "Loading states shown during API calls"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F008",
+    "title": "Integrate address form into facility edit flow",
+    "type": "feature",
+    "description": "Update facility edit form to load existing address data and populate AddressFormFields and LocationPicker. Implement PATCH API call to update address. Handle cases where facility has no existing address (create new). Pre-populate map marker with existing latitude/longitude. Add confirmation for location changes.",
+    "acceptance_criteria": [
+      "Existing address data loaded and populated in form fields",
+      "Map marker positioned at existing coordinates on load",
+      "PATCH API updates address when editing existing facility",
+      "New address created if facility has no existing address",
+      "All form fields editable with proper validation"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F009",
+    "title": "Create facility location display component for read-only views",
+    "type": "feature",
+    "description": "Build FacilityLocationDisplay component in components/molecules to show complete address and map in read-only mode. Display formatted address with all fields. Show static Leaflet map with marker at facility location. Add 'Open in Google Maps' link. Use in facility detail views and lists. Implement responsive design.",
+    "acceptance_criteria": [
+      "FacilityLocationDisplay component created for read-only views",
+      "Complete address displayed in formatted, readable layout",
+      "Static map rendered with marker at correct coordinates",
+      "Google Maps link opens facility location in new tab",
+      "Component responsive on mobile and desktop devices"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F010",
+    "title": "Add migration to populate existing facilities with default address",
+    "type": "feature",
+    "description": "Create data migration script to handle existing facilities with old text-based address field. Parse existing address text into structured format where possible. Create facility_addresses records for all existing facilities. Add flag to indicate auto-migrated vs user-entered addresses. Log migration results and handle edge cases.",
+    "acceptance_criteria": [
+      "Migration script created to process existing facilities",
+      "Old text address field parsed and mapped to new structure",
+      "facility_addresses records created for all existing facilities",
+      "Migration logs created showing success/failure counts",
+      "Edge cases handled gracefully with fallback values"
+    ],
+    "passes": false
+  }
+]
+```
+
+=== End of Output ===
