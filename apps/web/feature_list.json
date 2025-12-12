@@ -60,7 +60,7 @@
         "RLS policies configured for organization-level data isolation",
         "Appropriate HTTP status codes returned for all scenarios"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F004",
