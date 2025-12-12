@@ -518,3 +518,74 @@ MedSync Mobile initialized with Expo on 2025-12-12
   * Proper type safety for TypeScript/React Native code
   * Zero breaking changes to existing functionality
 
+
+---
+[2025-12-12] [F003] Install and configure expo-image-picker with permissions - COMPLETED
+- Installed expo-image-picker package (v17.0.10) for selecting images from device library
+- Package Installation:
+  * Installed via npx expo install expo-image-picker
+  * Version ~17.0.10 compatible with Expo SDK 54
+  * Added to dependencies in package.json
+- iOS Permission Configuration:
+  * Added NSPhotoLibraryUsageDescription to app.json
+  * User-friendly message: "MedSync needs access to your photo library so you can select and upload a profile picture."
+  * Permission prompt will display this message when requesting access
+- Android Permission Configuration:
+  * Added READ_MEDIA_IMAGES permission for Android 13+ (API level 33+)
+  * Added READ_EXTERNAL_STORAGE permission for backward compatibility (Android 12 and below)
+  * Configured in app.json android.permissions array
+  * Supports both legacy and modern Android permission models
+- Created useImagePicker Hook (hooks/useImagePicker.ts):
+  * Comprehensive hook to encapsulate image selection logic
+  * Permission Management:
+    - checkPermission(): Checks current permission status without requesting
+    - requestPermission(): Requests media library permissions with user feedback
+    - Handles all permission states: GRANTED, DENIED, UNDETERMINED
+    - Special handling for "Don't ask again" scenario with settings guidance
+  * Image Selection:
+    - pickImage(): Launches image picker with configurable options
+    - Supports customizable aspect ratio, quality, and media types
+    - Default configuration: 1:1 aspect, 80% quality, images only
+    - Returns normalized ImagePickerResult with uri, dimensions, and metadata
+  * State Management:
+    - permissionStatus: Current permission status (null | PermissionStatus)
+    - isRequestingPermission: Boolean flag for permission request in progress
+    - isPickingImage: Boolean flag for image picker active state
+  * Error Handling:
+    - Try-catch blocks for all async operations
+    - User-friendly Alert dialogs for permission denials
+    - Platform-specific guidance (iOS: open settings prompt, Android: manual instructions)
+    - Console error logging for debugging
+  * TypeScript Interfaces:
+    - ImagePickerResult: Normalized result type (uri, width, height, type, fileName, fileSize)
+    - UseImagePickerOptions: Configuration options (allowsEditing, aspect, quality, mediaTypes)
+    - UseImagePickerReturn: Hook return type with all methods and state
+  * Documentation:
+    - Comprehensive JSDoc comments for all interfaces and functions
+    - Usage examples in hook documentation
+    - Clear parameter and return type descriptions
+- Exported Hook in hooks/index.ts:
+  * Added useImagePicker to feature hooks section
+  * Exported all TypeScript types for consumer convenience
+  * Types: ImagePickerResult, UseImagePickerOptions, UseImagePickerReturn
+- Verification:
+  * Package successfully installed and added to package.json
+  * iOS permission configured in app.json infoPlist
+  * Android permissions configured in app.json permissions array
+  * Hook created with 260+ lines of robust implementation
+  * Project builds successfully with no errors (verified with expo export)
+  * TypeScript types properly defined and exported
+  * All exports verified in hooks/index.ts
+- Impact:
+  * Foundation for profile image upload feature (F004-F009)
+  * Reusable hook can be used anywhere in the app for image selection
+  * Proper permission handling ensures App Store and Play Store compliance
+  * User-friendly error messages improve UX for permission scenarios
+  * Follows React best practices with useCallback hooks for performance
+  * Zero breaking changes to existing functionality
+- All Acceptance Criteria Met:
+  ✅ expo-image-picker package installed
+  ✅ iOS NSPhotoLibraryUsageDescription added to app.json
+  ✅ Android READ_MEDIA_IMAGES permission configured
+  ✅ useImagePicker hook created with permission request logic
+  ✅ Permission denied scenario handled with user feedback
