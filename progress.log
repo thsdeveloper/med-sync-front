@@ -1,0 +1,8 @@
+[2025-12-15 20:16:25] [F001] Create especialidades table in Supabase with seed data - COMPLETED
+- Created migration file: migrations/20251215_create_especialidades_table.sql
+- Table created with columns: id (UUID), nome (TEXT UNIQUE NOT NULL), created_at (TIMESTAMPTZ)
+- Enabled RLS with public SELECT policy (public_especialidades_select)
+- Seeded 30 medical specialties (exceeds 15 minimum requirement)
+- Added index on nome column for efficient lookups
+- Migration executed successfully via Supabase MCP
+- Impact: Provides normalized specialty catalog, eliminates free-text data entry inconsistencies
