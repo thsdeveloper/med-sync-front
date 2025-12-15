@@ -25,7 +25,11 @@ interface SignUpData {
   email: string;
   phone?: string;
   crm: string;
-  specialty?: string;
+  /**
+   * Foreign key to especialidades table (REQUIRED).
+   * References the medical specialty from the normalized especialidades catalog.
+   */
+  especialidade_id: string;
   password: string;
 }
 
@@ -177,7 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: data.email,
           phone: data.phone || null,
           crm: data.crm,
-          specialty: data.specialty || null,
+          especialidade_id: data.especialidade_id,
           role: 'Médico',
           color: generateRandomColor(),
           active: true,

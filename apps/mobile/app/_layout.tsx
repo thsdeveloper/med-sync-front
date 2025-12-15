@@ -10,6 +10,7 @@ import { AnimatedSplash } from '@/components/AnimatedSplash';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider } from '@/providers/auth-provider';
 import { NotificationProvider } from '@/providers/notification-provider';
+import { QueryProvider } from '@/providers/query-provider';
 import { RealtimeProvider } from '@/providers/realtime-provider';
 
 // Prevenir auto-hide da splash screen
@@ -53,25 +54,27 @@ export default function RootLayout() {
 
   return (
     <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <AuthProvider>
-          <NotificationProvider>
-            <RealtimeProvider>
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen
-                  name="(auth)"
-                  options={{ gestureEnabled: false }}
-                />
-                <Stack.Screen
-                  name="(app)"
-                  options={{ gestureEnabled: false }}
-                />
-              </Stack>
-              <StatusBar style="auto" />
-            </RealtimeProvider>
-          </NotificationProvider>
-        </AuthProvider>
-      </ThemeProvider>
+      <QueryProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <AuthProvider>
+            <NotificationProvider>
+              <RealtimeProvider>
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen
+                    name="(auth)"
+                    options={{ gestureEnabled: false }}
+                  />
+                  <Stack.Screen
+                    name="(app)"
+                    options={{ gestureEnabled: false }}
+                  />
+                </Stack>
+                <StatusBar style="auto" />
+              </RealtimeProvider>
+            </NotificationProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </QueryProvider>
 
       {/* Splash animada por cima de tudo */}
       {!splashAnimationFinished && (

@@ -38,8 +38,11 @@ type ExistingStaffMatch = {
     name: string;
     email: string | null;
     crm: string;
-    specialty: string | null;
     role: string;
+    especialidade: {
+        id: string;
+        nome: string;
+    } | null;
 };
 
 interface MedicalStaffSheetProps {
@@ -89,7 +92,7 @@ export function MedicalStaffSheet({
         try {
             const { data, error } = await supabase
                 .from('medical_staff')
-                .select('id, name, email, crm, specialty, role')
+                .select('id, name, email, crm, role, especialidade:especialidade_id(id, nome)')
                 .ilike('crm', normalizedCrm)
                 .limit(1)
                 .maybeSingle();
@@ -113,7 +116,19 @@ export function MedicalStaffSheet({
                     // Já vinculado, não mostrar
                     setExistingStaffMatch(null);
                 } else {
-                    setExistingStaffMatch(data as ExistingStaffMatch);
+                    // Fix TypeScript type inference issue with nested relationships
+                    // Supabase returns especialidade as object | null, but TS infers it as array
+                    const matchData: ExistingStaffMatch = {
+                        id: data.id,
+                        name: data.name,
+                        email: data.email,
+                        crm: data.crm,
+                        role: data.role,
+                        especialidade: Array.isArray(data.especialidade)
+                            ? (data.especialidade[0] || null)
+                            : (data.especialidade || null)
+                    };
+                    setExistingStaffMatch(matchData);
                 }
             } else {
                 setExistingStaffMatch(null);
@@ -355,7 +370,7 @@ export function MedicalStaffSheet({
                             <AlertDescription className="text-blue-700">
                                 <p className="mb-2">
                                     <strong>{existingStaffMatch.name}</strong> ({existingStaffMatch.role})
-                                    {existingStaffMatch.specialty && ` • ${existingStaffMatch.specialty}`}
+                                    {existingStaffMatch.especialidade?.nome && ` • ${existingStaffMatch.especialidade.nome}`}
                                 </p>
                                 <p className="text-sm mb-3">
                                     Este profissional já está cadastrado no sistema. Deseja vinculá-lo à sua organização?

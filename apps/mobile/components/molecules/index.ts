@@ -15,3 +15,6 @@ export { AddressDetailsCollapsible } from './AddressDetailsCollapsible';
 
 // Profile components
 export { ProfileAvatarUpload, type ProfileAvatarUploadProps } from './ProfileAvatarUpload';
+
+// Form components
+export { EspecialidadePicker } from './EspecialidadePicker';

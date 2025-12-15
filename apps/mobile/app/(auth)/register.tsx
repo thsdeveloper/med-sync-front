@@ -15,6 +15,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Input, CRMInput } from '@/components/ui';
+import { EspecialidadePicker } from '@/components/molecules';
 import { useAuth } from '@/providers/auth-provider';
 import { staffRegisterSchema, type StaffRegisterData } from '@medsync/shared';
 
@@ -36,7 +37,7 @@ export default function RegisterScreen() {
       email: '',
       phone: '',
       crm: crm || '',
-      specialty: '',
+      especialidade_id: '',
       password: '',
       confirmPassword: '',
     },
@@ -50,7 +51,7 @@ export default function RegisterScreen() {
         email: data.email,
         phone: data.phone,
         crm: data.crm,
-        specialty: data.specialty,
+        especialidade_id: data.especialidade_id,
         password: data.password,
       });
 
@@ -163,17 +164,15 @@ export default function RegisterScreen() {
 
             <Controller
               control={control}
-              name="specialty"
+              name="especialidade_id"
               render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label="Especialidade (opcional)"
-                  placeholder="Ex: Cardiologia"
-                  leftIcon="medkit"
+                <EspecialidadePicker
+                  label="Especialidade"
+                  placeholder="Selecione sua especialidade"
                   value={value}
-                  onChangeText={onChange}
+                  onValueChange={onChange}
                   onBlur={onBlur}
-                  error={errors.specialty?.message}
-                  autoCapitalize="words"
+                  error={errors.especialidade_id?.message}
                 />
               )}
             />

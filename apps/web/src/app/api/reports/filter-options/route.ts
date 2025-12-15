@@ -32,12 +32,13 @@ export async function GET(request: NextRequest) {
 
         // Query distinct specialties from medical_staff filtered by organization
         // Use staff_organizations table for proper N:N relationship filtering
+        // Join with especialidades table to get normalized specialty names
         const { data: staffData, error: specialtiesError } = await supabase
             .from('medical_staff')
-            .select('specialty, staff_organizations!inner(organization_id)')
+            .select('especialidade:especialidade_id(id, nome), staff_organizations!inner(organization_id)')
             .eq('staff_organizations.organization_id', organizationId)
             .eq('staff_organizations.active', true)
-            .not('specialty', 'is', null);
+            .not('especialidade_id', 'is', null);
 
         if (specialtiesError) {
             console.error('Error fetching specialties:', specialtiesError);
@@ -47,19 +48,15 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        // Extract and normalize distinct specialties
+        // Extract distinct specialties from joined data
         const specialtiesSet = new Set<string>();
-        staffData?.forEach((staff) => {
-            if (staff.specialty) {
-                // Normalize: trim whitespace and convert to lowercase for consistency
-                const normalized = staff.specialty.trim().toLowerCase();
-                if (normalized) {
-                    specialtiesSet.add(normalized);
-                }
+        staffData?.forEach((staff: any) => {
+            if (staff.especialidade?.nome) {
+                specialtiesSet.add(staff.especialidade.nome);
             }
         });
 
-        // Convert to array and sort
+        // Convert to array and sort alphabetically
         const specialties = Array.from(specialtiesSet).sort();
 
         return NextResponse.json({

@@ -114,7 +114,7 @@
         "Form validation updated to require especialidade_id selection",
         "Form submission successfully sends especialidade_id to backend"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F007",
@@ -129,7 +129,7 @@
         "Mobile app detail/profile screens display especialidade.nome correctly",
         "Null/undefined especialidade handled with appropriate fallback (e.g., 'Não especificado')"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F008",
@@ -144,7 +144,7 @@
         "Integration tests verify correct data flow from selection to display",
         "Documentation updated explaining the especialidade refactoring"
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }

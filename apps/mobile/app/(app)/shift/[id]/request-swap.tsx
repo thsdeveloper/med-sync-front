@@ -66,7 +66,8 @@ export default function RequestSwapScreen() {
       const { data: staffData, error: staffError } = await supabase
         .from('medical_staff')
         .select(`
-          id, name, color, specialty, role
+          id, name, color, role,
+          especialidade:especialidade_id(id, nome)
         `)
         .eq('active', true)
         .neq('id', staff.id);
@@ -234,7 +235,7 @@ export default function RequestSwapScreen() {
                   </View>
                   <View style={styles.colleagueInfo}>
                     <Text style={styles.colleagueName}>{colleague.name}</Text>
-                    <Text style={styles.colleagueRole}>{colleague.specialty || colleague.role}</Text>
+                    <Text style={styles.colleagueRole}>{colleague.especialidade?.nome || colleague.role}</Text>
                   </View>
                   {selectedColleague === colleague.id && (
                     <Ionicons name="checkmark-circle" size={24} color="#10B981" />

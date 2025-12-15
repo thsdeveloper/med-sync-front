@@ -85,4 +85,44 @@ Exporta schemas Zod, tipos TypeScript e utilitarios usados por ambos os apps:
 ```ts
 import { userSchema } from "@medsync/shared/schemas";
 import { formatDate } from "@medsync/shared/utils";
+import { useEspecialidades } from "@medsync/shared/hooks";
+```
+
+---
+
+## Database Migrations
+
+### Recent Migrations
+
+#### Especialidade Refactoring (December 2025)
+
+The medical staff specialty system was refactored from a free-text `specialty` field to a normalized foreign key relationship (`especialidade_id`). This migration:
+
+- ✅ **Created `especialidades` table** with 30 seeded medical specialties
+- ✅ **Migrated all data** from text to foreign key (100% success rate)
+- ✅ **Improved data quality** - eliminated typos, inconsistencies, and variations
+- ✅ **Enhanced UX** - searchable dropdown instead of free-text input
+- ✅ **Dropped deprecated column** - cleaned up `specialty` text field
+
+**Migration Files**:
+- `migrations/20251215_create_especialidades_table.sql`
+- `migrations/20251215_migrate_medical_staff_specialty.sql`
+- `migrations/20251215_drop_especialidade_column.sql`
+
+**Full Documentation**: See [`docs/migrations/ESPECIALIDADE_REFACTORING.md`](./docs/migrations/ESPECIALIDADE_REFACTORING.md) for complete details, rollback plan, and lessons learned.
+
+**Breaking Change**: The `specialty` text field has been removed. Use `especialidade_id` foreign key and JOIN the `especialidades` table:
+
+```typescript
+// ❌ OLD (deprecated)
+const { data } = await supabase
+  .from('medical_staff')
+  .select('id, name, specialty');
+
+// ✅ NEW (current)
+const { data } = await supabase
+  .from('medical_staff')
+  .select('id, name, especialidade:especialidades(id, nome)');
+
+// Access: data.especialidade?.nome
 ```

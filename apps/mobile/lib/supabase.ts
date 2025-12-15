@@ -55,7 +55,7 @@ export async function getCurrentStaff() {
 
   const { data: staff, error } = await supabase
     .from('medical_staff')
-    .select('*')
+    .select('*, especialidade:especialidade_id(id, nome, created_at)')
     .eq('user_id', user.id)
     .maybeSingle();
 
@@ -74,7 +74,7 @@ export async function lookupStaffByCrm(crm: string) {
 
   const { data: staff, error } = await supabase
     .from('medical_staff')
-    .select('id, name, email, phone, crm, specialty, role, user_id, auth_email')
+    .select('id, name, email, phone, crm, role, user_id, auth_email, especialidade:especialidade_id(id, nome)')
     .eq('crm', crm)
     .maybeSingle(); // Use maybeSingle instead of single to avoid error when not found
 
@@ -100,7 +100,7 @@ export async function lookupStaffByCrm(crm: string) {
       email: staff.email,
       phone: staff.phone,
       crm: staff.crm,
-      specialty: staff.specialty,
+      especialidade: staff.especialidade,
       role: staff.role,
     },
   };

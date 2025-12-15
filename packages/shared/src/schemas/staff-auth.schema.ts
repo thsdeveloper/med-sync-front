@@ -38,16 +38,22 @@ export const staffRegisterSchema = z.object({
         .optional()
         .or(z.literal('')),
     crm: crmSchema,
+    /**
+     * @deprecated Use especialidade_id instead. This field is kept for backward compatibility
+     * during the migration from free-text specialty to foreign key reference.
+     */
     specialty: z
         .string()
         .optional()
         .or(z.literal('')),
+    /**
+     * Foreign key to especialidades table (REQUIRED).
+     * Replaces the deprecated free-text 'specialty' field.
+     */
     especialidade_id: z
         .string()
         .uuid('ID da especialidade deve ser um UUID válido')
-        .optional()
-        .or(z.literal(''))
-        .or(z.null()),
+        .min(1, 'Especialidade é obrigatória'),
     password: z
         .string()
         .min(1, 'Senha é obrigatória')

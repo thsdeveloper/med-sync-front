@@ -94,8 +94,10 @@ export default function ProfileScreen() {
           />
           <Text style={styles.profileName}>{staff.name}</Text>
           <Text style={styles.profileRole}>{staff.role || 'Profissional de Saúde'}</Text>
-          {staff.specialty && (
-            <Text style={styles.profileSpecialty}>{staff.specialty}</Text>
+          {staff.especialidade?.nome && (
+            <Text style={styles.profileSpecialty}>
+              {staff.especialidade.nome}
+            </Text>
           )}
         </View>
 
