@@ -1,0 +1,128 @@
+=== Atomizer Debug Output (2025-12-15T20:14:18.137Z) ===
+SUCCESS: true
+ERROR: none
+OUTPUT LENGTH: 8351
+
+OUTPUT:
+```json
+[
+  {
+    "id": "F001",
+    "title": "Create especialidades table in Supabase with seed data",
+    "type": "refactoring",
+    "description": "Create new 'especialidades' table in Supabase with columns: id (uuid, primary key), nome (text, unique, not null), created_at (timestamp). Create migration file that includes table creation, RLS policies for public read access, and seed data with common medical specialties (Cardiologia, Dermatologia, Ortopedia, Pediatria, Ginecologia, Oftalmologia, etc.). Enable RLS and set appropriate permissions.",
+    "acceptance_criteria": [
+      "Migration file created in migrations/ directory",
+      "Table 'especialidades' created with id, nome, created_at columns",
+      "RLS enabled with policy allowing public SELECT access",
+      "At least 15 common medical specialties seeded in the table",
+      "Migration executed successfully in Supabase"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F002",
+    "title": "Analyze and migrate existing corpo_clinico specialty data",
+    "type": "refactoring",
+    "description": "Query existing corpo_clinico table to extract all unique specialty values from the string field. Analyze the data to identify duplicates, variations, and typos. Create data migration script that: 1) maps existing string values to especialidades table IDs, 2) adds new column 'especialidade_id' (uuid, foreign key to especialidades) to corpo_clinico, 3) populates especialidade_id based on string matching, 4) handles edge cases and unmapped values by creating new entries in especialidades table.",
+    "acceptance_criteria": [
+      "Data analysis script created that lists all unique specialty values",
+      "Migration script handles string-to-ID mapping with fuzzy matching for typos",
+      "New column 'especialidade_id' added to corpo_clinico with foreign key constraint",
+      "All existing records successfully migrated to use especialidade_id",
+      "Migration script logs any unmapped or ambiguous values for manual review"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F003",
+    "title": "Update TypeScript types and Zod schemas for especialidade refactor",
+    "type": "refactoring",
+    "description": "Update shared TypeScript types in packages/shared/src to include Especialidade type with id and nome fields. Update CorpoClinico type to change especialidade from string to especialidade_id (uuid) and add nested especialidade object. Create Zod schemas for especialidade validation. Update form schemas in both web and mobile apps to validate especialidade_id instead of free text. Generate TypeScript types from Supabase schema using supabase gen types.",
+    "acceptance_criteria": [
+      "Especialidade type defined in packages/shared/src/types",
+      "CorpoClinico type updated with especialidade_id and nested especialidade",
+      "Zod schemas created for especialidade validation",
+      "Form schemas in web and mobile updated to use especialidade_id",
+      "TypeScript types generated from updated Supabase schema"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F004",
+    "title": "Create useEspecialidades hook with React Query",
+    "type": "refactoring",
+    "description": "Create shared hook useEspecialidades in packages/shared/src/hooks that fetches especialidades from Supabase using React Query. Implement caching with staleTime of 1 hour (data rarely changes). Include error handling, loading states, and retry logic. Export hook for use in both web and mobile apps. Add optional search/filter functionality to find especialidades by name.",
+    "acceptance_criteria": [
+      "useEspecialidades hook created in packages/shared/src/hooks",
+      "React Query used with appropriate caching configuration (staleTime: 1 hour)",
+      "Hook returns { data, isLoading, error, refetch } interface",
+      "Error handling and retry logic implemented",
+      "Optional search parameter implemented for filtering by name"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F005",
+    "title": "Refactor web app corpo clinico forms to use Select component",
+    "type": "refactoring",
+    "description": "Update corpo clinico create/edit forms in apps/web to replace text input with shadcn/ui Select component. Integrate useEspecialidades hook to populate Select options. Update React Hook Form field from 'especialidade' string to 'especialidade_id' uuid. Implement search/filter functionality in Select for better UX with many options. Ensure proper validation and error messages. Update form submission to send especialidade_id to API.",
+    "acceptance_criteria": [
+      "Text input replaced with shadcn/ui Select component in create form",
+      "Text input replaced with shadcn/ui Select component in edit form",
+      "useEspecialidades hook integrated to fetch and populate options",
+      "Select component includes search/filter functionality",
+      "Form validation updated to require especialidade_id selection",
+      "Form submission successfully sends especialidade_id to backend"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F006",
+    "title": "Refactor mobile app corpo clinico forms to use Picker component",
+    "type": "refactoring",
+    "description": "Update corpo clinico create/edit screens in apps/mobile to replace TextInput with React Native Picker or custom dropdown component. Integrate useEspecialidades hook to populate Picker options. Update form field from 'especialidade' string to 'especialidade_id' uuid. Implement platform-appropriate UI (iOS action sheet, Android dropdown). Ensure proper validation and error messages. Update form submission to send especialidade_id.",
+    "acceptance_criteria": [
+      "TextInput replaced with appropriate Picker/dropdown in create screen",
+      "TextInput replaced with appropriate Picker/dropdown in edit screen",
+      "useEspecialidades hook integrated to fetch and populate options",
+      "Platform-appropriate UI implemented (iOS/Android)",
+      "Form validation updated to require especialidade_id selection",
+      "Form submission successfully sends especialidade_id to backend"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F007",
+    "title": "Update all display views to show especialidade.nome via join",
+    "type": "refactoring",
+    "description": "Update all Supabase queries that fetch corpo_clinico records to include .select('*, especialidade:especialidade_id(id, nome)') to join especialidades table. Update display components in both web (tables, cards, detail views) and mobile (lists, cards, profile screens) to render especialidade.nome instead of string field. Handle null/undefined cases gracefully with fallback text. Ensure no breaking changes in existing views.",
+    "acceptance_criteria": [
+      "All corpo_clinico queries updated to join especialidades table",
+      "Web app tables/lists display especialidade.nome correctly",
+      "Web app detail/profile views display especialidade.nome correctly",
+      "Mobile app lists/cards display especialidade.nome correctly",
+      "Mobile app detail/profile screens display especialidade.nome correctly",
+      "Null/undefined especialidade handled with appropriate fallback (e.g., 'Não especificado')"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F008",
+    "title": "Remove deprecated especialidade string column and update tests",
+    "type": "refactoring",
+    "description": "After verifying all functionality works with especialidade_id: Create migration to drop old 'especialidade' string column from corpo_clinico table. Remove any remaining references to the old field in codebase. Update or create unit/integration tests for forms, queries, and display components to verify especialidade selection and display. Test edge cases like missing especialidades, form validation, and data migration scenarios. Document the refactoring in README or migration notes.",
+    "acceptance_criteria": [
+      "Migration created to safely drop 'especialidade' string column",
+      "All code references to old especialidade string field removed",
+      "Unit tests created/updated for web forms with especialidade Select",
+      "Unit tests created/updated for mobile forms with especialidade Picker",
+      "Integration tests verify correct data flow from selection to display",
+      "Documentation updated explaining the especialidade refactoring"
+    ],
+    "passes": false
+  }
+]
+```
+
+=== End of Output ===

@@ -56,7 +56,7 @@
         "All existing records successfully migrated to use especialidade_id",
         "Migration script logs any unmapped or ambiguous values for manual review"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F003",
