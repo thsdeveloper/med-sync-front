@@ -55,3 +55,68 @@
   * MedicalStaff type correctly represents JOIN relationships
   * Form data properly typed with MedicalStaffFormData including both old and new fields
 - Impact metrics: 5 files updated, 0 breaking changes, full backward compatibility, TypeScript compilation successful with zero errors
+[2025-12-15 17:54:49] [F004] Create useEspecialidades hook with React Query - COMPLETED
+- Created shared React hook in packages/shared/src/hooks/useEspecialidades.ts
+- Implemented React Query v5 integration with optimal caching strategy:
+  * staleTime: 1 hour (60 * 60 * 1000 ms) - data rarely changes
+  * gcTime: staleTime + 10 minutes - prevents premature garbage collection
+  * refetchOnWindowFocus: true - keeps data fresh when user returns to app
+- Error handling and retry logic:
+  * 3 retry attempts on query failure
+  * Exponential backoff: 1s → 2s → 4s (max 30s)
+  * Descriptive error messages with context
+- Hook interface and features:
+  * Accepts SupabaseClient as parameter for platform independence (web/mobile)
+  * Returns { data, isLoading, error, refetch, isFetching, isRefetching }
+  * Optional search parameter for server-side filtering using .ilike() (case-insensitive)
+  * Query key includes search term for proper cache separation
+  * enabled option for conditional queries
+  * Configurable staleTime override
+- TypeScript implementation:
+  * Full type safety with UseEspecialidadesOptions and UseEspecialidadesResult interfaces
+  * Uses Especialidade type from medical-staff.schema.ts
+  * Comprehensive JSDoc documentation with usage examples
+- Export configuration:
+  * Exported from packages/shared/src/hooks/index.ts
+  * Re-exported from packages/shared/src/index.ts main entry point
+  * Available via @medsync/shared/hooks import path
+- Testing and verification:
+  * Created __test-import__.ts to verify hook imports work correctly
+  * TypeScript compilation successful (pnpm typecheck passes)
+  * Web app builds successfully with hook available
+  * Full monorepo build successful (Turbo build passes)
+- Query implementation details:
+  * Fetches from especialidades table with columns: id, nome, created_at
+  * Results ordered alphabetically by nome (ascending)
+  * Server-side search filtering when search parameter provided
+  * Returns empty array on no results (safe default)
+- Impact metrics: 1 new hook created, 166 lines of code, platform-agnostic design enables code sharing between web and mobile apps, eliminates need for duplicate data fetching logic, provides consistent caching and error handling across both platforms
+[2025-12-15 18:01:04] [F005] Refactor web app corpo clinico forms to use Select component - COMPLETED
+- Installed shadcn/ui Command component for searchable select functionality
+- Updated medical staff schema (packages/shared/src/schemas/medical-staff.schema.ts):
+  * Made especialidade_id field REQUIRED (removed optional flags)
+  * Removed deprecated specialty string field from schema
+  * Simplified validation: especialidade_id now requires valid UUID and minimum 1 character
+- Created EspecialidadeCombobox molecule component (apps/web/src/components/molecules/EspecialidadeCombobox.tsx):
+  * Implements searchable dropdown using shadcn/ui Command + Popover pattern (follows Atomic Design)
+  * Integrates useEspecialidades hook to fetch and display especialidades
+  * Server-side search filtering updates as user types
+  * Shows loading states, error states, and empty states
+  * Displays selected especialidade name with checkmark indicator
+  * 125 lines of fully documented TypeScript code
+- Updated MedicalStaffSheet form component (apps/web/src/components/organisms/medical-staff/MedicalStaffSheet.tsx):
+  * Replaced text Input with EspecialidadeCombobox for especialidade_id field
+  * Removed all references to deprecated specialty text field
+  * Updated form default values, reset logic, and submission handlers
+  * Form now sends especialidade_id (UUID) instead of specialty (text) to API
+  * Both create and edit modes fully functional
+- Updated MedicalStaffList display component (apps/web/src/components/organisms/medical-staff/MedicalStaffList.tsx):
+  * Changed specialty field references to especialidade?.nome (uses JOIN data)
+  * Updated search filter to work with nested especialidade.nome
+  * Display column shows especialidade name from relationship
+- Form behavior changes:
+  * especialidade_id is now required (form validation enforces selection)
+  * Search/filter functionality improves UX when selecting from 30+ specialties
+  * Error message displays "Especialidade é obrigatória" if user tries to submit without selection
+  * Form resets properly in both create and edit modes
+- Impact metrics: 4 files modified, 1 new molecule component created, 0 lines of specialty text field code remaining, 100% migration to especialidade_id foreign key pattern, eliminated free-text specialty entry, improved data consistency, Web app builds successfully with zero TypeScript errors

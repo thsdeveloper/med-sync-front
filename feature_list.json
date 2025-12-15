@@ -99,7 +99,7 @@
         "Form validation updated to require especialidade_id selection",
         "Form submission successfully sends especialidade_id to backend"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F006",

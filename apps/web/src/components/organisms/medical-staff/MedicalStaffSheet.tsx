@@ -21,6 +21,7 @@ import { Button } from '@/components/atoms/Button';
 import { Separator } from '@/components/ui/separator';
 import { Select } from '@/components/atoms/Select';
 import { ColorPicker } from '@/components/molecules/ColorPicker';
+import { EspecialidadeCombobox } from '@/components/molecules/EspecialidadeCombobox';
 import { SupabaseFileUploader, type UploadedFileInfo } from '@/components/organisms/upload/SupabaseFileUploader';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -70,7 +71,6 @@ export function MedicalStaffSheet({
             email: '',
             phone: '',
             crm: '',
-            specialty: '',
             especialidade_id: '',
             role: 'Médico',
             color: '#3b82f6',
@@ -149,7 +149,6 @@ export function MedicalStaffSheet({
                     email: staffToEdit.email || '',
                     phone: staffToEdit.phone || '',
                     crm: staffToEdit.crm || '',
-                    specialty: staffToEdit.specialty || '',
                     especialidade_id: staffToEdit.especialidade_id || '',
                     role: staffToEdit.role as any,
                     color: staffToEdit.color || '#3b82f6',
@@ -162,7 +161,6 @@ export function MedicalStaffSheet({
                     email: '',
                     phone: '',
                     crm: '',
-                    specialty: '',
                     especialidade_id: '',
                     role: 'Médico',
                     color: '#3b82f6',
@@ -228,8 +226,7 @@ export function MedicalStaffSheet({
                         email: data.email || null,
                         phone: data.phone || null,
                         crm: data.crm || null,
-                        specialty: data.specialty || null,
-                        especialidade_id: data.especialidade_id || null,
+                        especialidade_id: data.especialidade_id,
                         role: data.role,
                         color: data.color,
                         active: data.active,
@@ -260,8 +257,7 @@ export function MedicalStaffSheet({
                         email: data.email || null,
                         phone: data.phone || null,
                         crm: data.crm || null,
-                        specialty: data.specialty || null,
-                        especialidade_id: data.especialidade_id || null,
+                        especialidade_id: data.especialidade_id,
                         role: data.role,
                         color: data.color,
                         active: data.active,
@@ -471,12 +467,15 @@ export function MedicalStaffSheet({
 
                     <FormField
                         control={form.control}
-                        name="specialty"
+                        name="especialidade_id"
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Especialidade</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Cardiologia" {...field} />
+                                    <EspecialidadeCombobox
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                    />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>

@@ -38,7 +38,7 @@ export function MedicalStaffList({
     const filteredStaff = staff.filter(member =>
         member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         member.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (member.specialty && member.specialty.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (member.especialidade?.nome && member.especialidade.nome.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (member.crm && member.crm.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
@@ -163,7 +163,7 @@ export function MedicalStaffList({
                                         </div>
                                     </td>
                                     <td className="px-4 py-3 hidden sm:table-cell text-slate-600">
-                                        {member.specialty || '-'}
+                                        {member.especialidade?.nome || '-'}
                                     </td>
                                     <td className="px-4 py-3 text-center">
                                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

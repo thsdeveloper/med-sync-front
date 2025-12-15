@@ -30,19 +30,11 @@ export const medicalStaffSchema = z.object({
         .optional()
         .or(z.literal('')),
     crm: crmOptionalSchema,
-    // DEPRECATED: Use especialidade_id instead
-    // Kept for backward compatibility with existing forms
-    specialty: z
-        .string()
-        .optional()
-        .or(z.literal('')),
-    // NEW: Foreign key to especialidades table
+    // Foreign key to especialidades table (REQUIRED)
     especialidade_id: z
         .string()
         .uuid('ID da especialidade deve ser um UUID válido')
-        .optional()
-        .or(z.literal(''))
-        .or(z.null()),
+        .min(1, 'Especialidade é obrigatória'),
     role: z
         .enum(ROLES),
     color: z
