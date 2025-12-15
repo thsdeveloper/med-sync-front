@@ -3,6 +3,17 @@ import { crmOptionalSchema } from './crm.schema';
 
 export const ROLES = ['Médico', 'Enfermeiro', 'Técnico', 'Administrativo', 'Outro'] as const;
 
+// Especialidade type and schema (database record)
+export const especialidadeSchema = z.object({
+    id: z.string().uuid('ID da especialidade deve ser um UUID válido'),
+    nome: z.string().min(1, 'Nome da especialidade é obrigatório'),
+    created_at: z.string().optional(),
+});
+
+export type Especialidade = z.infer<typeof especialidadeSchema>;
+
+// Form schema - usado para criar/editar profissionais
+// Note: specialty field is kept for backward compatibility but deprecated
 export const medicalStaffSchema = z.object({
     name: z
         .string()
@@ -19,10 +30,19 @@ export const medicalStaffSchema = z.object({
         .optional()
         .or(z.literal('')),
     crm: crmOptionalSchema,
+    // DEPRECATED: Use especialidade_id instead
+    // Kept for backward compatibility with existing forms
     specialty: z
         .string()
         .optional()
         .or(z.literal('')),
+    // NEW: Foreign key to especialidades table
+    especialidade_id: z
+        .string()
+        .uuid('ID da especialidade deve ser um UUID válido')
+        .optional()
+        .or(z.literal(''))
+        .or(z.null()),
     role: z
         .enum(ROLES),
     color: z
@@ -34,6 +54,7 @@ export const medicalStaffSchema = z.object({
 
 export type MedicalStaffFormData = z.infer<typeof medicalStaffSchema>;
 
+// Tipo do profissional no banco (cadastro global)
 export type MedicalStaff = MedicalStaffFormData & {
     id: string;
     organization_id?: string | null;
@@ -42,6 +63,9 @@ export type MedicalStaff = MedicalStaffFormData & {
     avatar_url?: string | null;
     created_at: string;
     updated_at: string;
+    // Nested especialidade object from JOIN query
+    // This is populated when querying with .select('*, especialidade:especialidades(*)')
+    especialidade?: Especialidade | null;
 };
 
 export type StaffOrganization = {

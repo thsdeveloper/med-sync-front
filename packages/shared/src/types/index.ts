@@ -7,6 +7,7 @@ export type {
 } from '../schemas/shifts.schema';
 
 export type {
+    Especialidade,
     MedicalStaff,
     MedicalStaffFormData,
     MedicalStaffWithOrganization,

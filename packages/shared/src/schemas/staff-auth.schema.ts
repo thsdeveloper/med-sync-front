@@ -42,6 +42,12 @@ export const staffRegisterSchema = z.object({
         .string()
         .optional()
         .or(z.literal('')),
+    especialidade_id: z
+        .string()
+        .uuid('ID da especialidade deve ser um UUID válido')
+        .optional()
+        .or(z.literal(''))
+        .or(z.null()),
     password: z
         .string()
         .min(1, 'Senha é obrigatória')
@@ -91,6 +97,7 @@ export type CrmLookupResult = {
         phone?: string | null;
         crm: string;
         specialty?: string | null;
+        especialidade_id?: string | null;
         role: string;
     };
 };

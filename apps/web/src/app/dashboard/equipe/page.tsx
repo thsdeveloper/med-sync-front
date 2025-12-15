@@ -46,11 +46,17 @@ export default function TeamPage() {
                         phone,
                         crm,
                         specialty,
+                        especialidade_id,
                         role,
                         color,
                         active,
                         created_at,
-                        updated_at
+                        updated_at,
+                        especialidade:especialidades (
+                            id,
+                            nome,
+                            created_at
+                        )
                     )
                 `)
                 .eq('organization_id', organizationId)

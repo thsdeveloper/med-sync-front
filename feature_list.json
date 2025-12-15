@@ -70,7 +70,7 @@
         "Form schemas in web and mobile updated to use especialidade_id",
         "TypeScript types generated from updated Supabase schema"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F004",
@@ -84,7 +84,7 @@
         "Error handling and retry logic implemented",
         "Optional search parameter implemented for filtering by name"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F005",

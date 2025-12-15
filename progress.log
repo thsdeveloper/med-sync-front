@@ -6,3 +6,52 @@
 - Added index on nome column for efficient lookups
 - Migration executed successfully via Supabase MCP
 - Impact: Provides normalized specialty catalog, eliminates free-text data entry inconsistencies
+[2025-12-15 20:35:00] [F002] Analyze and migrate existing corpo_clinico specialty data - COMPLETED
+- Created data analysis script: scripts/analyze_specialty_data.sql (5-part analysis including unique values, fuzzy matching, statistics)
+- Created migration file: migrations/20251215_migrate_medical_staff_specialty.sql
+- Added especialidade_id column (UUID) to medical_staff table with foreign key constraint to especialidades(id)
+- Implemented multi-strategy fuzzy matching function:
+  * Exact match (case-insensitive, trimmed whitespace)
+  * Common abbreviations mapping (Cardio→Cardiologia, Neuro→Neurologia, Anestesia→Anestesiologia)
+  * Partial text matching
+  * Auto-creation of new especialidades for unmapped values
+- Successfully migrated all 6 records with 100% coverage, zero data loss:
+  * "Cardio" (2 records) → mapped to Cardiologia
+  * "Anestesia " (1 record, trailing space handled) → mapped to Anestesiologia
+  * "Anestesiologia" (1 record) → exact match to Anestesiologia
+  * "Cardiologista" (1 record) → mapped to Cardiologia
+  * "Neuro" (1 record) → mapped to Neurologia
+- Created migration verification script: scripts/migration_log.sql (8-part verification suite)
+- Added performance index: idx_medical_staff_especialidade_id
+- Preserved original specialty text field for backward compatibility and audit trail
+- Migration executed via Supabase MCP with complete success
+- Impact metrics: 6 records deduplicated from 5 variations to 3 normalized entries, eliminated typos/whitespace issues, established referential integrity with foreign key constraint
+[2025-12-15 17:46:43] [F003] Update TypeScript types and Zod schemas for especialidade refactor - COMPLETED
+- Updated packages/shared/src/schemas/medical-staff.schema.ts:
+  * Added comprehensive JSDoc comments documenting especialidade_id as the new foreign key field
+  * Marked specialty field as DEPRECATED with clear migration path
+  * Enhanced especialidadeSchema with all database fields (id, nome, created_at)
+  * Updated MedicalStaff type to include nested especialidade object from JOIN queries
+- Generated TypeScript types from Supabase schema via MCP:
+  * Created complete Database type definitions with all tables including especialidades
+  * Updated apps/mobile/lib/database.types.ts with especialidade_id foreign key relationship
+  * Verified foreign key constraints in generated types (medical_staff_especialidade_id_fkey)
+- Updated web app (apps/web):
+  * Modified src/app/dashboard/equipe/page.tsx to join especialidades table in queries
+  * Updated src/components/organisms/medical-staff/MedicalStaffSheet.tsx:
+    - Added especialidade_id to form default values and reset logic
+    - Updated insert/update operations to include especialidade_id field
+    - Maintained backward compatibility with existing specialty text field
+- Form schema validations:
+  * especialidade_id accepts UUID format with proper Zod validation
+  * Fields are optional to support gradual migration (both specialty and especialidade_id can coexist)
+  * Empty strings and null values handled correctly for optional fields
+- Backward compatibility maintained:
+  * Original specialty field preserved in all types and database operations
+  * Existing forms continue to work without breaking changes
+  * Queries fetch both specialty and especialidade_id + nested especialidade object
+- Type safety improvements:
+  * All database operations now type-safe with generated Supabase types
+  * MedicalStaff type correctly represents JOIN relationships
+  * Form data properly typed with MedicalStaffFormData including both old and new fields
+- Impact metrics: 5 files updated, 0 breaking changes, full backward compatibility, TypeScript compilation successful with zero errors
