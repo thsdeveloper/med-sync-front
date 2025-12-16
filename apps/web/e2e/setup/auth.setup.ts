@@ -29,9 +29,9 @@ setup('authenticate', async ({ page }) => {
   console.log('🔐 Starting authentication setup...');
 
   // Navigate to login page
-  await page.goto('/');
+  await page.goto('/login');
 
-  // Check if we're already on the dashboard (already logged in)
+  // Check if we're already on the dashboard (already logged in via redirect)
   const currentUrl = page.url();
   if (currentUrl.includes('/dashboard')) {
     console.log('✅ Already authenticated, saving session...');
@@ -65,14 +65,14 @@ setup('authenticate', async ({ page }) => {
 
   console.log('⏳ Waiting for authentication to complete...');
 
-  // Wait for navigation to dashboard or authenticated page
-  // This ensures Supabase auth has fully completed
-  await page.waitForURL('**/dashboard/**', { timeout: 15000 });
+  // Wait for navigation after login (may redirect to / or /dashboard)
+  await page.waitForLoadState('networkidle', { timeout: 15000 });
 
   console.log('✅ Authentication successful!');
 
-  // Verify we're actually authenticated by checking for dashboard elements
-  await expect(page.locator('body')).toContainText(/dashboard|escalas|equipe/i, {
+  // Verify we're actually authenticated by checking for user menu
+  // The app shows a user menu button when authenticated
+  await expect(page.getByRole('button', { name: /menu do usuário/i })).toBeVisible({
     timeout: 10000,
   });
 

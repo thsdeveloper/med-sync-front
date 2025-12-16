@@ -74,8 +74,9 @@ export class CalendarPage {
     this.endDateInput = page.locator('input[type="date"], input[placeholder*="data"]').nth(1);
 
     // Calendar content
-    this.calendarGrid = page.locator('.rbc-calendar, [class*="calendar"]');
-    this.calendarEvents = page.locator('.rbc-event, [class*="event"]');
+    // Use more specific selector to avoid matching calendar icons
+    this.calendarGrid = page.locator('.rbc-calendar').first();
+    this.calendarEvents = page.locator('.rbc-event');
   }
 
   /**
@@ -235,5 +236,43 @@ export class CalendarPage {
    */
   async screenshot(name: string) {
     await this.calendarGrid.screenshot({ path: `screenshots/calendar-${name}.png` });
+  }
+
+  /**
+   * Get the current displayed date/month from the calendar toolbar label
+   * Returns the text content of the calendar date label
+   */
+  async getDisplayedDate(): Promise<string> {
+    const label = this.page.locator('.rbc-toolbar-label');
+    const text = await label.textContent();
+    return text?.trim() || '';
+  }
+
+  /**
+   * Verify that the displayed date matches expected text (partial match)
+   * @param expectedText - Text to search for in the calendar label
+   */
+  async expectDisplayedDateContains(expectedText: string) {
+    const displayedDate = await this.getDisplayedDate();
+    expect(displayedDate.toLowerCase()).toContain(expectedText.toLowerCase());
+  }
+
+  /**
+   * Get current URL search params
+   */
+  getURLParams(): URLSearchParams {
+    const url = new URL(this.page.url());
+    return url.searchParams;
+  }
+
+  /**
+   * Verify URL contains expected parameter
+   */
+  async expectURLParam(param: string, value?: string) {
+    const params = this.getURLParams();
+    expect(params.has(param)).toBe(true);
+    if (value !== undefined) {
+      expect(params.get(param)).toBe(value);
+    }
   }
 }
