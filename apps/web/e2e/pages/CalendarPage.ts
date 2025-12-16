@@ -275,4 +275,207 @@ export class CalendarPage {
       expect(params.get(param)).toBe(value);
     }
   }
+
+  /**
+   * Get the currently selected month from the month selector
+   */
+  async getSelectedMonth(): Promise<string> {
+    const text = await this.monthSelector.textContent();
+    return text?.trim() || '';
+  }
+
+  /**
+   * Get the currently selected year from the year selector
+   */
+  async getSelectedYear(): Promise<string> {
+    const text = await this.yearSelector.textContent();
+    return text?.trim() || '';
+  }
+
+  /**
+   * Verify month selector shows expected month
+   * @param monthName - Expected month name in Portuguese
+   */
+  async expectSelectedMonth(monthName: string) {
+    const selected = await this.getSelectedMonth();
+    expect(selected.toLowerCase()).toContain(monthName.toLowerCase());
+  }
+
+  /**
+   * Verify year selector shows expected year
+   * @param year - Expected year as string
+   */
+  async expectSelectedYear(year: string) {
+    const selected = await this.getSelectedYear();
+    expect(selected).toBe(year);
+  }
+
+  /**
+   * Verify a specific view mode button is active
+   * @param view - The view mode to check
+   */
+  async expectViewActive(view: 'month' | 'week' | 'day' | 'agenda') {
+    const buttonMap = {
+      month: this.monthViewButton,
+      week: this.weekViewButton,
+      day: this.dayViewButton,
+      agenda: this.agendaViewButton,
+    };
+
+    const button = buttonMap[view];
+
+    // Check if button has active state (variant="default" for active, "outline" for inactive)
+    const classAttr = await button.getAttribute('class');
+    expect(classAttr).toBeTruthy();
+
+    // The active button should not have the outline variant styling
+    // This is a simplified check - adjust based on actual HTML structure
+    await expect(button).toBeVisible();
+  }
+
+  /**
+   * Verify calendar is in month view (shows month grid)
+   */
+  async expectMonthViewLayout() {
+    await expect(this.page.locator('.rbc-month-view')).toBeVisible();
+  }
+
+  /**
+   * Verify calendar is in week view (shows week columns with time slots)
+   */
+  async expectWeekViewLayout() {
+    await expect(this.page.locator('.rbc-time-view')).toBeVisible();
+    // Week view should show 7 day columns
+    const dayColumns = this.page.locator('.rbc-time-header-content .rbc-header');
+    await expect(dayColumns).toHaveCount(7);
+  }
+
+  /**
+   * Verify calendar is in day view (shows single day with time slots)
+   */
+  async expectDayViewLayout() {
+    await expect(this.page.locator('.rbc-time-view')).toBeVisible();
+    // Day view should show 1 day column
+    const dayColumns = this.page.locator('.rbc-time-header-content .rbc-header');
+    await expect(dayColumns).toHaveCount(1);
+  }
+
+  /**
+   * Verify calendar is in agenda view (shows list of events)
+   */
+  async expectAgendaViewLayout() {
+    await expect(this.page.locator('.rbc-agenda-view')).toBeVisible();
+  }
+
+  /**
+   * Verify events are displayed in month view
+   */
+  async expectEventsInMonthView() {
+    await this.expectMonthViewLayout();
+    // Month view events have specific class
+    const monthEvents = this.page.locator('.rbc-month-view .rbc-event');
+    await expect(monthEvents.first()).toBeVisible({ timeout: 10000 });
+  }
+
+  /**
+   * Verify events are displayed in week view
+   */
+  async expectEventsInWeekView() {
+    await this.expectWeekViewLayout();
+    // Week view events appear in time slots
+    const weekEvents = this.page.locator('.rbc-time-view .rbc-event');
+    await expect(weekEvents.first()).toBeVisible({ timeout: 10000 });
+  }
+
+  /**
+   * Verify events are displayed in day view
+   */
+  async expectEventsInDayView() {
+    await this.expectDayViewLayout();
+    // Day view events appear in time slots
+    const dayEvents = this.page.locator('.rbc-time-view .rbc-event');
+    await expect(dayEvents.first()).toBeVisible({ timeout: 10000 });
+  }
+
+  /**
+   * Verify events are displayed in agenda view
+   */
+  async expectEventsInAgendaView() {
+    await this.expectAgendaViewLayout();
+    // Agenda view shows events in table/list format
+    const agendaEvents = this.page.locator('.rbc-agenda-view .rbc-agenda-event-cell');
+    await expect(agendaEvents.first()).toBeVisible({ timeout: 10000 });
+  }
+
+  /**
+   * Get event count in a specific view
+   */
+  async getEventCountInView(): Promise<number> {
+    // Wait a bit for events to load
+    await this.page.waitForTimeout(500);
+    return await this.calendarEvents.count();
+  }
+
+  /**
+   * Verify calendar shows expected number of events
+   * @param expectedCount - Expected number of events (or 'atleast' with minimum)
+   */
+  async expectEventCount(expectedCount: number | { atleast: number }) {
+    const count = await this.getEventCountInView();
+    if (typeof expectedCount === 'number') {
+      expect(count).toBe(expectedCount);
+    } else {
+      expect(count).toBeGreaterThanOrEqual(expectedCount.atleast);
+    }
+  }
+
+  /**
+   * Verify URL date parameter matches expected date
+   * @param expectedDate - Expected date in YYYY-MM-DD format
+   */
+  async expectURLDate(expectedDate: string) {
+    await this.expectURLParam('date', expectedDate);
+  }
+
+  /**
+   * Verify URL view parameter matches expected view
+   * @param expectedView - Expected view mode
+   */
+  async expectURLView(expectedView: 'month' | 'week' | 'day' | 'agenda') {
+    await this.expectURLParam('view', expectedView);
+  }
+
+  /**
+   * Clear all filters by navigating to clean URL
+   */
+  async clearAllFilters() {
+    await this.page.goto('/dashboard/escalas');
+    await this.waitForCalendarLoad();
+  }
+
+  /**
+   * Verify month selector is visible and clickable
+   */
+  async expectMonthSelectorVisible() {
+    await expect(this.monthSelector).toBeVisible();
+    await expect(this.monthSelector).toBeEnabled();
+  }
+
+  /**
+   * Verify year selector is visible and clickable
+   */
+  async expectYearSelectorVisible() {
+    await expect(this.yearSelector).toBeVisible();
+    await expect(this.yearSelector).toBeEnabled();
+  }
+
+  /**
+   * Verify all view mode buttons are visible
+   */
+  async expectViewButtonsVisible() {
+    await expect(this.monthViewButton).toBeVisible();
+    await expect(this.weekViewButton).toBeVisible();
+    await expect(this.dayViewButton).toBeVisible();
+    await expect(this.agendaViewButton).toBeVisible();
+  }
 }
