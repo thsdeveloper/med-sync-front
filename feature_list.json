@@ -145,6 +145,132 @@
         "Documentation updated explaining the especialidade refactoring"
       ],
       "passes": true
+    },
+    {
+      "id": "F009",
+      "title": "Investigate and document Calendário de Escalas current implementation",
+      "type": "feature",
+      "description": "Analyze the current calendar component implementation to understand the filter functionality issues. Document the component structure, identify which filters are broken (Hoje/Anterior/Próximo navigation, dezembro 2025 month selector, Mês/Semana/Dia/Agenda view switcher), locate the relevant files in the project structure, and identify the root causes of the filtering issues. Create a technical summary of findings.",
+      "acceptance_criteria": [
+        "Calendar component files located and documented",
+        "All broken filter functionalities identified and catalogued",
+        "Root causes of filter issues documented",
+        "Current state vs expected behavior clearly described",
+        "Technical summary created with fix recommendations"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F010",
+      "title": "Fix Hoje/Anterior/Próximo date navigation controls",
+      "type": "feature",
+      "description": "Repair the date navigation controls that allow users to jump to today, previous period, or next period in the calendar. Ensure proper state management for current date selection, implement correct date calculation logic using date-fns, and verify navigation works correctly across all view modes (Mês/Semana/Dia/Agenda). Add proper event handlers and state updates.",
+      "acceptance_criteria": [
+        "Hoje button correctly navigates to current date",
+        "Anterior button moves to previous period based on current view",
+        "Próximo button moves to next period based on current view",
+        "Date state properly updates and reflects in calendar UI",
+        "Navigation works correctly in all view modes"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F011",
+      "title": "Fix month/year selector (dezembro 2025) functionality",
+      "type": "feature",
+      "description": "Repair the month and year selection controls that allow users to pick specific months and years. Implement proper onChange handlers, ensure state synchronization between selector and calendar display, add proper date validation, and verify the calendar correctly renders events for the selected month/year. Use date-fns for date manipulation.",
+      "acceptance_criteria": [
+        "Month selector dropdown functions correctly",
+        "Year selector dropdown functions correctly",
+        "Selected month/year properly updates calendar display",
+        "Calendar events load correctly for selected period",
+        "Date state remains consistent across component"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F012",
+      "title": "Fix view mode switcher (Mês/Semana/Dia/Agenda)",
+      "type": "feature",
+      "description": "Repair the view mode toggle controls that switch between Month, Week, Day, and Agenda views. Implement proper view state management, ensure each view mode renders correctly with appropriate layout and event display, handle date range calculations for each view type, and maintain selected date when switching between views. Utilize React Big Calendar or custom view components.",
+      "acceptance_criteria": [
+        "Mês (Month) view renders correctly with all dates",
+        "Semana (Week) view shows correct 7-day range",
+        "Dia (Day) view displays single day with hourly breakdown",
+        "Agenda view shows list of upcoming events",
+        "View switching maintains current date selection"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F013",
+      "title": "Integrate all calendar filters and verify complete functionality",
+      "type": "feature",
+      "description": "Ensure all calendar filters work together harmoniously. Test interactions between date navigation, month/year selector, and view mode switcher. Verify state management is consistent across all filter types, fix any race conditions or state conflicts, ensure URL parameters or local state persist user selections, and validate calendar performance with multiple filters active.",
+      "acceptance_criteria": [
+        "All filters work together without conflicts",
+        "Changing one filter doesn't break others",
+        "Calendar state persists correctly during filter changes",
+        "No console errors or warnings during filter usage",
+        "Calendar renders correctly with any filter combination"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F014",
+      "title": "Create Playwright e2e test setup with authentication",
+      "type": "feature",
+      "description": "Set up Playwright testing framework for the web application. Configure Playwright with proper TypeScript support, create authentication helper that logs in with provided credentials (ths.pereira@gmail.com / Qsesbs2006), implement session storage to avoid repeated logins, create base test fixtures and page objects for calendar testing, and configure test environment variables.",
+      "acceptance_criteria": [
+        "Playwright installed and configured in apps/web",
+        "Authentication helper successfully logs in test user",
+        "Session state is reused across tests",
+        "Base fixtures and page objects created for calendar",
+        "Test configuration file created with proper settings"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F015",
+      "title": "Write e2e tests for date navigation controls",
+      "type": "feature",
+      "description": "Create comprehensive Playwright e2e tests for Hoje/Anterior/Próximo navigation controls. Test clicking Hoje button navigates to current date, test Anterior/Próximo buttons navigate correctly in each view mode, verify date display updates correctly, test edge cases like month/year boundaries, and ensure tests run reliably with proper waits and assertions.",
+      "acceptance_criteria": [
+        "Test suite covers Hoje button navigation",
+        "Test suite covers Anterior button in all views",
+        "Test suite covers Próximo button in all views",
+        "Edge cases tested (month boundaries, year transitions)",
+        "All tests pass consistently with proper assertions"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F016",
+      "title": "Write e2e tests for month/year selector and view modes",
+      "type": "feature",
+      "description": "Create comprehensive Playwright e2e tests for month/year selection and view mode switching. Test selecting different months and years updates calendar correctly, test switching between Mês/Semana/Dia/Agenda views, verify events display correctly in each view, test combined filter scenarios, and ensure all tests have proper assertions and error handling.",
+      "acceptance_criteria": [
+        "Tests verify month selector functionality",
+        "Tests verify year selector functionality",
+        "Tests verify all 4 view modes render correctly",
+        "Tests verify events display in each view mode",
+        "Combined filter scenarios tested successfully"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F017",
+      "title": "Add calendar e2e tests to CI/CD and document test usage",
+      "type": "feature",
+      "description": "Integrate Playwright calendar tests into the project's CI/CD pipeline. Update package.json with test scripts, configure test running in GitHub Actions or similar CI, create test documentation explaining how to run tests locally and in CI, document the test user credentials management approach, and ensure tests run in headless mode for CI while supporting headed mode for debugging.",
+      "acceptance_criteria": [
+        "Test scripts added to package.json (test:e2e, test:e2e:ui)",
+        "CI/CD pipeline configured to run calendar tests",
+        "README or docs updated with test running instructions",
+        "Test credentials securely managed (env vars/secrets)",
+        "Tests successfully run in both local and CI environments"
+      ],
+      "passes": false
     }
   ]
 }
