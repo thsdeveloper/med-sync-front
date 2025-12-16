@@ -270,7 +270,7 @@
         "Test credentials securely managed (env vars/secrets)",
         "Tests successfully run in both local and CI environments"
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }

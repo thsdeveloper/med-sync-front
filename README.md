@@ -76,6 +76,39 @@ Aplicacao Expo com React Native e expo-router.
 pnpm dev:mobile       # Inicia com tunnel (ngrok)
 ```
 
+### Testing
+
+#### End-to-End Tests
+
+The web application includes comprehensive e2e tests using Playwright:
+
+```bash
+# Run all e2e tests (headless mode)
+pnpm --filter @medsync/web test:e2e
+
+# Run tests with UI mode (recommended for development)
+pnpm --filter @medsync/web test:e2e:ui
+
+# Run tests in headed mode (visible browser)
+pnpm --filter @medsync/web test:e2e:headed
+
+# Debug tests step-by-step
+pnpm --filter @medsync/web test:e2e:debug
+
+# View test report
+pnpm --filter @medsync/web test:e2e:report
+```
+
+**Test Coverage**: 140+ comprehensive tests for calendar functionality including:
+- Date navigation controls (Hoje/Anterior/Próximo)
+- Month and year selectors
+- View mode switching (Mês/Semana/Dia/Agenda)
+- Combined filter scenarios
+- URL state persistence and browser history
+- Edge cases (leap years, month boundaries, rapid interactions)
+
+For detailed testing documentation, setup instructions, and CI/CD configuration, see [`apps/web/e2e/README.md`](./apps/web/e2e/README.md).
+
 ### Pacotes compartilhados
 
 #### Shared (`packages/shared`)
