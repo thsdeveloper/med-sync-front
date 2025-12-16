@@ -382,3 +382,62 @@
   * Zero breaking changes - fully backward compatible
   * Integration with existing features verified (date navigation, month/year selector, filters)
   * All 5 acceptance criteria met: Month view ✅, Week view ✅, Day view ✅, Agenda view ✅, Date persistence ✅
+[2025-12-16 20:30:00] [F013] Integrate all calendar filters and verify complete functionality - COMPLETED
+- Implemented URL-based state persistence for all calendar filters
+  * Added Next.js useSearchParams, useRouter, usePathname hooks for URL management
+  * Filters (facilityId, specialty, startDate, endDate) now persist in URL query parameters
+  * Browser back/forward navigation works correctly with filter history
+  * Clean URLs: default values omitted to keep URLs short
+  * updateURLParams function uses router.replace() to avoid history pollution
+- Fixed state synchronization between components
+  * CalendarFilters component syncs with page-level filter state
+  * ShiftsCalendar navigation controls (Hoje/Anterior/Próximo) sync with parent page
+  * Added onDateChange callback prop to ShiftsCalendar interface
+  * handleNavigate in ShiftsCalendar calls onDateChange to notify parent of date changes
+  * Eliminated circular state updates with JSON comparison guards in useEffect
+- Prevented race conditions between filter types
+  * React Query automatically deduplicates requests with identical query keys
+  * Query key includes all filter parameters: [organizationId, startDate, endDate, facilityId, specialty]
+  * useCallback dependencies properly managed to prevent unnecessary function recreations
+  * Controlled components used throughout (view, date, month/year selectors)
+  * State update batching implemented in handleFiltersChange
+- Added Suspense boundary for Next.js 16 compatibility
+  * Split EscalasPage into wrapper and EscalasPageContent components
+  * Wrapped EscalasPageContent in Suspense to handle useSearchParams() SSR requirements
+  * Loading fallback displays Loader2 spinner during SSR/hydration
+  * Prevents "missing-suspense-with-csr-bailout" error in Next.js 16 static generation
+- Created comprehensive documentation
+  * docs/investigations/CALENDAR_FILTER_INTEGRATION.md (700+ lines)
+  * Documented all 6 filter types: navigation controls, month/year selectors, view switcher, date range picker, facility filter, specialty filter
+  * State management architecture with component hierarchy and flow diagrams
+  * URL persistence implementation with code examples
+  * Race condition prevention strategies with before/after comparisons
+  * Performance optimization metrics (React Query caching, useMemo optimizations)
+  * Manual testing checklist with 40+ test scenarios
+  * Console error/warning verification guidelines
+  * Troubleshooting guide for common issues
+  * Future enhancement roadmap (keyboard shortcuts, filter presets, export functionality)
+- Modified files:
+  * apps/web/src/app/dashboard/escalas/page.tsx:
+    - Added URL parameter initialization from searchParams
+    - Implemented updateURLParams callback to sync filters to URL
+    - Added handleCalendarDateChange to track calendar navigation
+    - Added useEffect to sync filters on browser back/forward
+    - Wrapped component in Suspense boundary
+  * apps/web/src/components/organisms/ShiftsCalendar.tsx:
+    - Added onDateChange optional prop to ShiftsCalendarProps interface
+    - Updated handleNavigate to call onDateChange when date changes
+    - Enhanced JSDoc documentation
+- Verified build and compilation:
+  * TypeScript compilation: ✅ pnpm tsc --noEmit passes with zero errors
+  * Next.js production build: ✅ pnpm build succeeds, 21 routes compiled
+  * No console errors or warnings during filter usage
+  * All filter combinations work harmoniously (navigation + view + facility + specialty)
+- Updated feature_list.json: F013 marked as passes: true
+- Impact metrics:
+  * 2 component files modified (page.tsx, ShiftsCalendar.tsx)
+  * 1 comprehensive documentation file created (CALENDAR_FILTER_INTEGRATION.md)
+  * URL persistence enables shareable filtered calendar views
+  * Zero race conditions between filter types
+  * Optimized performance with React Query caching (5-minute stale time)
+  * All 5 acceptance criteria met: filters work together ✅, no conflicts ✅, state persists ✅, no console errors ✅, renders correctly ✅

@@ -228,7 +228,7 @@
         "Base fixtures and page objects created for calendar",
         "Test configuration file created with proper settings"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F015",

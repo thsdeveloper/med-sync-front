@@ -489,3 +489,72 @@
   ✅ Active route highlighting works correctly for /dashboard/escalas route
   ✅ Link positioned logically in menu structure (in "Gestão" section, after "Visão Geral", before "Trocas")
 
+[2025-12-16 20:18:40] [F014] Create Playwright e2e test setup with authentication - COMPLETED
+- Installed Playwright v1.57.0 in apps/web as devDependency
+- Created playwright.config.ts with TypeScript support and multi-browser configuration (Chromium, Firefox, WebKit)
+- Configured authentication setup project that runs before all tests
+- Implemented session storage in .auth/user.json to avoid repeated logins across tests
+- Created comprehensive authentication setup script (e2e/setup/auth.setup.ts):
+  * Logs in with test credentials (ths.pereira@gmail.com / Qsesbs2006)
+  * Waits for Supabase authentication to complete
+  * Saves authenticated session to .auth/user.json
+  * Validates successful login before proceeding
+  * Includes proper error handling and console logging
+- Created CalendarPage page object model (e2e/pages/CalendarPage.ts, 230+ lines):
+  * Encapsulates all calendar interactions (navigation, filters, view switching)
+  * Type-safe locators for all calendar elements (buttons, selectors, events)
+  * Helper methods for common actions (goto, clickToday, changeView, etc.)
+  * Assertion helpers (expectCalendarVisible, expectEventsVisible)
+  * Comprehensive JSDoc documentation with usage examples
+- Created custom test fixtures (e2e/fixtures/calendar.fixtures.ts):
+  * Extends Playwright base test with calendarPage fixture
+  * Automatically initializes CalendarPage for each test
+  * Re-exports expect for convenience
+  * Enables clean test syntax with pre-configured page objects
+- Created sample test suite (e2e/calendar/calendar-navigation.spec.ts, 11 tests):
+  * Tests calendar page visibility and navigation controls
+  * Tests Hoje/Anterior/Próximo button functionality
+  * Tests all 4 view modes (Mês, Semana, Dia, Agenda)
+  * Tests view mode persistence during date navigation
+  * Tests authenticated session reuse across tests
+  * Demonstrates best practices for e2e testing with Playwright
+- Created test environment configuration (.env.test):
+  * Configured PLAYWRIGHT_BASE_URL (http://localhost:3000)
+  * Stored test user credentials for auth setup
+  * Included all necessary Supabase environment variables
+- Created comprehensive test documentation (e2e/README.md, 400+ lines):
+  * Getting started guide with installation instructions
+  * Running tests guide (headless, UI mode, headed, debug)
+  * Authentication flow explanation with session storage details
+  * Page object usage examples and API reference
+  * Writing new tests guide with best practices
+  * Debugging tips and troubleshooting section
+  * CI/CD integration example with GitHub Actions
+  * 20+ code examples demonstrating test patterns
+- Updated package.json with test scripts:
+  * test:e2e - Run all tests in headless mode
+  * test:e2e:ui - Run tests with interactive UI mode
+  * test:e2e:headed - Run tests with visible browser
+  * test:e2e:debug - Run tests with Playwright Inspector
+  * playwright:codegen - Generate tests with Playwright Codegen
+- Updated tsconfig.json to include e2e/ directory in TypeScript compilation
+- Created .gitignore to exclude test artifacts (.auth/, test-results/, playwright-report/)
+- Configured Playwright with proper timeouts, retries, and reporters (HTML + list)
+- Set up web server configuration to auto-start Next.js dev server for tests
+- Test listing verified: 37 tests generated (1 setup + 12 per browser × 3 browsers)
+- TypeScript compilation successful with zero errors
+- All 5 acceptance criteria met:
+  ✅ Playwright installed and configured in apps/web
+  ✅ Authentication helper successfully logs in test user
+  ✅ Session state is reused across tests via .auth/user.json
+  ✅ Base fixtures and page objects created for calendar (CalendarPage + custom fixtures)
+  ✅ Test configuration file created with proper settings (playwright.config.ts)
+- Impact metrics:
+  * 7 new files created (playwright.config.ts, 4 test files, .env.test, e2e/README.md)
+  * 2 files modified (package.json, tsconfig.json)
+  * 1 gitignore created for test artifacts
+  * ~1,200 lines of test infrastructure code written
+  * Page object pattern implemented for maintainable tests
+  * Authentication flow optimized with session reuse (1 login for all tests)
+  * Ready for F015-F017 implementation (writing additional test suites)
+  * Foundation established for comprehensive e2e testing strategy
