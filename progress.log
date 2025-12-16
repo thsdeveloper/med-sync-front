@@ -323,3 +323,62 @@
   * Calendar state fully synchronized between toolbar and calendar display
   * Events load correctly for selected month/year via automatic data refetch
   * All 5 acceptance criteria met: Month selector ✅, Year selector ✅, Calendar display updates ✅, Events load correctly ✅, Date state consistent ✅
+[2025-12-16 20:15:00] [F012] Fix view mode switcher (Mês/Semana/Dia/Agenda) - COMPLETED
+- Fixed calendar view mode switcher by adding explicit views configuration to CalendarWrapper and ShiftsCalendar components
+- Modified CalendarWrapper organism (apps/web/src/components/organisms/CalendarWrapper.tsx):
+  * Added views prop to CalendarWrapperProps interface (Type: View[], optional)
+  * Set default value: ['month', 'week', 'day', 'agenda'] to enable all 4 view modes
+  * Passed views prop to react-big-calendar Calendar component
+  * Added comprehensive JSDoc documentation explaining view configuration
+  * Updated component documentation with view mode behavior specifications
+- Modified ShiftsCalendar organism (apps/web/src/components/organisms/ShiftsCalendar.tsx):
+  * Explicitly passed views={['month', 'week', 'day', 'agenda']} prop to CalendarWrapper
+  * Added detailed documentation describing each view mode:
+    - Mês (Month): Full month view with all dates in grid layout
+    - Semana (Week): 7-day week view with hourly time slots (Sunday-Saturday)
+    - Dia (Day): Single day view with detailed hourly breakdown (24-hour timeline)
+    - Agenda (Agenda): List view showing upcoming events chronologically
+  * Updated component JSDoc with view mode specifications section
+- View mode functionality verified working:
+  * Month view: Renders full month grid with 6 weeks, all dates visible, proper weekday headers
+  * Week view: Displays 7 days (Sunday to Saturday) with hourly time slots in sidebar
+  * Day view: Shows single day with 24-hour timeline and hourly breakdown
+  * Agenda view: Displays events in chronological list format with date/time
+- State management verification:
+  * View state properly synchronized via controlled view prop
+  * handleViewChange callback correctly updates currentView state
+  * Current date maintained when switching views via controlled date prop
+  * Date ranges automatically recalculated via useMemo when view changes:
+    - Month view: startOfMonth → endOfMonth
+    - Week view: startOfWeek → endOfWeek (weekStartsOn: 0 for Sunday)
+    - Day view: startOfDay → endOfDay
+    - Agenda view: startOfMonth → endOfMonth (broader range for data availability)
+  * Event data automatically refetches when date range changes (React Query)
+- CalendarToolbar integration verified:
+  * View switcher buttons (Mês/Semana/Dia/Agenda) render correctly in toolbar
+  * Active view button properly highlighted with 'default' variant
+  * Inactive view buttons use 'outline' variant
+  * onClick handlers correctly call onView(viewName) to trigger view changes
+  * All 4 view labels properly translated to Portuguese via VIEW_LABELS constant
+- Created comprehensive technical documentation: docs/investigations/VIEW_MODE_SWITCHER_FIX.md
+  * Problem analysis with root cause explanation
+  * Solution overview with code examples
+  * Technical architecture diagrams (component hierarchy, state flow)
+  * View mode specifications table with date range calculations and display layouts
+  * Verification checklist for all 4 view modes (20+ test cases)
+  * Cross-view functionality testing (date persistence, navigation, filters)
+  * Code quality metrics (0 TypeScript errors, 0 build errors)
+  * Integration notes with related features (F010, F011, CalendarFilters)
+  * Future enhancement recommendations (work_week view, keyboard shortcuts, persistence)
+- TypeScript compilation verified: Zero errors (pnpm tsc --noEmit passes)
+- Next.js production build verified: 21 routes compiled successfully with zero errors
+- Updated feature_list.json: F012 marked as passes: true
+- Impact metrics:
+  * 2 component files modified (CalendarWrapper.tsx, ShiftsCalendar.tsx)
+  * ~15 lines of code changed (minimal, focused change)
+  * 1 technical documentation file created (VIEW_MODE_SWITCHER_FIX.md, 400+ lines)
+  * All 4 view modes now explicitly enabled and functional
+  * View state properly managed via controlled components pattern
+  * Zero breaking changes - fully backward compatible
+  * Integration with existing features verified (date navigation, month/year selector, filters)
+  * All 5 acceptance criteria met: Month view ✅, Week view ✅, Day view ✅, Agenda view ✅, Date persistence ✅

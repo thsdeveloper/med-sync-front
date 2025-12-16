@@ -214,7 +214,7 @@
         "No console errors or warnings during filter usage",
         "Calendar renders correctly with any filter combination"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F014",

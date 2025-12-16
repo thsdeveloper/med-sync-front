@@ -61,6 +61,8 @@ export interface ShiftsCalendarProps {
   height?: string | number;
   /** Custom CSS class name */
   className?: string;
+  /** Optional callback when calendar date changes via navigation */
+  onDateChange?: (date: Date) => void;
 }
 
 /**
@@ -130,6 +132,7 @@ export function ShiftsCalendar({
   defaultDate = new Date(),
   height = '700px',
   className = '',
+  onDateChange,
 }: ShiftsCalendarProps) {
   // State for calendar view and date
   const [currentView, setCurrentView] = useState<View>(defaultView);
@@ -202,9 +205,14 @@ export function ShiftsCalendar({
   }, []);
 
   // Handle date navigation
-  const handleNavigate = useCallback((date: Date) => {
-    setCurrentDate(date);
-  }, []);
+  const handleNavigate = useCallback(
+    (date: Date) => {
+      setCurrentDate(date);
+      // Notify parent component of date change
+      onDateChange?.(date);
+    },
+    [onDateChange]
+  );
 
   // Handle modal close
   const handleModalClose = useCallback((open: boolean) => {
