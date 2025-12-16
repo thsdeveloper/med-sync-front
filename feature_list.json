@@ -186,7 +186,7 @@
         "Calendar events load correctly for selected period",
         "Date state remains consistent across component"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F012",

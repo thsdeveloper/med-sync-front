@@ -38,6 +38,7 @@ import {
 import { CalendarWrapper, CalendarWrapperEvent } from './CalendarWrapper';
 import { CalendarLoadingSkeleton } from './CalendarLoadingSkeleton';
 import { CalendarEmptyState } from '../molecules/CalendarEmptyState';
+import { CalendarToolbar } from '../molecules/CalendarToolbar';
 import { ShiftDetailModal } from './ShiftDetailModal';
 import { useShiftsCalendar } from '@/hooks/useShiftsCalendar';
 import type { CalendarEvent } from '@/types/calendar';
@@ -101,12 +102,16 @@ function transformToWrapperEvents(
  * - Organization-based filtering
  * - Facility and specialty filters
  * - Date navigation controls (Hoje/Anterior/Próximo)
+ * - Interactive month/year selectors
  * - Proper date range calculation for each view mode
+ * - Date validation for month/year changes
  *
  * Navigation Controls:
  * - Hoje (Today): Navigates to current date
  * - Anterior (Previous): Moves to previous period (month/week/day based on current view)
  * - Próximo (Next): Moves to next period (month/week/day based on current view)
+ * - Month selector: Dropdown to select specific month (Janeiro - Dezembro)
+ * - Year selector: Dropdown to select specific year (current year ± 5 years)
  *
  * @param props - Calendar configuration props
  * @returns Complete calendar component
@@ -229,7 +234,7 @@ export function ShiftsCalendar({
 
   return (
     <>
-      {/* Calendar Component - Using controlled mode for proper navigation */}
+      {/* Calendar Component - Using controlled mode with custom toolbar */}
       <CalendarWrapper
         events={calendarEvents}
         onSelectEvent={handleSelectEvent}
@@ -242,6 +247,9 @@ export function ShiftsCalendar({
         height={height}
         className={className}
         selectable={false} // Disable slot selection for read-only view
+        components={{
+          toolbar: CalendarToolbar, // Use custom toolbar with month/year selectors
+        }}
       />
 
       {/* Shift Detail Modal */}

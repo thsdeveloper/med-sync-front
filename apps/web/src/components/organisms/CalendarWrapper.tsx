@@ -37,6 +37,7 @@ import {
   Calendar,
   View,
   SlotInfo,
+  Components,
 } from 'react-big-calendar';
 import { calendarLocalizer, calendarMessages, dateFormats } from '@/lib/calendar-config';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -103,6 +104,8 @@ export interface CalendarWrapperProps {
     style?: React.CSSProperties;
     className?: string;
   };
+  /** Optional custom components (e.g., custom toolbar) */
+  components?: Components<CalendarWrapperEvent, object>;
 }
 
 /**
@@ -134,6 +137,7 @@ export function CalendarWrapper({
   style,
   height = '700px',
   eventStyleGetter,
+  components,
 }: CalendarWrapperProps) {
   /**
    * Default event style getter with project design system colors
@@ -222,6 +226,7 @@ export function CalendarWrapper({
         onView={onView}
         onNavigate={onNavigate}
         eventPropGetter={styleGetter}
+        components={components}
         style={{ height: '100%' }}
         popup
         showMultiDayTimes

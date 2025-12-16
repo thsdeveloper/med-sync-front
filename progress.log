@@ -272,3 +272,54 @@
   * Date state properly synchronized between calendar UI and component state
   * Zero TypeScript errors, zero build errors, zero runtime errors
   * All 5 acceptance criteria met: Hoje ✅, Anterior ✅, Próximo ✅, state updates ✅, all view modes ✅
+[2025-12-16 19:57:58] [F011] Fix month/year selector (dezembro 2025) functionality - COMPLETED
+- Created CalendarToolbar molecule component (apps/web/src/components/molecules/CalendarToolbar.tsx):
+  * Interactive month selector dropdown with all 12 months (Janeiro - Dezembro)
+  * Interactive year selector dropdown (current year ± 5 years range)
+  * Integrated navigation buttons (Hoje, Anterior, Próximo)
+  * View switcher buttons (Mês, Semana, Dia, Agenda)
+  * Date validation logic handling edge cases (Feb 29 in non-leap years, month transitions)
+  * Portuguese labels and formatting using date-fns/locale/ptBR
+  * Proper TypeScript typing with ToolbarProps<CalendarWrapperEvent, object>
+  * 250+ lines of fully documented code following Atomic Design methodology
+- Updated CalendarWrapper organism (apps/web/src/components/organisms/CalendarWrapper.tsx):
+  * Added Components import from react-big-calendar
+  * Added components prop to CalendarWrapperProps interface
+  * Passed components prop to Calendar component for custom toolbar injection
+  * Maintained full backward compatibility with existing implementation
+- Updated ShiftsCalendar organism (apps/web/src/components/organisms/ShiftsCalendar.tsx):
+  * Imported CalendarToolbar component
+  * Passed custom toolbar via components={{ toolbar: CalendarToolbar }} prop
+  * Updated component documentation with new month/year selector features
+  * Enhanced feature list with date validation and interactive selector descriptions
+- State synchronization and validation:
+  * Month selector uses controlled onValueChange handler calling onNavigate('DATE', newDate)
+  * Year selector uses controlled onValueChange handler with same pattern
+  * Date validation prevents invalid dates using isValid() and lastDayOfMonth() from date-fns
+  * Examples: Jan 31 → Feb 28/29, leap year handling (Feb 29, 2024 → Feb 28, 2025)
+  * All date changes trigger calendar re-render via controlled date prop
+  * Date range recalculation happens automatically via useMemo in ShiftsCalendar
+- Event loading verification:
+  * Calendar events refetch automatically when currentDate or currentView changes
+  * Date range recalculated in useMemo based on view mode and current date
+  * useShiftsCalendar hook receives updated startDate/endDate parameters
+  * React Query automatically refetches data when query key dependencies change
+- UI/UX improvements:
+  * Month dropdown shows full month names in Portuguese (Janeiro, Fevereiro, etc.)
+  * Year dropdown shows numeric years (2020-2030 range)
+  * Current date label displays formatted date for context (e.g., "dezembro de 2025")
+  * All controls use shadcn/ui components for consistent design system
+  * Proper button sizes (h-9) and spacing for visual consistency
+  * Navigation icons (ChevronLeft, ChevronRight, CalendarIcon) from lucide-react
+- TypeScript compilation verified: Zero errors
+- Next.js production build verified: 21 routes compiled successfully
+- Updated feature_list.json: F011 marked as passes: true
+- Impact metrics:
+  * 1 new molecule component created (CalendarToolbar.tsx, 250+ lines)
+  * 2 organism components updated (CalendarWrapper.tsx, ShiftsCalendar.tsx)
+  * Month selector functional with 12 options
+  * Year selector functional with 11 options (current year ± 5)
+  * Date validation handles all edge cases (leap years, month boundaries)
+  * Calendar state fully synchronized between toolbar and calendar display
+  * Events load correctly for selected month/year via automatic data refetch
+  * All 5 acceptance criteria met: Month selector ✅, Year selector ✅, Calendar display updates ✅, Events load correctly ✅, Date state consistent ✅
