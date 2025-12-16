@@ -64,13 +64,17 @@ export type ShiftSwapRequestWithDetails = ShiftSwapRequest & {
         id: string;
         name: string;
         color: string;
-        specialty?: string | null;
+        especialidade?: {
+            nome: string;
+        } | null;
     };
     target_staff?: {
         id: string;
         name: string;
         color: string;
-        specialty?: string | null;
+        especialidade?: {
+            nome: string;
+        } | null;
     } | null;
     original_shift?: {
         id: string;

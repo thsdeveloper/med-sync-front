@@ -18,12 +18,13 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
-import { useEspecialidades } from '@medsync/shared/hooks';
+import { useProfissoes } from '@medsync/shared/hooks';
+import type { ProfissaoComConselho } from '@medsync/shared/schemas';
 import { supabase as defaultSupabase } from '@/lib/supabase';
 
-interface EspecialidadeComboboxProps {
+interface ProfissaoSelectProps {
     value: string;
-    onChange: (value: string) => void;
+    onChange: (value: string, profissao?: ProfissaoComConselho) => void;
     disabled?: boolean;
     placeholder?: string;
     className?: string;
@@ -31,27 +32,29 @@ interface EspecialidadeComboboxProps {
 }
 
 /**
- * EspecialidadeCombobox - Searchable select component for medical specialties
+ * ProfissaoSelect - Searchable select component for healthcare professions
  *
  * A molecule component that combines shadcn/ui Command and Popover atoms
- * to create a searchable dropdown for selecting medical specialties.
+ * to create a searchable dropdown for selecting healthcare professions.
+ * Each profession is displayed with its associated professional council (conselho).
  *
  * Features:
  * - Search/filter functionality with debounce (300ms)
- * - Displays all especialidades from the database
+ * - Displays all profissoes from the database with conselho info
  * - Shows loading and error states
  * - Customizable placeholder and className
  * - Accepts custom Supabase client for flexibility
+ * - Returns both the profissao_id and the full profissao object on change
  * - Follows Atomic Design (molecule combining Command, Popover atoms)
  */
-export function EspecialidadeCombobox({
+export function ProfissaoSelect({
     value,
     onChange,
     disabled = false,
-    placeholder = 'Selecione uma especialidade...',
+    placeholder = 'Selecione uma profissao...',
     className,
     supabaseClient,
-}: EspecialidadeComboboxProps) {
+}: ProfissaoSelectProps) {
     const client = supabaseClient ?? defaultSupabase;
     const [open, setOpen] = React.useState(false);
     const [searchQuery, setSearchQuery] = React.useState('');
@@ -65,29 +68,38 @@ export function EspecialidadeCombobox({
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
-    // Fetch especialidades list (filtered by search)
-    const { data: especialidades, isLoading, error } = useEspecialidades(client, {
+    // Fetch profissoes list (filtered by search)
+    const { data: profissoes, isLoading, error } = useProfissoes(client, {
         search: debouncedSearch,
     });
 
     // Check if selected value is in current list
     const selectedInList = React.useMemo(() => {
-        return especialidades?.find((esp) => esp.id === value);
-    }, [especialidades, value]);
+        return profissoes?.find((p) => p.id === value);
+    }, [profissoes, value]);
 
-    // Fetch all especialidades when selected value is not in filtered list
+    // Fetch all profissoes when selected value is not in filtered list
     // This ensures the selected name is always visible
-    const { data: allEspecialidades } = useEspecialidades(client, {
+    const { data: allProfissoes } = useProfissoes(client, {
         enabled: !!value && !selectedInList,
     });
 
-    // Get the name of the selected especialidade
-    const selectedName = React.useMemo(() => {
+    // Get the selected profissao object
+    const selectedProfissao = React.useMemo(() => {
         if (selectedInList) {
-            return selectedInList.nome;
+            return selectedInList;
         }
-        return allEspecialidades?.find((esp) => esp.id === value)?.nome;
-    }, [selectedInList, allEspecialidades, value]);
+        return allProfissoes?.find((p) => p.id === value);
+    }, [selectedInList, allProfissoes, value]);
+
+    // Get display text for selected profissao
+    const displayText = React.useMemo(() => {
+        if (!selectedProfissao) return null;
+        const conselhoSigla = selectedProfissao.conselho?.sigla;
+        return conselhoSigla
+            ? `${selectedProfissao.nome} (${conselhoSigla})`
+            : selectedProfissao.nome;
+    }, [selectedProfissao]);
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -104,10 +116,10 @@ export function EspecialidadeCombobox({
                     disabled={disabled}
                 >
                     <span className="truncate">
-                        {isLoading && !selectedName ? (
-                            'Carregando especialidades...'
-                        ) : selectedName ? (
-                            selectedName
+                        {isLoading && !displayText ? (
+                            'Carregando profissoes...'
+                        ) : displayText ? (
+                            displayText
                         ) : (
                             placeholder
                         )}
@@ -118,33 +130,34 @@ export function EspecialidadeCombobox({
             <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[8rem] p-0" align="start">
                 <Command shouldFilter={false}>
                     <CommandInput
-                        placeholder="Buscar especialidade..."
+                        placeholder="Buscar profissao..."
                         value={searchQuery}
                         onValueChange={setSearchQuery}
                     />
                     <CommandList>
                         {isLoading ? (
                             <div className="py-6 text-center text-sm text-muted-foreground">
-                                Carregando especialidades...
+                                Carregando profissoes...
                             </div>
                         ) : error ? (
                             <div className="py-6 text-center text-sm text-destructive">
-                                Erro ao carregar especialidades
+                                Erro ao carregar profissoes
                             </div>
-                        ) : especialidades && especialidades.length === 0 ? (
+                        ) : profissoes && profissoes.length === 0 ? (
                             <CommandEmpty>
                                 {searchQuery
-                                    ? 'Nenhuma especialidade encontrada.'
-                                    : 'Nenhuma especialidade disponível.'}
+                                    ? 'Nenhuma profissao encontrada.'
+                                    : 'Nenhuma profissao disponivel.'}
                             </CommandEmpty>
                         ) : (
                             <CommandGroup>
-                                {especialidades?.map((especialidade) => (
+                                {profissoes?.map((profissao) => (
                                     <CommandItem
-                                        key={especialidade.id}
-                                        value={especialidade.id}
+                                        key={profissao.id}
+                                        value={profissao.id}
                                         onSelect={(currentValue) => {
-                                            onChange(currentValue === value ? '' : currentValue);
+                                            const selectedProf = currentValue === value ? undefined : profissoes.find(p => p.id === currentValue);
+                                            onChange(currentValue === value ? '' : currentValue, selectedProf);
                                             setOpen(false);
                                             setSearchQuery('');
                                         }}
@@ -154,13 +167,18 @@ export function EspecialidadeCombobox({
                                             <Check
                                                 className={cn(
                                                     'h-4 w-4',
-                                                    value === especialidade.id
+                                                    value === profissao.id
                                                         ? 'opacity-100'
                                                         : 'opacity-0'
                                                 )}
                                             />
                                         </span>
-                                        {especialidade.nome}
+                                        <span className="flex-1">{profissao.nome}</span>
+                                        {profissao.conselho?.sigla && (
+                                            <span className="ml-2 text-xs text-muted-foreground">
+                                                {profissao.conselho.sigla}
+                                            </span>
+                                        )}
                                     </CommandItem>
                                 ))}
                             </CommandGroup>

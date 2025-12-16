@@ -27,11 +27,6 @@ export const facilitySchema = z.object({
             { message: 'CNPJ inválido. Use o formato XX.XXX.XXX/XXXX-XX' }
         )
         .or(z.literal('')),
-    address: z
-        .string()
-        .max(500, 'Endereço muito longo')
-        .optional()
-        .or(z.literal('')),
     phone: z
         .string()
         .max(20, 'Telefone muito longo')

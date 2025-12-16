@@ -21,7 +21,6 @@ import {
 import { Input } from '@/components/atoms/Input';
 import { Button } from '@/components/atoms/Button';
 import { Select } from '@/components/atoms/Select';
-import { Textarea } from '@/components/ui/textarea';
 import { PaymentConfigSection } from '@/components/organisms/payments/PaymentConfigSection';
 import { AddressFormFields } from '@/components/molecules/AddressFormFields';
 
@@ -108,7 +107,6 @@ export function FacilitySheet({
             name: '',
             type: 'clinic',
             cnpj: '',
-            address: '',
             phone: '',
             active: true,
             address_fields: {
@@ -145,7 +143,6 @@ export function FacilitySheet({
                     name: '',
                     type: 'clinic',
                     cnpj: '',
-                    address: '',
                     phone: '',
                     active: true,
                     address_fields: {
@@ -273,7 +270,6 @@ export function FacilitySheet({
                     name: facilityToEdit.name,
                     type: facilityToEdit.type,
                     cnpj: facilityToEdit.cnpj ? formatCnpj(facilityToEdit.cnpj) : '',
-                    address: facilityToEdit.address || '',
                     phone: facilityToEdit.phone ? formatPhone(facilityToEdit.phone) : '',
                     active: facilityToEdit.active,
                     address_fields: addressFields,
@@ -297,7 +293,6 @@ export function FacilitySheet({
                 name: data.name.trim(),
                 type: data.type,
                 cnpj: data.cnpj?.replace(/\D/g, '') || null,
-                address: data.address?.trim() || null,
                 phone: data.phone?.replace(/\D/g, '') || null,
                 active: data.active,
             };
@@ -571,24 +566,6 @@ export function FacilitySheet({
                                         onChange={(e) =>
                                             field.onChange(handlePhoneMask(e.target.value))
                                         }
-                                    />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-
-                    <FormField
-                        control={form.control}
-                        name="address"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Endereço Completo (Legado - opcional)</FormLabel>
-                                <FormControl>
-                                    <Textarea
-                                        {...field}
-                                        rows={2}
-                                        placeholder="Campo legado - use os campos de endereço abaixo"
                                     />
                                 </FormControl>
                                 <FormMessage />

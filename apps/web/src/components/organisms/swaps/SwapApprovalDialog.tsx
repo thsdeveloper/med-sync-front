@@ -116,7 +116,7 @@ export function SwapApprovalDialog({
               </Avatar>
               <div className="text-center">
                 <p className="font-medium text-sm">{swap.requester?.name}</p>
-                <p className="text-xs text-muted-foreground">{swap.requester?.specialty}</p>
+                <p className="text-xs text-muted-foreground">{swap.requester?.especialidade?.nome}</p>
               </div>
             </div>
 
@@ -133,7 +133,7 @@ export function SwapApprovalDialog({
               </Avatar>
               <div className="text-center">
                 <p className="font-medium text-sm">{swap.target_staff?.name}</p>
-                <p className="text-xs text-muted-foreground">{swap.target_staff?.specialty}</p>
+                <p className="text-xs text-muted-foreground">{swap.target_staff?.especialidade?.nome}</p>
               </div>
             </div>
           </div>

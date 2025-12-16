@@ -3,23 +3,37 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, Input, CRMInput } from '@/components/ui';
+import { Button, Input } from '@/components/ui';
 import { useAuth } from '@/providers/auth-provider';
-import { staffLoginSchema, type StaffLoginData } from '@medsync/shared';
+import { z } from 'zod';
+
+// Local schema for login form (password only since registro comes from params)
+const loginFormSchema = z.object({
+  password: z
+    .string()
+    .min(1, 'Senha é obrigatória')
+    .min(6, 'Senha deve ter no mínimo 6 caracteres'),
+});
+
+type LoginFormData = z.infer<typeof loginFormSchema>;
 
 export default function LoginScreen() {
-  const { crm } = useLocalSearchParams<{ crm: string }>();
-  const { signInWithCrm } = useAuth();
+  const { conselhoSigla, numero, uf } = useLocalSearchParams<{
+    conselhoSigla: string;
+    numero: string;
+    uf: string;
+  }>();
+  const { signInWithRegistro } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -27,18 +41,22 @@ export default function LoginScreen() {
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm<StaffLoginData>({
-    resolver: zodResolver(staffLoginSchema),
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginFormSchema),
     defaultValues: {
-      crm: crm || '',
       password: '',
     },
   });
 
-  const onSubmit = async (data: StaffLoginData) => {
+  const onSubmit = async (data: LoginFormData) => {
+    if (!conselhoSigla || !numero || !uf) {
+      Alert.alert('Erro', 'Dados do registro não encontrados. Volte e tente novamente.');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const { error } = await signInWithCrm(data.crm, data.password);
+      const { error } = await signInWithRegistro(conselhoSigla, numero, uf, data.password);
       if (error) {
         Alert.alert('Erro', error.message);
       }
@@ -48,6 +66,9 @@ export default function LoginScreen() {
       setIsLoading(false);
     }
   };
+
+  // Format registro display
+  const registroDisplay = `${conselhoSigla || ''} ${numero || ''}/${uf || ''}`;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -72,24 +93,14 @@ export default function LoginScreen() {
             </Text>
           </View>
 
+          {/* Registro Info */}
+          <View style={styles.registroCard}>
+            <Ionicons name="document-text-outline" size={20} color="#0066CC" />
+            <Text style={styles.registroText}>{registroDisplay}</Text>
+          </View>
+
           {/* Form */}
           <View style={styles.form}>
-            <Controller
-              control={control}
-              name="crm"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <CRMInput
-                  label="CRM"
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  error={errors.crm?.message}
-                  editable={!crm}
-                  required
-                />
-              )}
-            />
-
             <Controller
               control={control}
               name="password"
@@ -146,7 +157,7 @@ const styles = StyleSheet.create({
     marginTop: -60,
   },
   header: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   title: {
     fontSize: 28,
@@ -158,6 +169,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6B7280',
     lineHeight: 24,
+  },
+  registroCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 24,
+    gap: 10,
+  },
+  registroText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0066CC',
   },
   form: {
     marginBottom: 32,

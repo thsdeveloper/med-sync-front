@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Edit, Trash2, Search, MoreHorizontal, MapPin, Phone, Building2, Hospital } from 'lucide-react';
+import { Edit, Trash2, Search, MoreHorizontal, Phone, Building2, Hospital } from 'lucide-react';
 import { Facility, FACILITY_TYPE_LABELS } from '@medsync/shared';
 import { Input } from '@/components/atoms/Input';
 import { Button } from '@/components/atoms/Button';
@@ -30,7 +30,6 @@ export function FacilityList({
 
     const filteredFacilities = facilities.filter(facility =>
         facility.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (facility.address && facility.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
         FACILITY_TYPE_LABELS[facility.type].toLowerCase().includes(searchTerm.toLowerCase())
     );
 
@@ -72,7 +71,7 @@ export function FacilityList({
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
                 <Input
-                    placeholder="Buscar por nome, tipo ou endereço..."
+                    placeholder="Buscar por nome ou tipo..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
@@ -84,7 +83,6 @@ export function FacilityList({
                     <thead className="bg-slate-50 text-slate-600 font-medium border-b">
                         <tr>
                             <th className="px-4 py-3">Unidade</th>
-                            <th className="px-4 py-3 hidden md:table-cell">Endereço</th>
                             <th className="px-4 py-3 hidden sm:table-cell">Contato</th>
                             <th className="px-4 py-3 text-center">Status</th>
                             <th className="px-4 py-3 text-right">Ações</th>
@@ -116,16 +114,6 @@ export function FacilityList({
                                             </div>
                                         </div>
                                     </div>
-                                </td>
-                                <td className="px-4 py-3 hidden md:table-cell">
-                                    {facility.address ? (
-                                        <div className="flex items-start gap-1.5 text-slate-600 max-w-xs">
-                                            <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                                            <span className="line-clamp-2">{facility.address}</span>
-                                        </div>
-                                    ) : (
-                                        <span className="text-slate-400">-</span>
-                                    )}
                                 </td>
                                 <td className="px-4 py-3 hidden sm:table-cell">
                                     {facility.phone ? (
@@ -172,7 +160,7 @@ export function FacilityList({
                         ))}
                         {filteredFacilities.length === 0 && searchTerm && (
                             <tr>
-                                <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                                <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
                                     Nenhuma unidade encontrada para "{searchTerm}"
                                 </td>
                             </tr>

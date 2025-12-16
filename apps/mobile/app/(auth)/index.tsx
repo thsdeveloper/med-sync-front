@@ -1,72 +1,133 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
-  TouchableOpacity,
-  Image,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, CRMInput } from '@/components/ui';
+import { Button, RegistroProfissionalInput, type RegistroProfissionalValue } from '@/components/ui';
+import { ProfissaoPicker } from '@/components/molecules';
 import { useAuth } from '@/providers/auth-provider';
-import { crmLookupSchema, type CrmLookupData } from '@medsync/shared';
+import { useProfissoes, type ProfissaoComConselho } from '@medsync/shared';
+import { registroLookupSchema, type RegistroLookupData, CONSELHOS } from '@medsync/shared';
 
-export default function CrmInputScreen() {
-  const { lookupCrm } = useAuth();
+// Form type for this screen (includes profissao_id for UI convenience)
+interface LookupFormData {
+  profissao_id: string;
+  registro: RegistroProfissionalValue;
+}
+
+export default function RegistroLookupScreen() {
+  const { lookupRegistro } = useAuth();
+  const { data: profissoes } = useProfissoes();
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedProfissao, setSelectedProfissao] = useState<ProfissaoComConselho | null>(null);
 
   const {
     control,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors },
-  } = useForm<CrmLookupData>({
-    resolver: zodResolver(crmLookupSchema),
+  } = useForm<LookupFormData>({
     defaultValues: {
-      crm: '',
+      profissao_id: '',
+      registro: {
+        numero: '',
+        uf: '',
+        categoria: undefined,
+      },
     },
   });
 
-  const onSubmit = async (data: CrmLookupData) => {
+  const registroValue = watch('registro');
+  const profissaoId = watch('profissao_id');
+
+  const handleProfissaoChange = useCallback((id: string) => {
+    setValue('profissao_id', id);
+    // Find the selected profissao to get conselho info
+    const profissao = profissoes?.find(p => p.id === id);
+    setSelectedProfissao(profissao || null);
+    // Reset categoria when profissao changes
+    setValue('registro', {
+      ...registroValue,
+      categoria: undefined,
+    });
+  }, [profissoes, setValue, registroValue]);
+
+  const onSubmit = async (data: LookupFormData) => {
+    // Validate required fields
+    if (!data.registro.numero || !data.registro.uf) {
+      Alert.alert('Atenção', 'Preencha o número e UF do registro');
+      return;
+    }
+
+    if (!selectedProfissao?.conselho?.sigla) {
+      Alert.alert('Atenção', 'Selecione sua profissão');
+      return;
+    }
+
+    // Check categoria if required
+    if (selectedProfissao.conselho.requer_categoria && !data.registro.categoria) {
+      Alert.alert('Atenção', 'Selecione a categoria do registro');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const result = await lookupCrm(data.crm);
+      const result = await lookupRegistro(data.registro.numero, data.registro.uf);
+      const conselhoSigla = selectedProfissao.conselho.sigla;
 
       if (result.found && result.hasAuth) {
-        // CRM exists and has auth setup - go to login
+        // Registro exists and has auth setup - go to login
         router.push({
           pathname: '/(auth)/login',
-          params: { crm: data.crm },
+          params: {
+            conselhoSigla,
+            numero: data.registro.numero,
+            uf: data.registro.uf,
+          },
         });
       } else if (result.found && !result.hasAuth) {
-        // CRM exists but no auth - go to setup password
+        // Registro exists but no auth - go to setup password
         router.push({
           pathname: '/(auth)/setup-password',
           params: {
-            crm: data.crm,
+            conselhoSigla,
+            numero: data.registro.numero,
+            uf: data.registro.uf,
             staffId: result.staff?.id,
             name: result.staff?.name,
             email: result.staff?.email || '',
           },
         });
       } else {
-        // CRM not found - go to register
+        // Registro not found - go to register
         router.push({
           pathname: '/(auth)/register',
-          params: { crm: data.crm },
+          params: {
+            profissao_id: data.profissao_id,
+            conselhoSigla,
+            numero: data.registro.numero,
+            uf: data.registro.uf,
+            categoria: data.registro.categoria || '',
+          },
         });
       }
     } catch (error) {
-      Alert.alert('Erro', 'Não foi possível verificar o CRM. Tente novamente.');
+      Alert.alert('Erro', 'Não foi possível verificar o registro. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
   };
+
+  const conselhoSigla = selectedProfissao?.conselho?.sigla || 'Registro';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -82,23 +143,44 @@ export default function CrmInputScreen() {
             </View>
             <Text style={styles.title}>Bem-vindo</Text>
             <Text style={styles.subtitle}>
-              Insira seu CRM para acessar suas escalas de plantão
+              Insira seu registro profissional para acessar suas escalas de plantão
             </Text>
           </View>
 
           {/* Form */}
           <View style={styles.form}>
+            {/* Profissão Picker */}
             <Controller
               control={control}
-              name="crm"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <CRMInput
-                  label="CRM"
+              name="profissao_id"
+              render={({ field: { value } }) => (
+                <ProfissaoPicker
+                  label="Profissão"
+                  placeholder="Selecione sua profissão"
                   value={value}
-                  onChangeText={onChange}
+                  onValueChange={handleProfissaoChange}
+                  error={errors.profissao_id?.message}
+                />
+              )}
+            />
+
+            {/* Registro Profissional Input */}
+            <Controller
+              control={control}
+              name="registro"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <RegistroProfissionalInput
+                  label={`Número do ${conselhoSigla}`}
+                  value={value}
+                  onChange={onChange}
                   onBlur={onBlur}
-                  error={errors.crm?.message}
+                  profissao={selectedProfissao}
                   required
+                  errors={{
+                    numero: errors.registro?.numero?.message,
+                    uf: errors.registro?.uf?.message,
+                    categoria: errors.registro?.categoria?.message,
+                  }}
                 />
               )}
             />
@@ -107,6 +189,7 @@ export default function CrmInputScreen() {
               title="Continuar"
               onPress={handleSubmit(onSubmit)}
               loading={isLoading}
+              disabled={!profissaoId || !registroValue.numero || !registroValue.uf}
               style={styles.button}
             />
           </View>

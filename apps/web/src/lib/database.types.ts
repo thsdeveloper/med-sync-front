@@ -192,6 +192,33 @@ export type Database = {
           },
         ]
       }
+      conselhos_profissionais: {
+        Row: {
+          created_at: string | null
+          id: string
+          nome_completo: string
+          regex_validacao: string
+          requer_categoria: boolean
+          sigla: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          nome_completo: string
+          regex_validacao?: string
+          requer_categoria?: boolean
+          sigla: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          nome_completo?: string
+          regex_validacao?: string
+          requer_categoria?: boolean
+          sigla?: string
+        }
+        Relationships: []
+      }
       especialidades: {
         Row: {
           created_at: string | null
@@ -213,7 +240,6 @@ export type Database = {
       facilities: {
         Row: {
           active: boolean
-          address: string | null
           cnpj: string | null
           created_at: string
           id: string
@@ -224,7 +250,6 @@ export type Database = {
         }
         Insert: {
           active?: boolean
-          address?: string | null
           cnpj?: string | null
           created_at?: string
           id?: string
@@ -235,7 +260,6 @@ export type Database = {
         }
         Update: {
           active?: boolean
-          address?: string | null
           cnpj?: string | null
           created_at?: string
           id?: string
@@ -458,8 +482,11 @@ export type Database = {
           name: string
           organization_id: string | null
           phone: string | null
+          profissao_id: string | null
+          registro_categoria: string | null
+          registro_numero: string | null
+          registro_uf: string | null
           role: string
-          specialty: string | null
           updated_at: string | null
           user_id: string | null
         }
@@ -477,8 +504,11 @@ export type Database = {
           name: string
           organization_id?: string | null
           phone?: string | null
+          profissao_id?: string | null
+          registro_categoria?: string | null
+          registro_numero?: string | null
+          registro_uf?: string | null
           role: string
-          specialty?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -496,8 +526,11 @@ export type Database = {
           name?: string
           organization_id?: string | null
           phone?: string | null
+          profissao_id?: string | null
+          registro_categoria?: string | null
+          registro_numero?: string | null
+          registro_uf?: string | null
           role?: string
-          specialty?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -514,6 +547,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_staff_profissao_id_fkey"
+            columns: ["profissao_id"]
+            isOneToOne: false
+            referencedRelation: "profissoes"
             referencedColumns: ["id"]
           },
         ]
@@ -729,6 +769,38 @@ export type Database = {
             columns: ["staff_id"]
             isOneToOne: false
             referencedRelation: "medical_staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profissoes: {
+        Row: {
+          categorias_disponiveis: string[] | null
+          conselho_id: string
+          created_at: string | null
+          id: string
+          nome: string
+        }
+        Insert: {
+          categorias_disponiveis?: string[] | null
+          conselho_id: string
+          created_at?: string | null
+          id?: string
+          nome: string
+        }
+        Update: {
+          categorias_disponiveis?: string[] | null
+          conselho_id?: string
+          created_at?: string | null
+          id?: string
+          nome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profissoes_conselho_id_fkey"
+            columns: ["conselho_id"]
+            isOneToOne: false
+            referencedRelation: "conselhos_profissionais"
             referencedColumns: ["id"]
           },
         ]

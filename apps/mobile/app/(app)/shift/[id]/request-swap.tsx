@@ -3,13 +3,13 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   Alert,
   ActivityIndicator,
   ScrollView,
   TouchableOpacity,
   TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
@@ -17,14 +17,23 @@ import { ptBR } from 'date-fns/locale';
 import { Button, Card } from '@/components/ui';
 import { useAuth } from '@/providers/auth-provider';
 import { supabase } from '@/lib/supabase';
-import type { Shift, MedicalStaff } from '@medsync/shared';
+import type { Shift } from '@medsync/shared';
 
 type ShiftWithRelations = Shift & {
   sectors?: { name: string; color: string };
   medical_staff?: { id: string; name: string; color: string };
 };
 
-type ColleagueWithShifts = MedicalStaff & {
+// Simplified colleague type for swap screen (only includes fields we query)
+type ColleagueForSwap = {
+  id: string;
+  name: string;
+  color: string;
+  role: string;
+  especialidade?: { id: string; nome: string }[] | { id: string; nome: string } | null;
+};
+
+type ColleagueWithShifts = ColleagueForSwap & {
   shifts: ShiftWithRelations[];
 };
 

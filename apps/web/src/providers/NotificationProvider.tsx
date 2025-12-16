@@ -103,10 +103,10 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
                 .select(`
                   *,
                   requester:medical_staff!shift_swap_requests_requester_id_fkey (
-                    id, name, color, specialty
+                    id, name, color, especialidades(nome)
                   ),
                   target_staff:medical_staff!shift_swap_requests_target_staff_id_fkey (
-                    id, name, color, specialty
+                    id, name, color, especialidades(nome)
                   ),
                   original_shift:shifts!shift_swap_requests_original_shift_id_fkey (
                     id, start_time, end_time, status,

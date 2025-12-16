@@ -1,56 +1,80 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
   ScrollView,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, Input, CRMInput } from '@/components/ui';
+import { Button, Input } from '@/components/ui';
 import { EspecialidadePicker } from '@/components/molecules';
 import { useAuth } from '@/providers/auth-provider';
-import { staffRegisterSchema, type StaffRegisterData } from '@medsync/shared';
+import { staffRegisterWithRegistroSchema, type StaffRegisterWithRegistroData, useProfissoes } from '@medsync/shared';
 
 export default function RegisterScreen() {
-  const { crm } = useLocalSearchParams<{ crm: string }>();
+  const { profissao_id, conselhoSigla, numero, uf, categoria } = useLocalSearchParams<{
+    profissao_id: string;
+    conselhoSigla: string;
+    numero: string;
+    uf: string;
+    categoria?: string;
+  }>();
   const { signUp } = useAuth();
+  const { data: profissoes } = useProfissoes();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Find the selected profissao for display
+  const selectedProfissao = useMemo(() => {
+    return profissoes?.find(p => p.id === profissao_id);
+  }, [profissoes, profissao_id]);
 
   const {
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm<StaffRegisterData>({
-    resolver: zodResolver(staffRegisterSchema),
+  } = useForm<StaffRegisterWithRegistroData>({
+    resolver: zodResolver(staffRegisterWithRegistroSchema),
     defaultValues: {
       name: '',
       email: '',
       phone: '',
-      crm: crm || '',
+      profissao_id: profissao_id || '',
+      registro_numero: numero || '',
+      registro_uf: uf || '',
+      registro_categoria: categoria || undefined,
       especialidade_id: '',
       password: '',
       confirmPassword: '',
     },
   });
 
-  const onSubmit = async (data: StaffRegisterData) => {
+  const onSubmit = async (data: StaffRegisterWithRegistroData) => {
+    if (!conselhoSigla) {
+      Alert.alert('Erro', 'Dados do conselho não encontrados. Volte e tente novamente.');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { error } = await signUp({
         name: data.name,
         email: data.email,
-        phone: data.phone,
-        crm: data.crm,
+        phone: data.phone || undefined,
+        profissao_id: data.profissao_id,
+        registro_numero: data.registro_numero,
+        registro_uf: data.registro_uf,
+        registro_categoria: data.registro_categoria || undefined,
+        conselhoSigla: conselhoSigla,
         especialidade_id: data.especialidade_id,
         password: data.password,
       });
@@ -64,6 +88,9 @@ export default function RegisterScreen() {
       setIsLoading(false);
     }
   };
+
+  // Format registro display
+  const registroDisplay = `${conselhoSigla || ''} ${numero || ''}/${uf || ''}${categoria ? ` - ${categoria}` : ''}`;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -90,6 +117,18 @@ export default function RegisterScreen() {
             <Text style={styles.subtitle}>
               Preencha seus dados para criar seu acesso
             </Text>
+          </View>
+
+          {/* Registro Info Card */}
+          <View style={styles.registroCard}>
+            <View style={styles.registroCardHeader}>
+              <Ionicons name="document-text-outline" size={20} color="#0066CC" />
+              <Text style={styles.registroLabel}>Registro Profissional</Text>
+            </View>
+            <Text style={styles.registroText}>{registroDisplay}</Text>
+            {selectedProfissao && (
+              <Text style={styles.profissaoText}>{selectedProfissao.nome}</Text>
+            )}
           </View>
 
           {/* Form */}
@@ -137,27 +176,11 @@ export default function RegisterScreen() {
                   label="Telefone (opcional)"
                   placeholder="(00) 00000-0000"
                   leftIcon="call"
-                  value={value}
+                  value={value || ''}
                   onChangeText={onChange}
                   onBlur={onBlur}
                   error={errors.phone?.message}
                   keyboardType="phone-pad"
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="crm"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <CRMInput
-                  label="CRM"
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  error={errors.crm?.message}
-                  editable={!crm}
-                  required
                 />
               )}
             />
@@ -270,6 +293,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6B7280',
     lineHeight: 24,
+  },
+  registroCard: {
+    backgroundColor: '#EFF6FF',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 24,
+  },
+  registroCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  registroLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0066CC',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  registroText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  profissaoText: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 4,
   },
   form: {
     marginBottom: 24,

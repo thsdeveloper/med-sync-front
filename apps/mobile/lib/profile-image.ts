@@ -120,7 +120,6 @@ export interface UpdateUserAvatarResult {
     email: string | null;
     phone: string | null;
     role: string;
-    specialty: string | null;
     updated_at: string | null;
   };
 
@@ -611,7 +610,7 @@ export async function updateUserAvatar(
         updated_at: new Date().toISOString(),
       })
       .eq('user_id', userId)
-      .select('id, name, avatar_url, email, phone, role, specialty, updated_at')
+      .select('id, name, avatar_url, email, phone, role, updated_at')
       .single();
 
     if (updateError) {
@@ -651,7 +650,6 @@ export async function updateUserAvatar(
         email: updatedProfile.email,
         phone: updatedProfile.phone,
         role: updatedProfile.role,
-        specialty: updatedProfile.specialty,
         updated_at: updatedProfile.updated_at,
       },
     };

@@ -42,10 +42,10 @@ export default function TrocasPage() {
         .select(`
           *,
           requester:medical_staff!shift_swap_requests_requester_id_fkey (
-            id, name, color, specialty
+            id, name, color, especialidade:especialidades(nome)
           ),
           target_staff:medical_staff!shift_swap_requests_target_staff_id_fkey (
-            id, name, color, specialty
+            id, name, color, especialidade:especialidades(nome)
           ),
           original_shift:shifts!shift_swap_requests_original_shift_id_fkey (
             id, start_time, end_time, status,
@@ -287,7 +287,7 @@ export default function TrocasPage() {
                 </Avatar>
                 <div>
                   <p className="font-medium">{swap.requester?.name}</p>
-                  <p className="text-xs text-muted-foreground">{swap.requester?.specialty}</p>
+                  <p className="text-xs text-muted-foreground">{swap.requester?.especialidade?.nome}</p>
                 </div>
               </div>
 
@@ -301,7 +301,7 @@ export default function TrocasPage() {
                 </Avatar>
                 <div>
                   <p className="font-medium">{swap.target_staff?.name}</p>
-                  <p className="text-xs text-muted-foreground">{swap.target_staff?.specialty}</p>
+                  <p className="text-xs text-muted-foreground">{swap.target_staff?.especialidade?.nome}</p>
                 </div>
               </div>
             </div>

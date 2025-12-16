@@ -45,7 +45,6 @@ export default function TeamPage() {
                         email,
                         phone,
                         crm,
-                        specialty,
                         especialidade_id,
                         role,
                         color,

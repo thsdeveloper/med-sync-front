@@ -1,6 +1,15 @@
 import { z } from 'zod';
 import { crmOptionalSchema } from './crm.schema';
+import {
+    VALID_UFS,
+    type Profissao,
+    type ProfissaoComConselho,
+} from './registro-profissional.schema';
 
+/**
+ * @deprecated Use profissao_id ao invés de role.
+ * Mantido para backward compatibility.
+ */
 export const ROLES = ['Médico', 'Enfermeiro', 'Técnico', 'Administrativo', 'Outro'] as const;
 
 // Especialidade type and schema (database record)
@@ -13,7 +22,6 @@ export const especialidadeSchema = z.object({
 export type Especialidade = z.infer<typeof especialidadeSchema>;
 
 // Form schema - usado para criar/editar profissionais
-// Note: specialty field is kept for backward compatibility but deprecated
 export const medicalStaffSchema = z.object({
     name: z
         .string()
@@ -29,14 +37,39 @@ export const medicalStaffSchema = z.object({
         .string()
         .optional()
         .or(z.literal('')),
+
+    // ========================================================================
+    // Novos campos de registro profissional (substituem CRM)
+    // ========================================================================
+    profissao_id: z
+        .string()
+        .uuid('Selecione uma profissão válida')
+        .min(1, 'Profissão é obrigatória'),
+    registro_numero: z
+        .string()
+        .min(1, 'Número do registro é obrigatório')
+        .regex(/^\d+$/, 'Número do registro deve conter apenas dígitos'),
+    registro_uf: z.enum(VALID_UFS, { message: 'Selecione uma UF válida' }),
+    registro_categoria: z
+        .string()
+        .optional()
+        .nullable(),
+
+    // ========================================================================
+    // Campo CRM legado (deprecated - mantido para backward compatibility)
+    // ========================================================================
+    /** @deprecated Use registro_numero e registro_uf */
     crm: crmOptionalSchema,
+
     // Foreign key to especialidades table (REQUIRED)
     especialidade_id: z
         .string()
         .uuid('ID da especialidade deve ser um UUID válido')
         .min(1, 'Especialidade é obrigatória'),
-    role: z
-        .enum(ROLES),
+
+    /** @deprecated Use profissao_id. O role será derivado da profissão. */
+    role: z.enum(ROLES),
+
     color: z
         .string()
         .min(1, 'Cor é obrigatória'),
@@ -56,8 +89,9 @@ export type MedicalStaff = MedicalStaffFormData & {
     created_at: string;
     updated_at: string;
     // Nested especialidade object from JOIN query
-    // This is populated when querying with .select('*, especialidade:especialidades(*)')
     especialidade?: Especialidade | null;
+    // Nested profissao object from JOIN query
+    profissao?: ProfissaoComConselho | null;
 };
 
 export type StaffOrganization = {
@@ -73,6 +107,9 @@ export type MedicalStaffWithOrganization = MedicalStaff & {
     organization_count?: number;
 };
 
+/**
+ * @deprecated Use searchStaffByRegistroSchema
+ */
 export const searchStaffByCrmSchema = z.object({
     crm: z
         .string()
@@ -82,3 +119,23 @@ export const searchStaffByCrmSchema = z.object({
 });
 
 export type SearchStaffByCrmData = z.infer<typeof searchStaffByCrmSchema>;
+
+/**
+ * Schema para buscar profissional por registro
+ */
+export const searchStaffByRegistroSchema = z.object({
+    registro_numero: z
+        .string()
+        .min(1, 'Número do registro é obrigatório')
+        .transform((value) => value.trim()),
+    registro_uf: z
+        .string()
+        .min(2, 'UF é obrigatória')
+        .max(2, 'UF deve ter 2 caracteres')
+        .transform((value) => value.trim().toUpperCase()),
+});
+
+export type SearchStaffByRegistroData = z.infer<typeof searchStaffByRegistroSchema>;
+
+// Re-export types from registro-profissional for convenience
+export type { Profissao, ProfissaoComConselho };

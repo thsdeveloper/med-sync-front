@@ -6,3 +6,5 @@
  */
 
 export * from './useEspecialidades';
+export * from './useProfissoes';
+export * from './useConselhos';

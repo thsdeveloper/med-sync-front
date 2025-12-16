@@ -22,10 +22,20 @@ import { Separator } from '@/components/ui/separator';
 import { Select } from '@/components/atoms/Select';
 import { ColorPicker } from '@/components/molecules/ColorPicker';
 import { EspecialidadeCombobox } from '@/components/molecules/EspecialidadeCombobox';
+import { ProfissaoSelect } from '@/components/molecules/ProfissaoSelect';
+import { RegistroProfissionalInput, type RegistroProfissionalValue } from '@/components/molecules/RegistroProfissionalInput';
 import { SupabaseFileUploader, type UploadedFileInfo } from '@/components/organisms/upload/SupabaseFileUploader';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-import { medicalStaffSchema, MedicalStaffFormData, ROLES, MedicalStaff, MedicalStaffWithOrganization, normalizeCRM } from '@medsync/shared';
+import {
+    medicalStaffSchema,
+    MedicalStaffFormData,
+    ROLES,
+    MedicalStaff,
+    MedicalStaffWithOrganization,
+    generateAuthEmail,
+} from '@medsync/shared';
+import type { ProfissaoComConselho } from '@medsync/shared/schemas';
 
 type StaffContractRecord = {
     id: string;
@@ -37,11 +47,20 @@ type ExistingStaffMatch = {
     id: string;
     name: string;
     email: string | null;
-    crm: string;
+    crm: string | null;
     role: string;
+    registro_numero: string | null;
+    registro_uf: string | null;
     especialidade: {
         id: string;
         nome: string;
+    } | null;
+    profissao: {
+        id: string;
+        nome: string;
+        conselho?: {
+            sigla: string;
+        };
     } | null;
 };
 
@@ -63,9 +82,10 @@ export function MedicalStaffSheet({
     const isEditing = !!staffToEdit;
     const [contractInfo, setContractInfo] = useState<StaffContractRecord | null>(null);
     const [isContractLoading, setIsContractLoading] = useState(false);
-    const [isSearchingCrm, setIsSearchingCrm] = useState(false);
+    const [isSearchingRegistro, setIsSearchingRegistro] = useState(false);
     const [existingStaffMatch, setExistingStaffMatch] = useState<ExistingStaffMatch | null>(null);
     const [isLinking, setIsLinking] = useState(false);
+    const [selectedProfissao, setSelectedProfissao] = useState<ProfissaoComConselho | null>(null);
 
     const form = useForm<MedicalStaffFormData>({
         resolver: zodResolver(medicalStaffSchema),
@@ -74,6 +94,10 @@ export function MedicalStaffSheet({
             email: '',
             phone: '',
             crm: '',
+            profissao_id: '',
+            registro_numero: '',
+            registro_uf: '' as any,
+            registro_categoria: '',
             especialidade_id: '',
             role: 'Médico',
             color: '#3b82f6',
@@ -81,30 +105,35 @@ export function MedicalStaffSheet({
         },
     });
 
-    const crmValue = form.watch('crm');
+    const registroNumero = form.watch('registro_numero');
+    const registroUf = form.watch('registro_uf');
 
-    // Buscar profissional existente por CRM
-    const searchStaffByCrm = useCallback(async (crm: string) => {
-        if (!crm || crm.length < 3 || isEditing) return;
+    // Buscar profissional existente por registro profissional (numero + uf)
+    const searchStaffByRegistro = useCallback(async (numero: string, uf: string) => {
+        if (!numero || numero.length < 3 || !uf || isEditing) return;
 
-        const normalizedCrm = normalizeCRM(crm);
-        setIsSearchingCrm(true);
+        setIsSearchingRegistro(true);
         try {
             const { data, error } = await supabase
                 .from('medical_staff')
-                .select('id, name, email, crm, role, especialidade:especialidade_id(id, nome)')
-                .ilike('crm', normalizedCrm)
+                .select(`
+                    id, name, email, crm, role, registro_numero, registro_uf,
+                    especialidade:especialidade_id(id, nome),
+                    profissao:profissao_id(id, nome, conselho:conselho_id(sigla))
+                `)
+                .eq('registro_numero', numero)
+                .eq('registro_uf', uf)
                 .limit(1)
                 .maybeSingle();
 
             if (error) {
-                console.error('Erro ao buscar CRM:', error);
+                console.error('Erro ao buscar registro:', error);
                 setExistingStaffMatch(null);
                 return;
             }
 
             if (data) {
-                // Verificar se já está vinculado a esta organização
+                // Verificar se ja esta vinculado a esta organizacao
                 const { data: existingLink } = await supabase
                     .from('staff_organizations')
                     .select('id')
@@ -113,20 +142,37 @@ export function MedicalStaffSheet({
                     .maybeSingle();
 
                 if (existingLink) {
-                    // Já vinculado, não mostrar
+                    // Ja vinculado, nao mostrar
                     setExistingStaffMatch(null);
                 } else {
                     // Fix TypeScript type inference issue with nested relationships
                     // Supabase returns especialidade as object | null, but TS infers it as array
+                    // Flatten nested relationships from Supabase
+                    const rawProfissao = Array.isArray(data.profissao)
+                        ? data.profissao[0]
+                        : data.profissao;
+
+                    // Also flatten nested conselho within profissao
+                    const flattenedProfissao = rawProfissao ? {
+                        id: rawProfissao.id,
+                        nome: rawProfissao.nome,
+                        conselho: Array.isArray(rawProfissao.conselho)
+                            ? rawProfissao.conselho[0]
+                            : rawProfissao.conselho,
+                    } : null;
+
                     const matchData: ExistingStaffMatch = {
                         id: data.id,
                         name: data.name,
                         email: data.email,
                         crm: data.crm,
                         role: data.role,
+                        registro_numero: data.registro_numero,
+                        registro_uf: data.registro_uf,
                         especialidade: Array.isArray(data.especialidade)
                             ? (data.especialidade[0] || null)
-                            : (data.especialidade || null)
+                            : (data.especialidade || null),
+                        profissao: flattenedProfissao,
                     };
                     setExistingStaffMatch(matchData);
                 }
@@ -134,36 +180,41 @@ export function MedicalStaffSheet({
                 setExistingStaffMatch(null);
             }
         } catch (error) {
-            console.error('Erro ao buscar CRM:', error);
+            console.error('Erro ao buscar registro:', error);
             setExistingStaffMatch(null);
         } finally {
-            setIsSearchingCrm(false);
+            setIsSearchingRegistro(false);
         }
     }, [isEditing, organizationId]);
 
-    // Debounce da busca por CRM
+    // Debounce da busca por registro profissional
     useEffect(() => {
-        if (isEditing || !crmValue || crmValue.length < 3) {
+        if (isEditing || !registroNumero || registroNumero.length < 3 || !registroUf) {
             setExistingStaffMatch(null);
             return;
         }
 
         const timeoutId = setTimeout(() => {
-            searchStaffByCrm(crmValue);
+            searchStaffByRegistro(registroNumero, registroUf);
         }, 500);
 
         return () => clearTimeout(timeoutId);
-    }, [crmValue, searchStaffByCrm, isEditing]);
+    }, [registroNumero, registroUf, searchStaffByRegistro, isEditing]);
 
     useEffect(() => {
         if (isOpen) {
             setExistingStaffMatch(null);
+            setSelectedProfissao(staffToEdit?.profissao ?? null);
             if (staffToEdit) {
                 form.reset({
                     name: staffToEdit.name,
                     email: staffToEdit.email || '',
                     phone: staffToEdit.phone || '',
                     crm: staffToEdit.crm || '',
+                    profissao_id: staffToEdit.profissao_id || '',
+                    registro_numero: staffToEdit.registro_numero || '',
+                    registro_uf: (staffToEdit.registro_uf || '') as any,
+                    registro_categoria: staffToEdit.registro_categoria || '',
                     especialidade_id: staffToEdit.especialidade_id || '',
                     role: staffToEdit.role as any,
                     color: staffToEdit.color || '#3b82f6',
@@ -176,12 +227,17 @@ export function MedicalStaffSheet({
                     email: '',
                     phone: '',
                     crm: '',
+                    profissao_id: '',
+                    registro_numero: '',
+                    registro_uf: '' as any,
+                    registro_categoria: '',
                     especialidade_id: '',
                     role: 'Médico',
                     color: '#3b82f6',
                     active: true,
                 });
                 setContractInfo(null);
+                setSelectedProfissao(null);
             }
         }
     }, [isOpen, staffToEdit, form]);
@@ -232,6 +288,15 @@ export function MedicalStaffSheet({
 
     const onSubmit = async (data: MedicalStaffFormData) => {
         try {
+            // Gerar auth_email baseado no registro profissional
+            const authEmail = selectedProfissao?.conselho?.sigla
+                ? generateAuthEmail(
+                    selectedProfissao.conselho.sigla,
+                    data.registro_numero,
+                    data.registro_uf
+                )
+                : null;
+
             if (isEditing && staffToEdit) {
                 // 1. Atualizar dados do profissional
                 const { error: staffError } = await supabase
@@ -241,6 +306,11 @@ export function MedicalStaffSheet({
                         email: data.email || null,
                         phone: data.phone || null,
                         crm: data.crm || null,
+                        profissao_id: data.profissao_id,
+                        registro_numero: data.registro_numero,
+                        registro_uf: data.registro_uf,
+                        registro_categoria: data.registro_categoria || null,
+                        auth_email: authEmail,
                         especialidade_id: data.especialidade_id,
                         role: data.role,
                         color: data.color,
@@ -250,7 +320,7 @@ export function MedicalStaffSheet({
 
                 if (staffError) throw staffError;
 
-                // 2. Atualizar status do vínculo se existir staff_organization
+                // 2. Atualizar status do vinculo se existir staff_organization
                 if (staffToEdit.staff_organization) {
                     const { error: linkError } = await supabase
                         .from('staff_organizations')
@@ -258,7 +328,7 @@ export function MedicalStaffSheet({
                         .eq('id', staffToEdit.staff_organization.id);
 
                     if (linkError) {
-                        console.error('Erro ao atualizar vínculo:', linkError);
+                        console.error('Erro ao atualizar vinculo:', linkError);
                     }
                 }
 
@@ -272,6 +342,11 @@ export function MedicalStaffSheet({
                         email: data.email || null,
                         phone: data.phone || null,
                         crm: data.crm || null,
+                        profissao_id: data.profissao_id,
+                        registro_numero: data.registro_numero,
+                        registro_uf: data.registro_uf,
+                        registro_categoria: data.registro_categoria || null,
+                        auth_email: authEmail,
                         especialidade_id: data.especialidade_id,
                         role: data.role,
                         color: data.color,
@@ -282,7 +357,7 @@ export function MedicalStaffSheet({
 
                 if (staffError) throw staffError;
 
-                // 2. Criar vínculo com a organização
+                // 2. Criar vinculo com a organizacao
                 const { error: linkError } = await supabase
                     .from('staff_organizations')
                     .insert({
@@ -300,10 +375,11 @@ export function MedicalStaffSheet({
             onClose();
         } catch (error: any) {
             console.error('Error saving medical staff:', error);
-            
-            // Tratar erro de CRM duplicado
-            if (error.message?.includes('medical_staff_crm_unique_idx')) {
-                toast.error('Já existe um profissional com este CRM. Use a opção de vincular.');
+
+            // Tratar erro de registro duplicado
+            if (error.message?.includes('medical_staff_registro_unique_idx') ||
+                error.message?.includes('duplicate key')) {
+                toast.error('Ja existe um profissional com este registro. Use a opcao de vincular.');
             } else {
                 toast.error(error.message || 'Erro ao salvar profissional');
             }
@@ -369,11 +445,17 @@ export function MedicalStaffSheet({
                             <AlertTitle className="text-blue-800">Profissional encontrado!</AlertTitle>
                             <AlertDescription className="text-blue-700">
                                 <p className="mb-2">
-                                    <strong>{existingStaffMatch.name}</strong> ({existingStaffMatch.role})
-                                    {existingStaffMatch.especialidade?.nome && ` • ${existingStaffMatch.especialidade.nome}`}
+                                    <strong>{existingStaffMatch.name}</strong>
+                                    {existingStaffMatch.profissao?.nome && ` (${existingStaffMatch.profissao.nome})`}
+                                    {existingStaffMatch.profissao?.conselho?.sigla && existingStaffMatch.registro_numero && existingStaffMatch.registro_uf && (
+                                        <span className="text-xs ml-1">
+                                            - {existingStaffMatch.profissao.conselho.sigla} {existingStaffMatch.registro_numero}/{existingStaffMatch.registro_uf}
+                                        </span>
+                                    )}
+                                    {existingStaffMatch.especialidade?.nome && ` - ${existingStaffMatch.especialidade.nome}`}
                                 </p>
                                 <p className="text-sm mb-3">
-                                    Este profissional já está cadastrado no sistema. Deseja vinculá-lo à sua organização?
+                                    Este profissional ja esta cadastrado no sistema. Deseja vincula-lo a sua organizacao?
                                 </p>
                                 <Button
                                     type="button"
@@ -387,45 +469,72 @@ export function MedicalStaffSheet({
                                     ) : (
                                         <LinkIcon className="h-4 w-4" />
                                     )}
-                                    Vincular à minha organização
+                                    Vincular a minha organizacao
                                 </Button>
                             </AlertDescription>
                         </Alert>
                     )}
 
+                    {/* Profissao Select */}
                     <FormField
                         control={form.control}
-                        name="crm"
+                        name="profissao_id"
                         render={({ field }) => (
                             <FormItem>
+                                <FormLabel>Profissao</FormLabel>
+                                <FormControl>
+                                    <ProfissaoSelect
+                                        value={field.value}
+                                        onChange={(value, profissao) => {
+                                            field.onChange(value);
+                                            setSelectedProfissao(profissao ?? null);
+                                            // Clear categoria when profissao changes
+                                            form.setValue('registro_categoria', '');
+                                        }}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    {/* Registro Profissional Input (numero + UF + categoria) */}
+                    <FormField
+                        control={form.control}
+                        name="registro_numero"
+                        render={({ field: numeroField }) => (
+                            <FormItem>
                                 <FormLabel className="flex items-center gap-2">
-                                    Registro (CRM/COREN)
-                                    {isSearchingCrm && (
+                                    Registro Profissional
+                                    {isSearchingRegistro && (
                                         <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
                                     )}
                                 </FormLabel>
                                 <FormControl>
-                                    <div className="relative">
-                                        <Input
-                                            placeholder="1234/SP"
-                                            {...field}
-                                            onChange={(e) => {
-                                                const normalized = normalizeCRM(e.target.value);
-                                                field.onChange(normalized);
-                                            }}
-                                            className={existingStaffMatch ? 'border-blue-300 focus:border-blue-500' : ''}
-                                        />
-                                        {!isEditing && (
-                                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                        )}
-                                    </div>
+                                    <RegistroProfissionalInput
+                                        value={{
+                                            numero: numeroField.value,
+                                            uf: form.watch('registro_uf') || '',
+                                            categoria: form.watch('registro_categoria') || '',
+                                        }}
+                                        onChange={(value) => {
+                                            form.setValue('registro_numero', value.numero);
+                                            form.setValue('registro_uf', value.uf as any);
+                                            form.setValue('registro_categoria', value.categoria || '');
+                                        }}
+                                        profissao={selectedProfissao}
+                                        errors={{
+                                            numero: form.formState.errors.registro_numero?.message,
+                                            uf: form.formState.errors.registro_uf?.message,
+                                            categoria: form.formState.errors.registro_categoria?.message,
+                                        }}
+                                    />
                                 </FormControl>
                                 {!isEditing && (
                                     <p className="text-xs text-slate-500">
-                                        Formato: número/UF (ex: 1234/SP). Digite para verificar se o profissional já existe.
+                                        Digite o numero e UF do registro para verificar se o profissional ja existe.
                                     </p>
                                 )}
-                                <FormMessage />
                             </FormItem>
                         )}
                     />

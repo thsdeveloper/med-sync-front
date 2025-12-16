@@ -3,24 +3,26 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
   ScrollView,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Input, Card, Avatar } from '@/components/ui';
 import { useAuth } from '@/providers/auth-provider';
-import { staffSetupPasswordSchema, type StaffSetupPasswordData } from '@medsync/shared';
+import { staffSetupPasswordWithRegistroSchema, type StaffSetupPasswordWithRegistroData } from '@medsync/shared';
 
 export default function SetupPasswordScreen() {
-  const { crm, staffId, name, email } = useLocalSearchParams<{
-    crm: string;
+  const { conselhoSigla, numero, uf, staffId, name, email } = useLocalSearchParams<{
+    conselhoSigla: string;
+    numero: string;
+    uf: string;
     staffId: string;
     name: string;
     email: string;
@@ -34,19 +36,25 @@ export default function SetupPasswordScreen() {
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm<StaffSetupPasswordData>({
-    resolver: zodResolver(staffSetupPasswordSchema),
+  } = useForm<StaffSetupPasswordWithRegistroData>({
+    resolver: zodResolver(staffSetupPasswordWithRegistroSchema),
     defaultValues: {
-      crm: crm || '',
+      registro_numero: numero || '',
+      registro_uf: uf || '',
       email: email || '',
       password: '',
       confirmPassword: '',
     },
   });
 
-  const onSubmit = async (data: StaffSetupPasswordData) => {
+  const onSubmit = async (data: StaffSetupPasswordWithRegistroData) => {
     if (!staffId) {
       Alert.alert('Erro', 'ID do profissional não encontrado');
+      return;
+    }
+
+    if (!conselhoSigla) {
+      Alert.alert('Erro', 'Dados do conselho não encontrados. Volte e tente novamente.');
       return;
     }
 
@@ -54,7 +62,9 @@ export default function SetupPasswordScreen() {
     try {
       const { error } = await setupPassword({
         staffId,
-        crm: data.crm,
+        conselhoSigla,
+        registro_numero: data.registro_numero,
+        registro_uf: data.registro_uf,
         email: data.email,
         password: data.password,
       });
@@ -68,6 +78,9 @@ export default function SetupPasswordScreen() {
       setIsLoading(false);
     }
   };
+
+  // Format registro display
+  const registroDisplay = `${conselhoSigla || ''} ${numero || ''}/${uf || ''}`;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -103,7 +116,7 @@ export default function SetupPasswordScreen() {
                 <Avatar name={name} size="lg" />
                 <View style={styles.infoCardText}>
                   <Text style={styles.infoCardName}>{name}</Text>
-                  <Text style={styles.infoCardCrm}>CRM: {crm}</Text>
+                  <Text style={styles.infoCardRegistro}>{registroDisplay}</Text>
                 </View>
               </View>
             </Card>
@@ -232,7 +245,7 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     marginBottom: 4,
   },
-  infoCardCrm: {
+  infoCardRegistro: {
     fontSize: 14,
     color: '#6B7280',
   },

@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase, lookupStaffByCrm, getCurrentStaff } from '@/lib/supabase';
+import { supabase, lookupStaffByCrm, lookupStaffByRegistro, getCurrentStaff, clearAuthStorage } from '@/lib/supabase';
 import { router } from 'expo-router';
-import type { MedicalStaff, CrmLookupResult } from '@medsync/shared';
+import type { MedicalStaff, CrmLookupResult, RegistroLookupResult } from '@medsync/shared';
+import { generateAuthEmail } from '@medsync/shared';
 
 type StaffData = MedicalStaff | null;
 
@@ -12,8 +13,14 @@ interface AuthContextType {
   staff: StaffData;
   isLoading: boolean;
   isAuthenticated: boolean;
+  // Legacy CRM methods (deprecated - kept for backward compatibility)
+  /** @deprecated Use lookupRegistro instead */
   lookupCrm: (crm: string) => Promise<CrmLookupResult>;
+  /** @deprecated Use signInWithRegistro instead */
   signInWithCrm: (crm: string, password: string) => Promise<{ error: Error | null }>;
+  // New registro profissional methods
+  lookupRegistro: (numero: string, uf: string) => Promise<RegistroLookupResult>;
+  signInWithRegistro: (conselhoSigla: string, numero: string, uf: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (data: SignUpData) => Promise<{ error: Error | null }>;
   setupPassword: (data: SetupPasswordData) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -24,7 +31,14 @@ interface SignUpData {
   name: string;
   email: string;
   phone?: string;
-  crm: string;
+  /** @deprecated Use profissao_id + registro fields instead */
+  crm?: string;
+  // New registro profissional fields
+  profissao_id: string;
+  registro_numero: string;
+  registro_uf: string;
+  registro_categoria?: string;
+  conselhoSigla: string; // Para gerar auth_email
   /**
    * Foreign key to especialidades table (REQUIRED).
    * References the medical specialty from the normalized especialidades catalog.
@@ -35,7 +49,12 @@ interface SignUpData {
 
 interface SetupPasswordData {
   staffId: string;
-  crm: string;
+  /** @deprecated Use registro fields instead */
+  crm?: string;
+  // New registro profissional fields
+  conselhoSigla: string;
+  registro_numero: string;
+  registro_uf: string;
   email: string;
   password: string;
 }
@@ -43,6 +62,7 @@ interface SetupPasswordData {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  console.log('[AuthProvider] Component rendering...');
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [staff, setStaff] = useState<StaffData>(null);
@@ -56,10 +76,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('[Auth] Starting initializeAuth...');
+        // Add timeout to prevent infinite loading if storage operations hang
+        const SESSION_TIMEOUT_MS = 10000;
+
+        console.log('[Auth] Calling supabase.auth.getSession()...');
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise<{ data: { session: null }; error: Error & { isTimeout?: boolean } }>((resolve) =>
+          setTimeout(() => {
+            console.warn('Session check timed out after', SESSION_TIMEOUT_MS, 'ms');
+            const timeoutError = new Error('Session check timeout') as Error & { isTimeout?: boolean };
+            timeoutError.isTimeout = true;
+            resolve({ data: { session: null }, error: timeoutError });
+          }, SESSION_TIMEOUT_MS)
+        );
+
+        const result = await Promise.race([sessionPromise, timeoutPromise]);
+        const { data: { session }, error } = result;
 
         if (error) {
           console.error('Error getting session:', error);
+
+          // If timeout, clear corrupted/stale session data and force clean state
+          if ((error as Error & { isTimeout?: boolean }).isTimeout) {
+            console.log('[Auth] Timeout detected, clearing stale session data...');
+            try {
+              // Clear storage directly instead of calling signOut (which might also hang)
+              await clearAuthStorage();
+              console.log('[Auth] Session storage cleared successfully');
+            } catch (clearError) {
+              console.warn('[Auth] Error clearing session storage:', clearError);
+            }
+          }
+
           setSession(null);
           setUser(null);
           setStaff(null);
@@ -104,6 +153,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return lookupStaffByCrm(crm);
   }, []);
 
+  // New method to lookup by registro profissional
+  const lookupRegistro = useCallback(async (numero: string, uf: string): Promise<RegistroLookupResult> => {
+    const result = await lookupStaffByRegistro(numero, uf);
+    return {
+      found: result.found,
+      hasAuth: result.hasAuth,
+      staff: result.staff ? {
+        id: result.staff.id,
+        name: result.staff.name,
+        email: result.staff.email ?? null,
+        phone: result.staff.phone ?? null,
+        profissao_id: result.staff.profissao_id,
+        registro_numero: result.staff.registro_numero,
+        registro_uf: result.staff.registro_uf,
+        registro_categoria: result.staff.registro_categoria ?? null,
+        especialidade_id: result.staff.especialidade?.id ?? null,
+        profissao: result.staff.profissao,
+      } : undefined,
+    };
+  }, []);
+
   const signInWithCrm = useCallback(async (crm: string, password: string) => {
     try {
       // First, look up the staff member by CRM to get their auth_email
@@ -135,10 +205,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // New method to sign in with registro profissional
+  const signInWithRegistro = useCallback(async (
+    conselhoSigla: string,
+    numero: string,
+    uf: string,
+    password: string
+  ) => {
+    try {
+      // Generate auth_email from registro profissional
+      const authEmail = generateAuthEmail(conselhoSigla, numero, uf);
+
+      if (!authEmail) {
+        return { error: new Error('Registro profissional inválido') };
+      }
+
+      // First check if staff exists with this registro
+      const { data: staffData, error: lookupError } = await supabase
+        .from('medical_staff')
+        .select('auth_email')
+        .eq('registro_numero', numero)
+        .eq('registro_uf', uf.toUpperCase())
+        .single();
+
+      if (lookupError || !staffData?.auth_email) {
+        return { error: new Error('Registro profissional não encontrado ou sem acesso configurado') };
+      }
+
+      // Sign in with the auth_email
+      const { error } = await supabase.auth.signInWithPassword({
+        email: staffData.auth_email,
+        password,
+      });
+
+      if (error) {
+        return { error: new Error('Senha incorreta') };
+      }
+
+      // Navigate to app
+      router.replace('/(app)/(tabs)');
+      return { error: null };
+    } catch (err) {
+      return { error: err as Error };
+    }
+  }, []);
+
   const signUp = useCallback(async (data: SignUpData) => {
     try {
-      // Generate auth_email from CRM (unique identifier)
-      const authEmail = `${data.crm.toLowerCase().replace(/[^a-z0-9]/g, '')}@medsync.doctor`;
+      // Generate auth_email from registro profissional (new format)
+      const authEmail = generateAuthEmail(data.conselhoSigla, data.registro_numero, data.registro_uf);
+
+      if (!authEmail) {
+        return { error: new Error('Dados de registro profissional inválidos') };
+      }
 
       // Create auth user (with email confirmation disabled for internal auth emails)
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -147,7 +266,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         options: {
           data: {
             name: data.name,
-            crm: data.crm,
+            profissao_id: data.profissao_id,
+            registro_numero: data.registro_numero,
+            registro_uf: data.registro_uf,
           },
           emailRedirectTo: undefined,
         },
@@ -173,16 +294,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: signInError };
       }
 
-      // Create medical_staff record
+      // Create medical_staff record with new registro profissional fields
       const { error: staffError } = await supabase
         .from('medical_staff')
         .insert({
           name: data.name,
           email: data.email,
           phone: data.phone || null,
-          crm: data.crm,
+          crm: data.crm || null, // Legacy field (deprecated)
+          profissao_id: data.profissao_id,
+          registro_numero: data.registro_numero,
+          registro_uf: data.registro_uf,
+          registro_categoria: data.registro_categoria || null,
           especialidade_id: data.especialidade_id,
-          role: 'Médico',
+          role: 'Médico', // Role will be derived from profissao in future
           color: generateRandomColor(),
           active: true,
           user_id: authData.user.id,
@@ -208,9 +333,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const setupPassword = useCallback(async (data: SetupPasswordData) => {
     try {
-      // Generate auth_email from CRM
-      const authEmail = `${data.crm.toLowerCase().replace(/[^a-z0-9]/g, '')}@medsync.doctor`;
-      console.log('Setup password for CRM:', data.crm, 'authEmail:', authEmail);
+      // Generate auth_email from registro profissional (new format)
+      const authEmail = generateAuthEmail(data.conselhoSigla, data.registro_numero, data.registro_uf);
+
+      if (!authEmail) {
+        return { error: new Error('Dados de registro profissional inválidos') };
+      }
+
+      console.log('Setup password for registro:', data.conselhoSigla, data.registro_numero, data.registro_uf, 'authEmail:', authEmail);
 
       // Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -283,8 +413,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     staff,
     isLoading,
     isAuthenticated: !!session && !!user,
+    // Legacy CRM methods (deprecated)
     lookupCrm,
     signInWithCrm,
+    // New registro profissional methods
+    lookupRegistro,
+    signInWithRegistro,
     signUp,
     setupPassword,
     signOut,
