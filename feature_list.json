@@ -200,7 +200,7 @@
         "Agenda view shows list of upcoming events",
         "View switching maintains current date selection"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F013",

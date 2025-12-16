@@ -113,6 +113,12 @@ function transformToWrapperEvents(
  * - Month selector: Dropdown to select specific month (Janeiro - Dezembro)
  * - Year selector: Dropdown to select specific year (current year ± 5 years)
  *
+ * View Modes:
+ * - Mês (Month): Full month view with all dates in a grid layout
+ * - Semana (Week): 7-day week view with hourly time slots
+ * - Dia (Day): Single day view with detailed hourly breakdown
+ * - Agenda (Agenda): List view showing upcoming events chronologically
+ *
  * @param props - Calendar configuration props
  * @returns Complete calendar component
  */
@@ -244,6 +250,7 @@ export function ShiftsCalendar({
         date={currentDate}
         defaultView={defaultView}
         defaultDate={defaultDate}
+        views={['month', 'week', 'day', 'agenda']} // Enable all 4 view modes
         height={height}
         className={className}
         selectable={false} // Disable slot selection for read-only view

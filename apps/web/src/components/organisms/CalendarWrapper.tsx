@@ -91,6 +91,8 @@ export interface CalendarWrapperProps {
   defaultView?: View;
   /** Default date to show (uncontrolled mode, default: today) */
   defaultDate?: Date;
+  /** Available views to display in the toolbar (default: ['month', 'week', 'day', 'agenda']) */
+  views?: View[];
   /** Whether to allow selecting time slots (default: true) */
   selectable?: boolean;
   /** Custom CSS class name */
@@ -119,6 +121,11 @@ export interface CalendarWrapperProps {
  * - Controlled: Pass `view` and `date` props with `onView` and `onNavigate` callbacks
  * - Uncontrolled: Pass `defaultView` and `defaultDate` for initial values only
  *
+ * View Configuration:
+ * - Pass `views` array to specify which view modes should be available
+ * - Default: ['month', 'week', 'day', 'agenda'] (all 4 views)
+ * - View switcher in toolbar will only show specified views
+ *
  * @param props - Calendar configuration props
  * @returns Configured calendar component
  */
@@ -132,6 +139,7 @@ export function CalendarWrapper({
   date,
   defaultView = 'month',
   defaultDate = new Date(),
+  views = ['month', 'week', 'day', 'agenda'],
   selectable = true,
   className = '',
   style,
@@ -215,6 +223,8 @@ export function CalendarWrapper({
         messages={calendarMessages}
         formats={dateFormats}
         culture="pt-BR"
+        // View configuration - which views are available
+        views={views}
         // Use controlled props if provided, otherwise fall back to uncontrolled
         view={view}
         date={date}
