@@ -27,7 +27,14 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { View } from 'react-big-calendar';
-import { startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
+import {
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  startOfDay,
+  endOfDay,
+} from 'date-fns';
 import { CalendarWrapper, CalendarWrapperEvent } from './CalendarWrapper';
 import { CalendarLoadingSkeleton } from './CalendarLoadingSkeleton';
 import { CalendarEmptyState } from '../molecules/CalendarEmptyState';
@@ -86,14 +93,20 @@ function transformToWrapperEvents(
  * color coding, loading states, empty states, and a detail modal.
  *
  * Features:
- * - Month, week, and day views
+ * - Month, week, day, and agenda views
  * - Color coding by specialty
  * - Click to view shift details
  * - Loading skeleton during data fetch
  * - Empty state when no shifts found
  * - Organization-based filtering
  * - Facility and specialty filters
- * - Date navigation
+ * - Date navigation controls (Hoje/Anterior/Próximo)
+ * - Proper date range calculation for each view mode
+ *
+ * Navigation Controls:
+ * - Hoje (Today): Navigates to current date
+ * - Anterior (Previous): Moves to previous period (month/week/day based on current view)
+ * - Próximo (Next): Moves to next period (month/week/day based on current view)
  *
  * @param props - Calendar configuration props
  * @returns Complete calendar component
@@ -126,11 +139,15 @@ export function ShiftsCalendar({
       start = startOfMonth(currentDate);
       end = endOfMonth(currentDate);
     } else if (currentView === 'week') {
-      // For week view, get a week range (could be refined with startOfWeek/endOfWeek)
-      start = startOfMonth(currentDate);
-      end = endOfMonth(currentDate);
+      // For week view, get the week range (Sunday to Saturday)
+      start = startOfWeek(currentDate, { weekStartsOn: 0 }); // 0 = Sunday
+      end = endOfWeek(currentDate, { weekStartsOn: 0 });
+    } else if (currentView === 'day') {
+      // For day view, get just that day (00:00:00 to 23:59:59)
+      start = startOfDay(currentDate);
+      end = endOfDay(currentDate);
     } else {
-      // For day/agenda view, get entire month to have data available
+      // For agenda view, get entire month to have data available
       start = startOfMonth(currentDate);
       end = endOfMonth(currentDate);
     }
@@ -212,14 +229,16 @@ export function ShiftsCalendar({
 
   return (
     <>
-      {/* Calendar Component */}
+      {/* Calendar Component - Using controlled mode for proper navigation */}
       <CalendarWrapper
         events={calendarEvents}
         onSelectEvent={handleSelectEvent}
         onView={handleViewChange}
         onNavigate={handleNavigate}
-        defaultView={currentView}
-        defaultDate={currentDate}
+        view={currentView}
+        date={currentDate}
+        defaultView={defaultView}
+        defaultDate={defaultDate}
         height={height}
         className={className}
         selectable={false} // Disable slot selection for read-only view

@@ -172,7 +172,7 @@
         "Date state properly updates and reflects in calendar UI",
         "Navigation works correctly in all view modes"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F011",

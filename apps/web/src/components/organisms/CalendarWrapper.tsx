@@ -82,9 +82,13 @@ export interface CalendarWrapperProps {
   onView?: (view: View) => void;
   /** Callback when navigating to a different date range */
   onNavigate?: (date: Date) => void;
-  /** Default view to display (default: 'month') */
+  /** Current view to display (controlled mode) */
+  view?: View;
+  /** Current date to show (controlled mode) */
+  date?: Date;
+  /** Default view to display (uncontrolled mode, default: 'month') */
   defaultView?: View;
-  /** Default date to show (default: today) */
+  /** Default date to show (uncontrolled mode, default: today) */
   defaultDate?: Date;
   /** Whether to allow selecting time slots (default: true) */
   selectable?: boolean;
@@ -108,6 +112,10 @@ export interface CalendarWrapperProps {
  * managing shifts/events. It uses react-big-calendar with date-fns adapter and
  * Portuguese locale configuration.
  *
+ * Supports both controlled and uncontrolled modes:
+ * - Controlled: Pass `view` and `date` props with `onView` and `onNavigate` callbacks
+ * - Uncontrolled: Pass `defaultView` and `defaultDate` for initial values only
+ *
  * @param props - Calendar configuration props
  * @returns Configured calendar component
  */
@@ -117,6 +125,8 @@ export function CalendarWrapper({
   onSelectSlot,
   onView,
   onNavigate,
+  view,
+  date,
   defaultView = 'month',
   defaultDate = new Date(),
   selectable = true,
@@ -201,6 +211,9 @@ export function CalendarWrapper({
         messages={calendarMessages}
         formats={dateFormats}
         culture="pt-BR"
+        // Use controlled props if provided, otherwise fall back to uncontrolled
+        view={view}
+        date={date}
         defaultView={defaultView}
         defaultDate={defaultDate}
         selectable={selectable}
