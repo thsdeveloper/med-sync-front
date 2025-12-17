@@ -627,3 +627,75 @@
   * Reusable across entire application (Clínicas, Equipe, and future tables)
   * Zero breaking changes to existing code
   * Foundation for F019-F026 (table refactoring and testing features)
+[2025-12-17 03:30:00] [F019] Install TanStack Table and configure core table utilities - COMPLETED
+- Verified @tanstack/react-table v8.21.3 already installed in apps/web package.json (dependency from F018)
+- Created comprehensive table utilities module (src/lib/table-utils.ts, 370+ lines):
+  * createColumnHelper<TData>() - Type-safe column helper wrapper
+  * State management utilities: getDefaultTableState(), getDefaultPaginationState()
+  * Pagination utilities: getPaginationRange(), getTotalPages(), isValidPageIndex()
+  * Server-side helpers: handleServerSideSort(), handleServerSideFilter(), handleServerSidePagination()
+  * Combined params builder: getServerSideTableParams() for complete API query construction
+  * Type guards: isColumnFilter(), isSortingState() for runtime validation
+  * debounce() utility for filtering inputs (300ms default delay)
+  * Custom TypeScript types: TableState, SortingState, ColumnFilter, PaginationState
+- Created default table configuration module (src/config/table-config.ts, 260+ lines):
+  * Constants: DEFAULT_PAGE_SIZE_OPTIONS [10, 25, 50, 100], DEFAULT_PAGE_SIZE = 10
+  * CSS class names: TABLE_CLASS_NAMES (table, header, body, footer with Tailwind classes)
+  * Accessibility labels: TABLE_ARIA_LABELS (screen reader support)
+  * Empty state messages: TABLE_EMPTY_MESSAGES (Portuguese localization)
+  * Configuration helpers: getDefaultTableOptions(), getServerSideTableOptions(), getClientSideTableOptions()
+  * Page size utilities: isValidPageSize(), getNextPageSize(), getPreviousPageSize()
+  * Supports both client-side and server-side table modes
+- Created useDataTable custom hook (src/hooks/useDataTable.ts, 330+ lines):
+  * Full TypeScript generics support: useDataTable<TData>()
+  * Comprehensive options interface: UseDataTableOptions<TData> with 25+ configuration options
+  * State management for: pagination, sorting, columnFilters, globalFilter, columnVisibility, rowSelection
+  * Supports both manual (server-side) and automatic (client-side) modes via manualMode prop
+  * Automatic state change callbacks: onPaginationChange, onSortingChange, onColumnFiltersChange, onGlobalFilterChange
+  * Integrates TanStack Table core models: getCoreRowModel, getSortedRowModel, getFilteredRowModel, getPaginationRowModel
+  * Reset utilities: resetTableState(), resetPagination(), resetSorting(), resetFilters(), resetRowSelection()
+  * Return interface: UseDataTableResult<TData> with table instance + all states + utilities
+  * Loading and error state management built-in
+  * Page count calculation from totalRows or pageCount props
+  * Initial state configuration support for all table features
+- Created hooks barrel export (src/hooks/index.ts):
+  * Exports useDataTable hook with TypeScript types
+  * Provides consistent import path: @/hooks
+- Created comprehensive documentation (apps/web/docs/TABLE_UTILITIES.md, 1,200+ lines):
+  * Complete guide for TanStack Table integration in MedSync
+  * Table of contents with 12 major sections
+  * Quick start examples (client-side and server-side tables)
+  * useDataTable hook API reference with full options and return value documentation
+  * Table utilities API reference with all helper functions
+  * Default configuration constants and helpers
+  * 6 comprehensive usage examples: sortable table, paginated table, filterable table, row selection, server-side with React Query, custom actions column
+  * Best practices section with 7 recommendations (TypeScript generics, memoization, debouncing, unique row IDs, state resets, loading/error states, server-side mode for large datasets)
+  * Complete API reference for 10+ utility functions and 6+ configuration helpers
+  * Migration guide from react-table v7 and other table libraries
+  * Additional resources with links to TanStack Table docs
+- TypeScript type safety features:
+  * Generic types throughout: <TData> for row data, <TValue> for cell values
+  * Strict type checking for all state objects (SortingState, ColumnFiltersState, etc.)
+  * Type guards for runtime validation
+  * Full JSDoc documentation with TypeScript examples
+- Verification completed:
+  * TypeScript compilation: ✅ Zero errors (pnpm tsc --noEmit passes)
+  * Next.js production build: ✅ All 21 routes compiled successfully
+  * All imports resolved correctly
+  * Hook integrates seamlessly with TanStack Table v8 API
+- All 5 acceptance criteria met:
+  ✅ @tanstack/react-table package installed (v8.21.3 verified in package.json)
+  ✅ useDataTable hook created with full TypeScript generics support (UseDataTableOptions<TData>, UseDataTableResult<TData>)
+  ✅ Utility functions created: 10+ helpers for column definitions, state management, server-side params
+  ✅ Default table configuration exported: constants, CSS classes, ARIA labels, option builders
+  ✅ Documentation added: 1,200+ line comprehensive guide with API reference, examples, and best practices
+- Impact metrics:
+  * 4 files created: table-utils.ts (370 lines), table-config.ts (260 lines), useDataTable.ts (330 lines), hooks/index.ts
+  * 1 comprehensive documentation file: TABLE_UTILITIES.md (1,200+ lines)
+  * Total code: 960+ lines of utilities and hooks
+  * Zero breaking changes to existing code
+  * Foundation for F020-F021 (Clínicas and Equipe table refactoring with TanStack Table)
+  * Supports both client-side (small datasets) and server-side (large datasets) modes
+  * Fully reusable across all tables in the application
+  * Type-safe with full IntelliSense support in IDEs
+

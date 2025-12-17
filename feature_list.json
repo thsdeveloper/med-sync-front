@@ -298,7 +298,7 @@
         "Default table configuration exported for reuse across tables",
         "Documentation added for hook usage and table configuration"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F020",
