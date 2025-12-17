@@ -415,6 +415,22 @@
         "Link positioned logically in menu structure"
       ],
       "passes": true
+    },
+    {
+      "id": "B001",
+      "title": "Fix calendar navigation controls disappearing when no shifts found",
+      "type": "bugfix",
+      "description": "When navigating to periods without scheduled shifts using the Previous/Next buttons in the Shifts Calendar (Calendário de Escalas), the empty state message 'Nenhum plantão encontrado' displays correctly, but all calendar navigation controls (Hoje, Anterior, Próximo, month/year selectors, and view mode buttons) disappear. This traps users on the empty state screen with no way to navigate back to periods that have shifts. The bug occurs in ShiftsCalendar.tsx lines 244-247 where returning CalendarEmptyState replaces the entire calendar component including the CalendarToolbar. The fix should display the empty state within the calendar while preserving all navigation controls.",
+      "acceptance_criteria": [
+        "Calendar navigation controls (Hoje, Anterior, Próximo) remain visible when no shifts are found",
+        "Month and year selector dropdowns remain functional on empty state",
+        "View mode buttons (Mês, Semana, Dia, Agenda) stay accessible when calendar is empty",
+        "Empty state message 'Nenhum plantão encontrado' still displays within calendar area",
+        "Users can navigate from empty periods back to dates with shifts using any navigation control",
+        "All existing unit tests in hooks/__tests__/useShiftsCalendar.example.tsx continue to pass",
+        "All e2e tests in e2e/calendar/ pass including navigation, view modes, and combined filters tests"
+      ],
+      "passes": true
     }
   ]
 }

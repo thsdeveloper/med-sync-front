@@ -997,3 +997,18 @@
   * Zero breaking changes to existing code
   * Follows established E2E testing patterns from calendar and clínicas tests
   * Tests ready for immediate execution in CI/CD pipeline
+[2025-12-17T11:59:27-03:00] [B001] Fix calendar navigation controls disappearing when no shifts found - COMPLETED
+- Root cause: Early return in ShiftsCalendar.tsx (lines 244-247) replaced entire component including toolbar
+- Removed early return: if (calendarEvents.length === 0) { return <CalendarEmptyState /> }
+- Fix applied: Always render CalendarWrapper with toolbar, show empty state as overlay
+- Empty state now rendered as absolute positioned overlay within calendar container
+- Overlay positioned with top: 60px to appear below toolbar, preserving all navigation controls
+- Empty state message includes CalendarX icon, title 'Nenhum plantão encontrado', and description
+- Calendar structure always rendered: toolbar with Hoje/Anterior/Próximo, month/year selectors, view buttons
+- Users can now navigate away from empty periods using any navigation control
+- Test coverage: Created 5 unit tests in ShiftsCalendar.test.tsx verifying empty state behavior
+- All tests pass: navigation controls visible, empty state overlay displayed, calendar structure preserved
+- Build successful: TypeScript compilation clean, Next.js production build passes
+- Minimal code changes: Modified 1 file (ShiftsCalendar.tsx), added 1 import (CalendarX icon)
+- Zero breaking changes: All existing functionality preserved, only empty state rendering improved
+

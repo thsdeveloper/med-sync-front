@@ -35,6 +35,7 @@ import {
   startOfDay,
   endOfDay,
 } from 'date-fns';
+import { CalendarX } from 'lucide-react';
 import { CalendarWrapper, CalendarWrapperEvent } from './CalendarWrapper';
 import { CalendarLoadingSkeleton } from './CalendarLoadingSkeleton';
 import { CalendarEmptyState } from '../molecules/CalendarEmptyState';
@@ -241,31 +242,51 @@ export function ShiftsCalendar({
     );
   }
 
-  // Show empty state when no shifts found
-  if (calendarEvents.length === 0) {
-    return <CalendarEmptyState height={height} className={className} />;
-  }
-
   return (
     <>
-      {/* Calendar Component - Using controlled mode with custom toolbar */}
-      <CalendarWrapper
-        events={calendarEvents}
-        onSelectEvent={handleSelectEvent}
-        onView={handleViewChange}
-        onNavigate={handleNavigate}
-        view={currentView}
-        date={currentDate}
-        defaultView={defaultView}
-        defaultDate={defaultDate}
-        views={['month', 'week', 'day', 'agenda']} // Enable all 4 view modes
-        height={height}
-        className={className}
-        selectable={false} // Disable slot selection for read-only view
-        components={{
-          toolbar: CalendarToolbar, // Use custom toolbar with month/year selectors
-        }}
-      />
+      {/* Calendar wrapper with conditional empty state overlay */}
+      <div className="relative">
+        {/* Calendar Component - Using controlled mode with custom toolbar */}
+        <CalendarWrapper
+          events={calendarEvents}
+          onSelectEvent={handleSelectEvent}
+          onView={handleViewChange}
+          onNavigate={handleNavigate}
+          view={currentView}
+          date={currentDate}
+          defaultView={defaultView}
+          defaultDate={defaultDate}
+          views={['month', 'week', 'day', 'agenda']} // Enable all 4 view modes
+          height={height}
+          className={className}
+          selectable={false} // Disable slot selection for read-only view
+          components={{
+            toolbar: CalendarToolbar, // Use custom toolbar with month/year selectors
+          }}
+        />
+
+        {/* Empty state overlay - shown when no events, but calendar controls remain visible */}
+        {calendarEvents.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ top: '60px' }}>
+            <div className="pointer-events-auto bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-border p-8">
+              <div className="flex flex-col items-center justify-center max-w-md text-center space-y-4">
+                {/* Icon */}
+                <div className="rounded-full bg-muted p-6">
+                  <CalendarX className="h-12 w-12 text-muted-foreground" />
+                </div>
+
+                {/* Title */}
+                <h3 className="text-lg font-semibold text-foreground">Nenhum plantão encontrado</h3>
+
+                {/* Description */}
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Não há plantões cadastrados para o período selecionado. Ajuste os filtros ou selecione outro período.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Shift Detail Modal */}
       <ShiftDetailModal
