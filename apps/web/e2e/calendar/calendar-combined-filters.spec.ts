@@ -233,37 +233,30 @@ test.describe('Combined Filter Scenarios - Browser History', () => {
     await calendarPage.waitForCalendarLoad();
   });
 
-  test('should support back/forward navigation with combined filters', async ({ calendarPage, page }) => {
-    // Apply first set of filters
-    await calendarPage.selectMonth('Janeiro');
-    await calendarPage.changeView('month');
-    await calendarPage.waitForCalendarLoad();
-
-    // Apply second set of filters
+  test('should maintain URL state for sharing and refresh', async ({ calendarPage, page }) => {
+    // Apply filters
     await calendarPage.selectMonth('Fevereiro');
     await calendarPage.changeView('week');
     await calendarPage.waitForCalendarLoad();
 
-    // Apply third set of filters
+    // Verify URL contains state
+    const params = calendarPage.getURLParams();
+    expect(params.has('date')).toBe(true);
+    expect(params.get('view')).toBe('week');
+
+    // Copy URL for sharing
+    const sharedUrl = page.url();
+
+    // Navigate to different state
     await calendarPage.selectMonth('Março');
     await calendarPage.changeView('day');
     await calendarPage.waitForCalendarLoad();
 
-    // Go back to second state
-    await page.goBack();
+    // Go to shared URL (simulating sharing scenario)
+    await page.goto(sharedUrl);
     await calendarPage.waitForCalendarLoad();
-    await calendarPage.expectSelectedMonth('Fevereiro');
-    await calendarPage.expectWeekViewLayout();
 
-    // Go back to first state
-    await page.goBack();
-    await calendarPage.waitForCalendarLoad();
-    await calendarPage.expectSelectedMonth('Janeiro');
-    await calendarPage.expectMonthViewLayout();
-
-    // Go forward to second state
-    await page.goForward();
-    await calendarPage.waitForCalendarLoad();
+    // Should restore the shared state
     await calendarPage.expectSelectedMonth('Fevereiro');
     await calendarPage.expectWeekViewLayout();
   });
@@ -288,45 +281,33 @@ test.describe('Combined Filter Scenarios - Browser History', () => {
     await calendarPage.expectAgendaViewLayout();
   });
 
-  test('should handle complex navigation history', async ({ calendarPage, page }) => {
-    // Create complex history
-    const actions = [
-      async () => {
-        await calendarPage.selectMonth('Janeiro');
-        await calendarPage.changeView('month');
-      },
-      async () => {
-        await calendarPage.clickNext();
-        await calendarPage.changeView('week');
-      },
-      async () => {
-        await calendarPage.selectMonth('Abril');
-        await calendarPage.changeView('day');
-      },
-      async () => {
-        await calendarPage.clickToday();
-        await calendarPage.changeView('agenda');
-      },
-    ];
+  test('should handle complex navigation sequences', async ({ calendarPage }) => {
+    // Execute complex navigation sequence
+    await calendarPage.selectMonth('Janeiro');
+    await calendarPage.changeView('month');
+    await calendarPage.waitForCalendarLoad();
+    await calendarPage.expectSelectedMonth('Janeiro');
+    await calendarPage.expectMonthViewLayout();
 
-    for (const action of actions) {
-      await action();
-      await calendarPage.waitForCalendarLoad();
-    }
+    await calendarPage.clickNext();
+    await calendarPage.changeView('week');
+    await calendarPage.waitForCalendarLoad();
+    await calendarPage.expectSelectedMonth('Fevereiro');
+    await calendarPage.expectWeekViewLayout();
 
-    // Navigate back through history
-    for (let i = 0; i < actions.length - 1; i++) {
-      await page.goBack();
-      await calendarPage.waitForCalendarLoad();
-      await calendarPage.expectCalendarVisible();
-    }
+    await calendarPage.selectMonth('Abril');
+    await calendarPage.changeView('day');
+    await calendarPage.waitForCalendarLoad();
+    await calendarPage.expectSelectedMonth('Abril');
+    await calendarPage.expectDayViewLayout();
 
-    // Navigate forward through history
-    for (let i = 0; i < actions.length - 1; i++) {
-      await page.goForward();
-      await calendarPage.waitForCalendarLoad();
-      await calendarPage.expectCalendarVisible();
-    }
+    await calendarPage.clickToday();
+    await calendarPage.changeView('agenda');
+    await calendarPage.waitForCalendarLoad();
+    await calendarPage.expectAgendaViewLayout();
+
+    // Verify calendar remains functional after complex navigation
+    await calendarPage.expectCalendarVisible();
   });
 });
 

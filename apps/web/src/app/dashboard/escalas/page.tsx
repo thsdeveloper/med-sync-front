@@ -15,8 +15,9 @@
 
 import { useState, useMemo, useEffect, useCallback, Suspense } from 'react';
 import { CalendarDays, Loader2 } from 'lucide-react';
-import { startOfMonth, endOfMonth } from 'date-fns';
+import { startOfMonth, endOfMonth, parseISO, format } from 'date-fns';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import type { View } from 'react-big-calendar';
 
 import { PageHeader } from '@/components/organisms/page';
 import { ShiftsCalendar } from '@/components/organisms/ShiftsCalendar';
@@ -44,6 +45,11 @@ const DEFAULT_FILTERS: CalendarPageFilters = {
 };
 
 /**
+ * Default view mode for the calendar
+ */
+const DEFAULT_VIEW: View = 'month';
+
+/**
  * Inner component that uses useSearchParams (must be wrapped in Suspense)
  */
 function EscalasPageContent() {
@@ -67,29 +73,65 @@ function EscalasPageContent() {
     };
   }, [searchParams]);
 
+  // Initialize date from URL parameter or default to today
+  const initialDate = useMemo(() => {
+    const urlDate = searchParams.get('date');
+    if (urlDate) {
+      try {
+        return parseISO(urlDate);
+      } catch {
+        return new Date();
+      }
+    }
+    return new Date();
+  }, [searchParams]);
+
+  // Initialize view from URL parameter or default
+  const initialView = useMemo(() => {
+    const urlView = searchParams.get('view') as View | null;
+    const validViews: View[] = ['month', 'week', 'day', 'agenda'];
+    if (urlView && validViews.includes(urlView)) {
+      return urlView;
+    }
+    return DEFAULT_VIEW;
+  }, [searchParams]);
+
   const [filters, setFilters] = useState<CalendarPageFilters>(initialFilters);
 
   // State to track calendar's internal date (for synchronization)
-  const [calendarDate, setCalendarDate] = useState<Date>(new Date());
+  const [calendarDate, setCalendarDate] = useState<Date>(initialDate);
+
+  // State to track calendar view mode
+  const [calendarView, setCalendarView] = useState<View>(initialView);
 
   // Extract organization ID (null if no organization selected)
   const organizationId = activeOrganization?.id ?? null;
 
   /**
-   * Update URL parameters when filters change
-   * Uses replace to avoid polluting browser history
+   * Update URL parameters when filters, date, or view change
+   * Uses replaceState to avoid polluting browser history with each small change
    */
   const updateURLParams = useCallback(
-    (newFilters: CalendarPageFilters) => {
+    (
+      newFilters: CalendarPageFilters,
+      date: Date = calendarDate,
+      view: View = calendarView
+    ) => {
       const params = new URLSearchParams();
 
-      // Only add non-default values to keep URL clean
-      if (newFilters.startDate !== DEFAULT_FILTERS.startDate) {
-        params.set('startDate', newFilters.startDate);
+      // Add date parameter (always, for shareable URLs)
+      const dateStr = format(date, 'yyyy-MM-dd');
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
+      if (dateStr !== todayStr) {
+        params.set('date', dateStr);
       }
-      if (newFilters.endDate !== DEFAULT_FILTERS.endDate) {
-        params.set('endDate', newFilters.endDate);
+
+      // Add view parameter if not default
+      if (view !== DEFAULT_VIEW) {
+        params.set('view', view);
       }
+
+      // Only add filter values if non-default to keep URL clean
       if (newFilters.facilityId !== DEFAULT_FILTERS.facilityId) {
         params.set('facilityId', newFilters.facilityId);
       }
@@ -102,7 +144,7 @@ function EscalasPageContent() {
 
       router.replace(newUrl, { scroll: false });
     },
-    [pathname, router]
+    [pathname, router, calendarDate, calendarView]
   );
 
   /**
@@ -122,24 +164,37 @@ function EscalasPageContent() {
 
   /**
    * Handle calendar date changes from ShiftsCalendar navigation
-   * This keeps the filter date range in sync with calendar navigation
+   * Updates local state and URL parameters
    */
   const handleCalendarDateChange = useCallback(
     (newDate: Date) => {
       setCalendarDate(newDate);
-      // Note: We don't update filters here to avoid circular updates
-      // The calendar manages its own date range based on view mode
+      updateURLParams(filters, newDate, calendarView);
     },
-    []
+    [filters, calendarView, updateURLParams]
+  );
+
+  /**
+   * Handle calendar view changes from ShiftsCalendar
+   * Updates local state and URL parameters
+   */
+  const handleCalendarViewChange = useCallback(
+    (newView: View) => {
+      setCalendarView(newView);
+      updateURLParams(filters, calendarDate, newView);
+    },
+    [filters, calendarDate, updateURLParams]
   );
 
   /**
    * Clear all filters to default values
    */
   const handleClearFilters = useCallback(() => {
+    const today = new Date();
     setFilters(DEFAULT_FILTERS);
-    updateURLParams(DEFAULT_FILTERS);
-    setCalendarDate(new Date()); // Reset calendar to today
+    setCalendarDate(today);
+    setCalendarView(DEFAULT_VIEW);
+    updateURLParams(DEFAULT_FILTERS, today, DEFAULT_VIEW);
   }, [updateURLParams]);
 
   /**
@@ -154,7 +209,7 @@ function EscalasPageContent() {
   }, [filters.startDate, filters.endDate]);
 
   /**
-   * Sync filters when URL parameters change (browser back/forward)
+   * Sync state when URL parameters change (browser back/forward)
    */
   useEffect(() => {
     const urlFilters = {
@@ -164,11 +219,37 @@ function EscalasPageContent() {
       specialty: searchParams.get('specialty') || DEFAULT_FILTERS.specialty,
     };
 
+    // Sync date from URL
+    const urlDate = searchParams.get('date');
+    let newDate = new Date();
+    if (urlDate) {
+      try {
+        newDate = parseISO(urlDate);
+      } catch {
+        // Keep default
+      }
+    }
+
+    // Sync view from URL
+    const urlView = searchParams.get('view') as View | null;
+    const validViews: View[] = ['month', 'week', 'day', 'agenda'];
+    const newView = urlView && validViews.includes(urlView) ? urlView : DEFAULT_VIEW;
+
     // Only update if different to avoid infinite loops
     if (JSON.stringify(urlFilters) !== JSON.stringify(filters)) {
       setFilters(urlFilters);
     }
-  }, [searchParams]); // Intentionally omitting filters from deps to prevent loops
+
+    // Update date if different (compare as ISO strings to avoid reference issues)
+    if (format(newDate, 'yyyy-MM-dd') !== format(calendarDate, 'yyyy-MM-dd')) {
+      setCalendarDate(newDate);
+    }
+
+    // Update view if different
+    if (newView !== calendarView) {
+      setCalendarView(newView);
+    }
+  }, [searchParams]); // Intentionally omitting state deps to prevent loops
 
   // Show loading spinner while organization context is initializing
   if (orgLoading && !organizationId) {
@@ -205,10 +286,12 @@ function EscalasPageContent() {
             organizationId={organizationId}
             facilityId={filters.facilityId}
             specialty={filters.specialty}
-            defaultView="month"
+            defaultView={DEFAULT_VIEW}
+            view={calendarView}
             defaultDate={calendarDate}
             height="700px"
             onDateChange={handleCalendarDateChange}
+            onViewChange={handleCalendarViewChange}
           />
         </div>
       ) : (

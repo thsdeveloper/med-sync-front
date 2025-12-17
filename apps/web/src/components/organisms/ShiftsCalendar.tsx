@@ -25,7 +25,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { View } from 'react-big-calendar';
 import {
   startOfMonth,
@@ -56,6 +56,8 @@ export interface ShiftsCalendarProps {
   specialty?: string;
   /** Default view to display (default: 'month') */
   defaultView?: View;
+  /** Controlled view mode (optional) */
+  view?: View;
   /** Default date to show (default: today) */
   defaultDate?: Date;
   /** Height of the calendar (default: '700px') */
@@ -64,6 +66,8 @@ export interface ShiftsCalendarProps {
   className?: string;
   /** Optional callback when calendar date changes via navigation */
   onDateChange?: (date: Date) => void;
+  /** Optional callback when calendar view changes */
+  onViewChange?: (view: View) => void;
 }
 
 /**
@@ -130,14 +134,33 @@ export function ShiftsCalendar({
   facilityId = 'todas',
   specialty = 'todas',
   defaultView = 'month',
+  view,
   defaultDate = new Date(),
   height = '700px',
   className = '',
   onDateChange,
+  onViewChange,
 }: ShiftsCalendarProps) {
-  // State for calendar view and date
-  const [currentView, setCurrentView] = useState<View>(defaultView);
+  // State for calendar view and date (supports controlled or uncontrolled mode)
+  const [internalView, setInternalView] = useState<View>(view ?? defaultView);
   const [currentDate, setCurrentDate] = useState<Date>(defaultDate);
+
+  // Use controlled view if provided, otherwise use internal state
+  const currentView = view ?? internalView;
+
+  // Sync internal view state when controlled view prop changes
+  useEffect(() => {
+    if (view !== undefined && view !== internalView) {
+      setInternalView(view);
+    }
+  }, [view, internalView]);
+
+  // Sync date when defaultDate prop changes (for controlled mode)
+  useEffect(() => {
+    if (defaultDate.getTime() !== currentDate.getTime()) {
+      setCurrentDate(defaultDate);
+    }
+  }, [defaultDate, currentDate]);
 
   // State for selected shift (for detail modal)
   const [selectedShift, setSelectedShift] = useState<CalendarEvent | null>(
@@ -201,9 +224,13 @@ export function ShiftsCalendar({
   );
 
   // Handle view change
-  const handleViewChange = useCallback((view: View) => {
-    setCurrentView(view);
-  }, []);
+  const handleViewChange = useCallback(
+    (newView: View) => {
+      setInternalView(newView);
+      onViewChange?.(newView);
+    },
+    [onViewChange]
+  );
 
   // Handle date navigation
   const handleNavigate = useCallback(
