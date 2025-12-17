@@ -326,7 +326,7 @@
         "Multi-select filters working for role, especialidade, and status",
         "Pagination working with same configurable page sizes as Clínicas"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F022",
