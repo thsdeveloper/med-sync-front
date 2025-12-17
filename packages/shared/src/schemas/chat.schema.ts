@@ -91,6 +91,7 @@ export type MessageWithSender = ChatMessage & {
         color: string;
     };
     is_own?: boolean;
+    attachments?: ChatAttachment[];
 };
 
 // Admin participant type (for support conversations)
@@ -149,4 +150,135 @@ export type AdminMessageWithSender = ChatMessage & {
         type: 'staff' | 'admin';
     };
     is_own?: boolean;
+    attachments?: ChatAttachment[];
+};
+
+// ============================================================================
+// Document Attachment Types and Schemas
+// ============================================================================
+
+/**
+ * Attachment status enum
+ * - pending: Document uploaded, awaiting admin review
+ * - accepted: Document approved by admin, visible to all participants
+ * - rejected: Document rejected by admin with reason
+ */
+export const ATTACHMENT_STATUS = ['pending', 'accepted', 'rejected'] as const;
+export type AttachmentStatus = typeof ATTACHMENT_STATUS[number];
+
+/**
+ * File type enum
+ * - pdf: PDF document
+ * - image: Image file (jpg, jpeg, png, gif)
+ */
+export const FILE_TYPE = ['pdf', 'image'] as const;
+export type FileType = typeof FILE_TYPE[number];
+
+/**
+ * Allowed file extensions for attachments
+ */
+export const ALLOWED_FILE_EXTENSIONS = {
+    pdf: ['.pdf'],
+    image: ['.jpg', '.jpeg', '.png', '.gif'],
+} as const;
+
+/**
+ * File size limits in bytes
+ * Max file size: 10MB
+ */
+export const MAX_FILE_SIZE = 10485760; // 10MB in bytes
+export const MAX_FILE_SIZE_MB = 10;
+
+/**
+ * Chat attachment type (from database)
+ */
+export type ChatAttachment = {
+    id: string;
+    conversation_id: string;
+    message_id: string | null;
+    sender_id: string;
+    file_name: string;
+    file_type: FileType;
+    file_path: string;
+    file_size: number;
+    status: AttachmentStatus;
+    rejected_reason: string | null;
+    reviewed_by: string | null;
+    reviewed_at: string | null;
+    created_at: string;
+};
+
+/**
+ * Schema for uploading a document attachment
+ * Validates file metadata before upload
+ */
+export const uploadAttachmentSchema = z.object({
+    conversation_id: z.string().uuid('ID da conversa inválido'),
+    message_id: z.string().uuid('ID da mensagem inválido').optional().nullable(),
+    file_name: z.string()
+        .min(1, 'Nome do arquivo é obrigatório')
+        .max(255, 'Nome do arquivo muito longo')
+        .refine(
+            (name) => {
+                const ext = name.toLowerCase().match(/\.[^.]+$/)?.[0];
+                if (!ext) return false;
+                const allExtensions: string[] = [
+                    ...ALLOWED_FILE_EXTENSIONS.pdf,
+                    ...ALLOWED_FILE_EXTENSIONS.image,
+                ];
+                return allExtensions.includes(ext);
+            },
+            {
+                message: 'Tipo de arquivo não permitido. Use PDF, JPG, JPEG, PNG ou GIF',
+            }
+        ),
+    file_type: z.enum(FILE_TYPE, {
+        message: 'Tipo de arquivo deve ser "pdf" ou "image"',
+    }),
+    file_size: z.number()
+        .int('Tamanho do arquivo deve ser um número inteiro')
+        .positive('Tamanho do arquivo deve ser maior que zero')
+        .max(MAX_FILE_SIZE, `Arquivo muito grande. Tamanho máximo: ${MAX_FILE_SIZE_MB}MB`),
+});
+
+export type UploadAttachmentData = z.infer<typeof uploadAttachmentSchema>;
+
+/**
+ * Schema for updating attachment status (admin review action)
+ * Admins can accept or reject documents
+ */
+export const updateAttachmentStatusSchema = z.object({
+    attachment_id: z.string().uuid('ID do anexo inválido'),
+    status: z.enum(['accepted', 'rejected'] as const, {
+        message: 'Status deve ser "accepted" ou "rejected"',
+    }),
+    rejected_reason: z.string()
+        .max(500, 'Motivo da rejeição muito longo')
+        .optional()
+        .nullable(),
+}).refine(
+    (data) => {
+        // If status is 'rejected', rejected_reason is required
+        if (data.status === 'rejected' && (!data.rejected_reason || data.rejected_reason.trim().length === 0)) {
+            return false;
+        }
+        return true;
+    },
+    {
+        message: 'Motivo da rejeição é obrigatório quando o documento é rejeitado',
+        path: ['rejected_reason'],
+    }
+);
+
+export type UpdateAttachmentStatusData = z.infer<typeof updateAttachmentStatusSchema>;
+
+/**
+ * Chat attachment with sender info for display
+ */
+export type AttachmentWithSender = ChatAttachment & {
+    sender?: {
+        id: string;
+        name: string;
+        color: string;
+    };
 };

@@ -424,7 +424,7 @@
         "File type validation includes PDF and common image formats (jpg, png, jpeg)",
         "File size limits defined in schema (e.g., max 10MB)"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F029",
