@@ -354,7 +354,7 @@
         "useDataTable hook tested with various data types and configurations",
         "Code coverage above 80% for all data-table components"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F024",
