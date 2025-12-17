@@ -397,6 +397,132 @@
         "Keyboard navigation and accessibility tested for table interactions"
       ],
       "passes": true
+    },
+    {
+      "id": "F027",
+      "title": "Create database schema for chat document attachments",
+      "type": "feature",
+      "description": "Create Supabase migration to add chat_attachments table with fields: id, conversation_id (FK), message_id (FK), sender_id, file_name, file_type (pdf/image), file_path (storage reference), file_size, status (pending/accepted/rejected), rejected_reason, reviewed_by (admin user_id), reviewed_at, created_at. Add RLS policies for staff and admin access. Configure storage bucket 'chat-documents' with appropriate policies for PDF and image uploads.",
+      "acceptance_criteria": [
+        "Migration creates chat_attachments table with all required fields",
+        "Foreign key constraints established to chat_messages and chat_conversations",
+        "Storage bucket 'chat-documents' created with size/type restrictions",
+        "RLS policies allow staff to upload and view their own attachments",
+        "RLS policies allow admins to view and update attachment status"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F028",
+      "title": "Update shared schemas for document attachments in chat",
+      "type": "feature",
+      "description": "Extend @medsync/shared chat.schema.ts with attachment types and validation schemas. Add ChatAttachment type with status enum (pending/accepted/rejected). Create uploadAttachmentSchema with Zod validation for file metadata. Add updateAttachmentStatusSchema for admin review actions. Update MessageWithSender type to include attachments array.",
+      "acceptance_criteria": [
+        "ChatAttachment type defined with all fields including status",
+        "Zod schemas created for attachment upload and status update",
+        "MessageWithSender extended to include optional attachments array",
+        "File type validation includes PDF and common image formats (jpg, png, jpeg)",
+        "File size limits defined in schema (e.g., max 10MB)"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F029",
+      "title": "Implement file picker and upload in mobile chat",
+      "type": "feature",
+      "description": "Add document/image picker button to mobile chat input using expo-image-picker and expo-document-picker. Implement file selection UI with preview for images and file info for PDFs. Create upload function to Supabase storage with progress indicator. Insert attachment record in chat_attachments table linked to message. Handle upload errors with user feedback. Support selecting multiple files (up to 3 per message).",
+      "acceptance_criteria": [
+        "Document picker button added to chat input in mobile app",
+        "Image picker integrated for selecting photos from gallery/camera",
+        "PDF picker integrated for selecting document files",
+        "File upload to Supabase storage with progress indicator",
+        "Attachment metadata saved to chat_attachments table with message reference"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F030",
+      "title": "Display document attachments in mobile chat messages",
+      "type": "feature",
+      "description": "Create AttachmentPreview component for mobile to display document attachments in chat messages. Show image thumbnails with tap-to-view fullscreen using modal. Show PDF icon with filename and size, tap to open with sharing options. Display attachment status badges (pending/accepted/rejected) with appropriate colors. Handle download and caching for offline viewing. Show rejected reason if applicable.",
+      "acceptance_criteria": [
+        "Image attachments display as thumbnails in message bubbles",
+        "PDF attachments show file icon, name, and size",
+        "Tap on image opens fullscreen viewer with zoom/pan",
+        "Tap on PDF opens native document viewer or sharing sheet",
+        "Status badges display correctly (pending, accepted, rejected)"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F031",
+      "title": "Build admin document review UI in web dashboard",
+      "type": "feature",
+      "description": "Add attachment display section to ChatMessages component in web app. Create DocumentAttachmentCard component showing thumbnail/icon, filename, upload date, and current status. Implement review action buttons (Accept/Reject) with confirmation dialog. Add rejection reason textarea when rejecting. Update attachment status via Supabase RPC function. Show visual feedback for review actions. Filter to show only support conversations with pending attachments.",
+      "acceptance_criteria": [
+        "Attachments displayed in web chat messages with proper styling",
+        "Accept and Reject buttons available for pending attachments",
+        "Rejection dialog includes textarea for reason input",
+        "Status updates persist to database and reflect in UI immediately",
+        "Admin can view full-size images and download PDFs"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F032",
+      "title": "Create push notification system for attachment status updates",
+      "type": "feature",
+      "description": "Extend notification.schema.ts with new types: 'document_accepted' and 'document_rejected'. Create Supabase Edge Function or database trigger to send push notifications when admin updates attachment status. Include attachment filename and conversation context in notification payload. Use existing NotificationProvider in mobile to handle incoming notifications. Route users to specific chat conversation when tapping notification.",
+      "acceptance_criteria": [
+        "New notification types added to schema: document_accepted, document_rejected",
+        "Notifications triggered automatically when attachment status changes",
+        "Push notification includes filename and actionable data",
+        "Tapping notification navigates to correct chat conversation in mobile",
+        "Notification stored in notifications table for history"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F033",
+      "title": "Implement real-time updates for attachment status changes",
+      "type": "feature",
+      "description": "Setup Supabase realtime subscription for chat_attachments table in both mobile and web apps. Update ChatMessages components to reflect status changes instantly without refresh. Show toast/alert in mobile when attachment is reviewed. Update unread count logic to include pending attachments. Ensure optimistic updates with rollback on error.",
+      "acceptance_criteria": [
+        "Realtime subscription established for chat_attachments changes",
+        "Status changes reflect immediately in both mobile and web UIs",
+        "Toast notification shown in mobile when document is reviewed",
+        "No manual refresh required to see updated statuses",
+        "Handles network interruptions gracefully with reconnection"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F034",
+      "title": "Add attachment management API endpoints and validation",
+      "type": "feature",
+      "description": "Create Supabase RPC functions: upload_chat_attachment, update_attachment_status, delete_attachment. Implement business logic validation (file type, size, user permissions). Add rate limiting for uploads (max 10 per hour per user). Create utility functions in mobile/web for attachment operations. Handle edge cases: storage cleanup on message deletion, orphaned attachments. Add logging for audit trail.",
+      "acceptance_criteria": [
+        "RPC functions created with proper error handling and validation",
+        "File type and size validation enforced server-side",
+        "Rate limiting prevents abuse of upload feature",
+        "Orphaned attachments cleaned up automatically via scheduled job",
+        "All attachment operations logged for audit purposes"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F035",
+      "title": "Write tests for document upload and review workflow",
+      "type": "feature",
+      "description": "Create unit tests for attachment schemas and utility functions. Write integration tests for upload flow in mobile using Jest/Detox. Create e2e tests for admin review workflow in web using Playwright. Test file validation, storage operations, and status updates. Test push notification delivery and navigation. Verify RLS policies prevent unauthorized access.",
+      "acceptance_criteria": [
+        "Unit tests cover attachment schemas and validation logic",
+        "Integration tests verify mobile upload flow end-to-end",
+        "E2e tests verify admin can review and update attachment status",
+        "Tests verify push notifications are sent and received correctly",
+        "Security tests confirm RLS policies work as expected"
+      ],
+      "passes": false
     }
   ]
 }

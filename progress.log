@@ -895,3 +895,70 @@
   * Comprehensive especialidade integration testing validates foreign key relationship
   * Multi-filter testing ensures all filter combinations work correctly
   * Keyboard navigation testing ensures accessibility compliance
+
+[2025-12-17 11:30:00] [F027] Create database schema for chat document attachments - COMPLETED
+- Created migration file: migrations/20251217_create_chat_attachments.sql
+- Database table chat_attachments created with all required fields:
+  * id (UUID, primary key)
+  * conversation_id (UUID, FK to chat_conversations, ON DELETE CASCADE)
+  * message_id (UUID, FK to chat_messages, ON DELETE SET NULL, optional)
+  * sender_id (UUID, FK to medical_staff, ON DELETE CASCADE)
+  * file_name (TEXT, required)
+  * file_type (TEXT, CHECK constraint: 'pdf' or 'image')
+  * file_path (TEXT, storage reference in format: organization_id/conversation_id/filename)
+  * file_size (INTEGER, CHECK constraint: 0 < size <= 10485760 bytes / 10MB)
+  * status (TEXT, CHECK constraint: 'pending', 'accepted', 'rejected', DEFAULT 'pending')
+  * rejected_reason (TEXT, optional)
+  * reviewed_by (UUID, FK to auth.users, optional)
+  * reviewed_at (TIMESTAMPTZ, optional)
+  * created_at (TIMESTAMPTZ, DEFAULT now())
+- Foreign key constraints verified:
+  * chat_attachments_conversation_id_fkey → chat_conversations(id)
+  * chat_attachments_message_id_fkey → chat_messages(id)
+  * chat_attachments_sender_id_fkey → medical_staff(id)
+  * chat_attachments_reviewed_by_fkey → auth.users(id)
+- Performance indexes created (6 indexes total):
+  * idx_chat_attachments_conversation_id (most common query pattern)
+  * idx_chat_attachments_message_id
+  * idx_chat_attachments_sender_id
+  * idx_chat_attachments_status
+  * idx_chat_attachments_pending_review (partial index WHERE status='pending')
+  * idx_chat_attachments_conversation_status (composite index)
+- Row Level Security (RLS) enabled with 5 policies:
+  * staff_insert_own_attachments: Staff can upload documents in conversations they participate in
+  * staff_select_accepted_attachments: Staff can view accepted attachments in their conversations
+  * staff_select_own_attachments: Staff can view status of their own uploads (pending/rejected)
+  * admin_select_all_attachments: Admins can view all attachments in their organization
+  * admin_update_attachment_status: Admins can update attachment status (accept/reject with reason)
+- Storage bucket 'chat-documents' created via Supabase MCP:
+  * Bucket name: chat-documents
+  * Public access: false (private bucket)
+  * File size limit: 10MB (10485760 bytes)
+  * Allowed MIME types: application/pdf, image/jpeg, image/jpg, image/png, image/gif
+  * Path structure: {organization_id}/{conversation_id}/{filename}
+- Storage RLS policies created (5 policies):
+  * Staff can upload chat documents: Verify user is staff member and participant in conversation
+  * Staff can download accepted chat documents: Access accepted attachments in their conversations
+  * Staff can download own chat documents: Access their own uploads regardless of status
+  * Admins can download all organization chat documents: Full access to organization's attachments
+  * Admins can delete organization chat documents: Cleanup capability for admins
+- Comprehensive table comments added for documentation:
+  * Table-level comment explaining purpose and workflow
+  * Column-level comments for all fields with detailed descriptions
+  * Storage bucket configuration documented in migration file
+- Verification completed:
+  * Table exists with correct schema
+  * All foreign keys properly established
+  * RLS enabled and all policies active
+  * All indexes created successfully
+  * Storage bucket configured with proper restrictions
+- Migration executed successfully via Supabase MCP with zero errors
+- Impact metrics:
+  * Enables secure document upload workflow in chat system
+  * Admin review process enforced at database level
+  * Prevents unauthorized access via RLS policies
+  * Optimized query performance with strategic indexes
+  * Supports both PDF documents and image files (jpg, png, gif)
+  * File size limited to 10MB for performance and storage management
+  * Path structure enables organization-level isolation and cleanup
+  * All 5 acceptance criteria met: table created ✅, foreign keys established ✅, storage bucket configured ✅, staff RLS policies ✅, admin RLS policies ✅

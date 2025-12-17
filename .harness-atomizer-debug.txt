@@ -1,134 +1,134 @@
-=== Atomizer Debug Output (2025-12-17T02:55:10.485Z) ===
+=== Atomizer Debug Output (2025-12-17T16:53:55.804Z) ===
 SUCCESS: true
 ERROR: none
-OUTPUT LENGTH: 8294
+OUTPUT LENGTH: 8503
 
 OUTPUT:
 ```json
 [
   {
-    "id": "F018",
+    "id": "F027",
+    "title": "Create database schema for chat document attachments",
     "type": "feature",
-    "title": "Create reusable DataTable component architecture with Atomic Design",
-    "description": "Design and implement a reusable DataTable component system following Atomic Design principles. Create atoms (TableCell, TableHeader, TableRow), molecules (TablePagination, TableToolbar, ColumnHeader), and organisms (DataTable). Set up folder structure in src/components/data-table/ with proper TypeScript types and TanStack Table integration. Include base configuration for sorting, filtering, and pagination.",
+    "description": "Create Supabase migration to add chat_attachments table with fields: id, conversation_id (FK), message_id (FK), sender_id, file_name, file_type (pdf/image), file_path (storage reference), file_size, status (pending/accepted/rejected), rejected_reason, reviewed_by (admin user_id), reviewed_at, created_at. Add RLS policies for staff and admin access. Configure storage bucket 'chat-documents' with appropriate policies for PDF and image uploads.",
     "acceptance_criteria": [
-      "Atomic Design folder structure created in src/components/data-table/",
-      "Base atoms created: TableCell, TableHeader, TableRow components",
-      "Molecules created: TablePagination, TableToolbar, ColumnHeader with sort indicators",
-      "DataTable organism created with TanStack Table integration",
-      "TypeScript types defined for generic table data and column configuration"
+      "Migration creates chat_attachments table with all required fields",
+      "Foreign key constraints established to chat_messages and chat_conversations",
+      "Storage bucket 'chat-documents' created with size/type restrictions",
+      "RLS policies allow staff to upload and view their own attachments",
+      "RLS policies allow admins to view and update attachment status"
     ],
     "passes": false
   },
   {
-    "id": "F019",
+    "id": "F028",
+    "title": "Update shared schemas for document attachments in chat",
     "type": "feature",
-    "title": "Install TanStack Table and configure core table utilities",
-    "description": "Install @tanstack/react-table package and create utility functions for table configuration. Implement helpers for column definitions, sorting state, filtering logic, and pagination handlers. Create useDataTable custom hook to encapsulate common table logic. Set up proper TypeScript generics for type-safe table operations.",
+    "description": "Extend @medsync/shared chat.schema.ts with attachment types and validation schemas. Add ChatAttachment type with status enum (pending/accepted/rejected). Create uploadAttachmentSchema with Zod validation for file metadata. Add updateAttachmentStatusSchema for admin review actions. Update MessageWithSender type to include attachments array.",
     "acceptance_criteria": [
-      "@tanstack/react-table package installed in apps/web",
-      "useDataTable hook created with TypeScript generics support",
-      "Utility functions created for column helpers and table state management",
-      "Default table configuration exported for reuse across tables",
-      "Documentation added for hook usage and table configuration"
+      "ChatAttachment type defined with all fields including status",
+      "Zod schemas created for attachment upload and status update",
+      "MessageWithSender extended to include optional attachments array",
+      "File type validation includes PDF and common image formats (jpg, png, jpeg)",
+      "File size limits defined in schema (e.g., max 10MB)"
     ],
     "passes": false
   },
   {
-    "id": "F020",
+    "id": "F029",
+    "title": "Implement file picker and upload in mobile chat",
     "type": "feature",
-    "title": "Refactor Clínicas table to use TanStack Table with DataTable components",
-    "description": "Migrate the existing clinicas table at /dashboard/organizacao/clinicas to use the new DataTable component system. Define column configurations for clinic data (name, address, phone, status). Implement sorting, filtering by name/status, and pagination. Preserve existing actions (edit, delete, view). Integrate with existing React Query hooks for clinicas data.",
+    "description": "Add document/image picker button to mobile chat input using expo-image-picker and expo-document-picker. Implement file selection UI with preview for images and file info for PDFs. Create upload function to Supabase storage with progress indicator. Insert attachment record in chat_attachments table linked to message. Handle upload errors with user feedback. Support selecting multiple files (up to 3 per message).",
     "acceptance_criteria": [
-      "Clínicas page refactored to use DataTable component",
-      "Column definitions created for all clinic fields",
-      "Sorting implemented for name, created date columns",
-      "Search/filter functionality working for clinic name and status",
-      "Pagination working with configurable page sizes (10, 25, 50, 100)"
+      "Document picker button added to chat input in mobile app",
+      "Image picker integrated for selecting photos from gallery/camera",
+      "PDF picker integrated for selecting document files",
+      "File upload to Supabase storage with progress indicator",
+      "Attachment metadata saved to chat_attachments table with message reference"
     ],
     "passes": false
   },
   {
-    "id": "F021",
+    "id": "F030",
+    "title": "Display document attachments in mobile chat messages",
     "type": "feature",
-    "title": "Refactor Equipe table to use TanStack Table with DataTable components",
-    "description": "Migrate the existing equipe table at /dashboard/equipe to use the new DataTable component system. Define column configurations for team member data (name, role, especialidade, email, phone, status). Implement sorting, filtering by role/especialidade/status, and pagination. Preserve existing actions. Integrate with React Query hooks and especialidades relationship.",
+    "description": "Create AttachmentPreview component for mobile to display document attachments in chat messages. Show image thumbnails with tap-to-view fullscreen using modal. Show PDF icon with filename and size, tap to open with sharing options. Display attachment status badges (pending/accepted/rejected) with appropriate colors. Handle download and caching for offline viewing. Show rejected reason if applicable.",
     "acceptance_criteria": [
-      "Equipe page refactored to use DataTable component",
-      "Column definitions created for all team member fields including especialidade",
-      "Sorting implemented for name, role, especialidade columns",
-      "Multi-select filters working for role, especialidade, and status",
-      "Pagination working with same configurable page sizes as Clínicas"
+      "Image attachments display as thumbnails in message bubbles",
+      "PDF attachments show file icon, name, and size",
+      "Tap on image opens fullscreen viewer with zoom/pan",
+      "Tap on PDF opens native document viewer or sharing sheet",
+      "Status badges display correctly (pending, accepted, rejected)"
     ],
     "passes": false
   },
   {
-    "id": "F022",
+    "id": "F031",
+    "title": "Build admin document review UI in web dashboard",
     "type": "feature",
-    "title": "Setup unit testing architecture with Vitest and React Testing Library",
-    "description": "Configure Vitest as the unit testing framework for apps/web. Install @testing-library/react, @testing-library/jest-dom, and @testing-library/user-event. Create test setup files, configure vitest.config.ts with proper aliases and globals. Create test utilities folder with custom render functions and mock providers (QueryClient, theme). Set up test scripts in package.json.",
+    "description": "Add attachment display section to ChatMessages component in web app. Create DocumentAttachmentCard component showing thumbnail/icon, filename, upload date, and current status. Implement review action buttons (Accept/Reject) with confirmation dialog. Add rejection reason textarea when rejecting. Update attachment status via Supabase RPC function. Show visual feedback for review actions. Filter to show only support conversations with pending attachments.",
     "acceptance_criteria": [
-      "Vitest and Testing Library packages installed",
-      "vitest.config.ts created with proper TypeScript and path aliases",
-      "Test setup file created with jest-dom matchers",
-      "Custom render utility created with QueryClientProvider and ThemeProvider wrappers",
-      "npm scripts added: test, test:watch, test:coverage"
+      "Attachments displayed in web chat messages with proper styling",
+      "Accept and Reject buttons available for pending attachments",
+      "Rejection dialog includes textarea for reason input",
+      "Status updates persist to database and reflect in UI immediately",
+      "Admin can view full-size images and download PDFs"
     ],
     "passes": false
   },
   {
-    "id": "F023",
+    "id": "F032",
+    "title": "Create push notification system for attachment status updates",
     "type": "feature",
-    "title": "Write unit tests for DataTable component system",
-    "description": "Create comprehensive unit tests for all DataTable atoms, molecules, and organisms. Test TableCell rendering, TablePagination controls, ColumnHeader sorting, and DataTable with various configurations. Mock TanStack Table hooks. Test sorting state changes, pagination updates, and filter interactions. Achieve 80%+ code coverage for data-table components.",
+    "description": "Extend notification.schema.ts with new types: 'document_accepted' and 'document_rejected'. Create Supabase Edge Function or database trigger to send push notifications when admin updates attachment status. Include attachment filename and conversation context in notification payload. Use existing NotificationProvider in mobile to handle incoming notifications. Route users to specific chat conversation when tapping notification.",
     "acceptance_criteria": [
-      "Unit tests created for all atoms: TableCell, TableHeader, TableRow",
-      "Unit tests created for molecules: TablePagination, TableToolbar, ColumnHeader",
-      "Unit tests created for DataTable organism with sorting, filtering, pagination",
-      "useDataTable hook tested with various data types and configurations",
-      "Code coverage above 80% for all data-table components"
+      "New notification types added to schema: document_accepted, document_rejected",
+      "Notifications triggered automatically when attachment status changes",
+      "Push notification includes filename and actionable data",
+      "Tapping notification navigates to correct chat conversation in mobile",
+      "Notification stored in notifications table for history"
     ],
     "passes": false
   },
   {
-    "id": "F024",
+    "id": "F033",
+    "title": "Implement real-time updates for attachment status changes",
     "type": "feature",
-    "title": "Write unit tests for Clínicas and Equipe table implementations",
-    "description": "Create unit tests for the refactored Clínicas and Equipe table pages. Mock Supabase queries and React Query hooks. Test column definitions, filter logic, sorting behavior, and action button interactions. Test edge cases: empty data, loading states, error states. Mock user interactions like search input, filter selection, and pagination clicks.",
+    "description": "Setup Supabase realtime subscription for chat_attachments table in both mobile and web apps. Update ChatMessages components to reflect status changes instantly without refresh. Show toast/alert in mobile when attachment is reviewed. Update unread count logic to include pending attachments. Ensure optimistic updates with rollback on error.",
     "acceptance_criteria": [
-      "Unit tests created for Clínicas table page with all interactions",
-      "Unit tests created for Equipe table page with especialidade integration",
-      "Loading and error states tested for both tables",
-      "Filter and search functionality tested with user-event simulations",
-      "Action buttons (edit, delete, view) tested with proper callbacks"
+      "Realtime subscription established for chat_attachments changes",
+      "Status changes reflect immediately in both mobile and web UIs",
+      "Toast notification shown in mobile when document is reviewed",
+      "No manual refresh required to see updated statuses",
+      "Handles network interruptions gracefully with reconnection"
     ],
     "passes": false
   },
   {
-    "id": "F025",
+    "id": "F034",
+    "title": "Add attachment management API endpoints and validation",
     "type": "feature",
-    "title": "Write e2e tests for Clínicas table using Playwright",
-    "description": "Create Playwright e2e tests for the Clínicas table at /dashboard/organizacao/clinicas. Use existing auth.setup.ts for authentication. Test full user workflows: navigate to page, search clinics, apply filters, sort columns, paginate results, and perform CRUD actions. Test responsive behavior and accessibility. Verify data persistence after actions.",
+    "description": "Create Supabase RPC functions: upload_chat_attachment, update_attachment_status, delete_attachment. Implement business logic validation (file type, size, user permissions). Add rate limiting for uploads (max 10 per hour per user). Create utility functions in mobile/web for attachment operations. Handle edge cases: storage cleanup on message deletion, orphaned attachments. Add logging for audit trail.",
     "acceptance_criteria": [
-      "E2E test file created: e2e/clinicas-table.spec.ts",
-      "Tests cover navigation, search, filtering, sorting, and pagination",
-      "CRUD operations tested: create clinic, edit clinic, delete clinic",
-      "Tests verify proper data display after backend mutations",
-      "Tests pass consistently in CI environment"
+      "RPC functions created with proper error handling and validation",
+      "File type and size validation enforced server-side",
+      "Rate limiting prevents abuse of upload feature",
+      "Orphaned attachments cleaned up automatically via scheduled job",
+      "All attachment operations logged for audit purposes"
     ],
     "passes": false
   },
   {
-    "id": "F026",
+    "id": "F035",
+    "title": "Write tests for document upload and review workflow",
     "type": "feature",
-    "title": "Write e2e tests for Equipe table using Playwright",
-    "description": "Create Playwright e2e tests for the Equipe table at /dashboard/equipe. Test full user workflows: navigate to page, search team members, filter by role/especialidade/status, sort columns, paginate results, and perform team member actions. Test especialidade dropdown selection. Verify integration with especialidades table. Test accessibility and keyboard navigation.",
+    "description": "Create unit tests for attachment schemas and utility functions. Write integration tests for upload flow in mobile using Jest/Detox. Create e2e tests for admin review workflow in web using Playwright. Test file validation, storage operations, and status updates. Test push notification delivery and navigation. Verify RLS policies prevent unauthorized access.",
     "acceptance_criteria": [
-      "E2E test file created: e2e/equipe-table.spec.ts",
-      "Tests cover navigation, search, multi-filter selection, sorting, pagination",
-      "Especialidade filter tested with proper options from database",
-      "Team member CRUD operations tested end-to-end",
-      "Keyboard navigation and accessibility tested for table interactions"
+      "Unit tests cover attachment schemas and validation logic",
+      "Integration tests verify mobile upload flow end-to-end",
+      "E2e tests verify admin can review and update attachment status",
+      "Tests verify push notifications are sent and received correctly",
+      "Security tests confirm RLS policies work as expected"
     ],
     "passes": false
   }
