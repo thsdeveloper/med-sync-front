@@ -1,62 +1,75 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { Plus, Building2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Button } from '@/components/atoms/Button';
-import { FacilityList } from '@/components/organisms/facilities/FacilityList';
 import { FacilitySheet } from '@/components/organisms/facilities/FacilitySheet';
 import { Facility } from '@medsync/shared';
 import { PageHeader } from '@/components/organisms/page';
 import { useOrganization } from '@/providers/OrganizationProvider';
+import { DataTable } from '@/components/data-table/organisms/DataTable';
+import { getClinicasColumns } from '@/components/organisms/clinicas/clinicas-columns';
 
+/**
+ * Clinicas Page Component
+ *
+ * Displays a table of clinics and hospitals (facilities) for the active organization.
+ * Features:
+ * - TanStack Table integration with sorting, filtering, and pagination
+ * - Search by facility name
+ * - Filter by active/inactive status
+ * - Edit and delete actions
+ * - Configurable page sizes: 10, 25, 50, 100
+ * - React Query for data fetching and caching
+ */
 export default function ClinicsPage() {
     const { activeOrganization, loading: orgLoading } = useOrganization();
-    const [isLoading, setIsLoading] = useState(true);
-    const [facilities, setFacilities] = useState<Facility[]>([]);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [editingFacility, setEditingFacility] = useState<Facility | null>(null);
 
     const organizationId = activeOrganization?.id ?? null;
 
-    const fetchFacilities = useCallback(async () => {
-        if (!organizationId) {
-            setFacilities([]);
-            setIsLoading(false);
-            return;
-        }
+    // Fetch facilities using React Query
+    const {
+        data: facilities = [],
+        isLoading: facilitiesLoading,
+        refetch: refetchFacilities,
+    } = useQuery({
+        queryKey: ['facilities', organizationId],
+        queryFn: async () => {
+            if (!organizationId) {
+                return [];
+            }
 
-        try {
-            setIsLoading(true);
-
-            const { data: facilitiesData, error: facilitiesError } = await supabase
+            const { data, error } = await supabase
                 .from('facilities')
                 .select('*')
                 .eq('organization_id', organizationId)
                 .order('name');
 
-            if (facilitiesError) throw facilitiesError;
-            setFacilities(facilitiesData as Facility[]);
-        } catch (error) {
-            console.error('Error loading data:', error);
-            toast.error('Erro ao carregar dados das unidades.');
-        } finally {
-            setIsLoading(false);
-        }
-    }, [organizationId]);
+            if (error) {
+                console.error('Error loading facilities:', error);
+                toast.error('Erro ao carregar dados das unidades.');
+                throw error;
+            }
 
-    useEffect(() => {
-        if (!orgLoading) {
-            fetchFacilities();
-        }
-    }, [orgLoading, fetchFacilities]);
+            return (data as Facility[]) || [];
+        },
+        enabled: !!organizationId && !orgLoading,
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        gcTime: 10 * 60 * 1000, // 10 minutes (previously cacheTime)
+    });
 
+    // Handle edit action
     const handleEdit = (facility: Facility) => {
         setEditingFacility(facility);
         setIsSheetOpen(true);
     };
 
+    // Handle delete action
     const handleDelete = async (id: string) => {
         if (!window.confirm('Tem certeza que deseja excluir esta unidade?')) return;
 
@@ -68,20 +81,32 @@ export default function ClinicsPage() {
 
             if (error) throw error;
 
-            setFacilities(prev => prev.filter(item => item.id !== id));
             toast.success('Unidade removida com sucesso.');
+            refetchFacilities();
         } catch (error) {
             console.error('Error deleting facility:', error);
             toast.error('Erro ao excluir unidade.');
         }
     };
 
+    // Handle sheet close
     const handleSheetClose = () => {
         setIsSheetOpen(false);
         setEditingFacility(null);
     };
 
-    const loading = orgLoading || isLoading;
+    // Handle successful create/update
+    const handleSuccess = () => {
+        refetchFacilities();
+    };
+
+    // Generate columns with action handlers
+    const columns = useMemo(
+        () => getClinicasColumns({ onEdit: handleEdit, onDelete: handleDelete }),
+        []
+    );
+
+    const loading = orgLoading || facilitiesLoading;
 
     return (
         <div className="flex flex-1 flex-col gap-8">
@@ -99,11 +124,19 @@ export default function ClinicsPage() {
 
             <div className="flex-1">
                 {organizationId ? (
-                    <FacilityList
-                        facilities={facilities}
+                    <DataTable
+                        data={facilities}
+                        columns={columns}
                         isLoading={loading}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
+                        searchColumn="name"
+                        searchPlaceholder="Buscar por nome..."
+                        emptyMessage="Nenhuma unidade cadastrada. Comece cadastrando suas clínicas e hospitais."
+                        enablePagination={true}
+                        enableSorting={true}
+                        enableFiltering={true}
+                        pageSize={10}
+                        pageSizeOptions={[10, 25, 50, 100]}
+                        showToolbar={true}
                     />
                 ) : (
                     !loading && (
@@ -124,7 +157,7 @@ export default function ClinicsPage() {
                 <FacilitySheet
                     isOpen={isSheetOpen}
                     onClose={handleSheetClose}
-                    onSuccess={fetchFacilities}
+                    onSuccess={handleSuccess}
                     organizationId={organizationId}
                     facilityToEdit={editingFacility}
                 />

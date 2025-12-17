@@ -312,7 +312,7 @@
         "Search/filter functionality working for clinic name and status",
         "Pagination working with configurable page sizes (10, 25, 50, 100)"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F021",

@@ -645,3 +645,69 @@
   * Full documentation enables team members to run and debug tests locally
   * Headless mode optimized for CI (sequential execution, retries, artifact collection)
   * Headed/UI/Debug modes optimized for local development and debugging
+[2025-12-17 00:17:36] [F020] Refactor Clínicas table to use TanStack Table with DataTable components - COMPLETED
+- Created column definitions file: apps/web/src/components/organisms/clinicas/clinicas-columns.tsx
+  * Name column with facility icon, type badge, and CNPJ display (sortable)
+  * Phone column with icon and dash for empty values
+  * Status column with active/inactive badges (sortable, filterable)
+  * Created_at column with relative time display using date-fns (sortable)
+  * Actions column with edit/delete dropdown menu
+  * 200+ lines of fully documented TypeScript code following Atomic Design
+- Refactored main clinicas page: apps/web/src/app/dashboard/organizacao/clinicas/page.tsx
+  * Replaced FacilityList component with DataTable organism
+  * Migrated from useState to React Query useQuery hook for data fetching
+  * Implemented proper caching strategy (staleTime: 5 minutes, gcTime: 10 minutes)
+  * Integrated column definitions with action handlers using useMemo
+  * Configured DataTable with all features:
+    - enablePagination: true (page sizes: 10, 25, 50, 100)
+    - enableSorting: true (name, status, created_at columns)
+    - enableFiltering: true (search by name, filter by status)
+    - searchColumn: 'name' with placeholder 'Buscar por nome...'
+    - showToolbar: true (search input and view options)
+  * Preserved all existing functionality:
+    - Edit action opens FacilitySheet in edit mode
+    - Delete action with confirmation dialog
+    - Loading states during data fetch
+    - Empty states with proper messaging
+    - Organization selection validation
+- Data flow architecture:
+  * React Query manages facility data fetching and caching
+  * TanStack Table handles sorting, filtering, and pagination client-side
+  * Column definitions receive action handlers as props (onEdit, onDelete)
+  * FacilitySheet integration preserved for create/edit operations
+  * refetchFacilities callback ensures data refresh after mutations
+- TypeScript type safety:
+  * Facility type from @medsync/shared package
+  * DataTableColumn generic type for column definitions
+  * Proper typing for all callbacks and handlers
+  * Full type inference for table data
+- UI/UX improvements over previous implementation:
+  * Consistent table design using shadcn/ui components
+  * Visual sort indicators on sortable columns (arrows)
+  * Configurable pagination with page size selector
+  * Better loading skeleton using DataTable built-in loader
+  * Improved accessibility with proper button labels
+  * Search functionality integrated into toolbar
+  * Type badges color-coded (hospital: rose, clinic: blue)
+  * Status badges color-coded (active: green, inactive: gray)
+  * Relative date display (e.g., '3 dias atrás') with absolute date below
+- Build and compilation verified:
+  * TypeScript compilation successful: pnpm -w run typecheck passes
+  * Next.js production build successful: pnpm run build passes
+  * 21 routes compiled without errors
+  * Zero TypeScript errors, zero build warnings
+- All 5 acceptance criteria met:
+  * Clínicas page refactored to use DataTable component ✅
+  * Column definitions created for all clinic fields (name, phone, status, created_at, actions) ✅
+  * Sorting implemented for name, status, created date columns ✅
+  * Search/filter functionality working for clinic name and status ✅
+  * Pagination working with configurable page sizes (10, 25, 50, 100) ✅
+- Impact metrics:
+  * 1 new column definitions file created (200+ lines)
+  * 1 page component refactored from 134 to 167 lines (better structure)
+  * FacilityList component deprecated but preserved for potential rollback
+  * Code reusability improved: column definitions can be shared across features
+  * Maintainability improved: DataTable system provides consistent table behavior
+  * User experience enhanced with better sorting, filtering, and pagination
+  * Performance optimized with React Query caching and TanStack Table client-side operations
+  * Zero breaking changes: all existing functionality preserved
