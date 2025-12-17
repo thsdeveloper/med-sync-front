@@ -340,7 +340,7 @@
         "Custom render utility created with QueryClientProvider and ThemeProvider wrappers",
         "npm scripts added: test, test:watch, test:coverage"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F023",

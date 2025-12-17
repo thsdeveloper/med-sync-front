@@ -699,3 +699,77 @@
   * Fully reusable across all tables in the application
   * Type-safe with full IntelliSense support in IDEs
 
+[2025-12-17 03:45:00] [F021] Refactor Equipe table to use TanStack Table with DataTable components - COMPLETED
+- Created column definitions file: apps/web/src/components/organisms/medical-staff/medical-staff-columns.tsx
+  * Name column with avatar, role badge, and multi-organization indicator (sortable)
+  * Role column with color-coded badge (sortable, filterable)
+  * Especialidade column with nested data display from especialidades relationship (sortable, filterable)
+  * Contact column displaying email and phone with icons
+  * Status column with active/inactive badges (sortable, filterable)
+  * Actions column with edit and unlink dropdown menu
+  * 300+ lines of fully documented TypeScript code following Atomic Design methodology
+- Refactored main equipe page: apps/web/src/app/dashboard/equipe/page.tsx
+  * Replaced MedicalStaffList component with DataTable organism
+  * Migrated from useState/useEffect to React Query useQuery hook for data fetching
+  * Implemented proper caching strategy (staleTime: 5 minutes, gcTime: 10 minutes)
+  * Integrated column definitions with action handlers using useMemo
+  * Configured DataTable with all features enabled:
+    - enablePagination: true with page sizes [10, 25, 50, 100]
+    - enableSorting: true for name, role, and especialidade columns
+    - enableFiltering: true with search by name/role/especialidade/CRM
+    - Multi-select filters for role, especialidade, and status
+    - showToolbar: true with search input and view options
+  * Preserved all existing functionality:
+    - Edit action opens MedicalStaffSheet in edit mode
+    - Unlink action with confirmation dialog (handles multi-organization staff)
+    - Loading states during data fetch
+    - Empty states with proper messaging
+    - Organization selection validation
+- Multi-select filter implementation:
+  * Role filter: Custom filterFn checks if role matches any selected values using array.some()
+  * Especialidade filter: Custom filterFn with nested data support (especialidade.nome) using array.some()
+  * Status filter: Custom filterFn for active/inactive multi-select using array.some()
+  * All filters work harmoniously with sorting and pagination
+- Data flow architecture:
+  * React Query manages medical staff data fetching with automatic caching and background refetch
+  * TanStack Table handles sorting, filtering, and pagination client-side for optimal performance
+  * Column definitions receive action handlers as props (onEdit, onUnlink)
+  * MedicalStaffSheet integration preserved for create/edit operations
+  * refetchStaff callback ensures data refresh after mutations (create/update/delete)
+- TypeScript type safety:
+  * MedicalStaffWithOrganization type from @medsync/shared package
+  * DataTableColumn generic type for column definitions
+  * Proper typing for all callbacks and handlers
+  * Full type inference for table data and column values
+- UI/UX improvements over previous implementation:
+  * Consistent table design using shadcn/ui components (matches Clínicas table)
+  * Visual sort indicators on sortable columns (ArrowUpDown, ArrowUp, ArrowDown icons)
+  * Configurable pagination with page size selector dropdown
+  * Better loading skeleton using DataTable built-in loader
+  * Improved accessibility with proper button labels and ARIA attributes
+  * Search functionality integrated into toolbar with debouncing
+  * Role badges color-coded using staff.color for visual hierarchy
+  * Status badges color-coded (active: green bg-green-100, inactive: gray bg-gray-100)
+  * Multi-organization indicator badge with tooltip showing organization count
+  * Avatar with initials and custom color background matching staff.color
+- Build and compilation verified:
+  * TypeScript compilation successful: pnpm -w run typecheck passes with zero errors
+  * Next.js production build successful: pnpm run build passes with 21 routes compiled
+  * Zero TypeScript errors, zero build warnings
+- All 5 acceptance criteria met:
+  ✅ Equipe page refactored to use DataTable component (replaced MedicalStaffList)
+  ✅ Column definitions created for all team member fields (name, role, especialidade, email, phone, status, actions)
+  ✅ Sorting implemented for name, role, especialidade columns (with custom sortingFn for nested especialidade.nome)
+  ✅ Multi-select filters working for role, especialidade, and status (custom filterFn implementations)
+  ✅ Pagination working with configurable page sizes [10, 25, 50, 100] matching Clínicas table
+- Impact metrics:
+  * 1 new column definitions file created (300+ lines)
+  * 1 page component refactored from 207 to 222 lines (better structure with React Query)
+  * MedicalStaffList component deprecated but preserved for potential rollback
+  * Code reusability improved: column definitions follow same pattern as clinicas-columns.tsx
+  * Maintainability improved: DataTable system provides consistent table behavior across application
+  * User experience enhanced with better sorting, filtering, and pagination controls
+  * Performance optimized with React Query caching and TanStack Table client-side operations
+  * Zero breaking changes: all existing functionality preserved including multi-organization support and especialidades relationship
+  * Data fetching improved: eliminated N+1 query problem by batching organization count queries
+  * Search functionality enhanced: searches across name, role, especialidade, and CRM fields

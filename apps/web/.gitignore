@@ -18,6 +18,9 @@ node_modules/
 /.auth/
 /e2e/screenshots/
 
+# Vitest
+/coverage/
+
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
