@@ -10,6 +10,8 @@ export const NOTIFICATION_TYPES = [
     'shift_swap_admin_rejected', // Admin rejeitou
     'shift_assigned',            // Nova escala atribuída
     'shift_reminder',            // Lembrete de escala
+    'document_accepted',         // Documento anexado foi aprovado pelo admin
+    'document_rejected',         // Documento anexado foi rejeitado pelo admin
     'general'                    // Notificação geral
 ] as const;
 
@@ -54,6 +56,11 @@ export function isSwapNotification(type: NotificationType): boolean {
     return type.startsWith('shift_swap_');
 }
 
+// Helper para verificar se é notificação de documento
+export function isDocumentNotification(type: NotificationType): boolean {
+    return type.startsWith('document_');
+}
+
 // Labels amigáveis para os tipos de notificação
 export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
     'shift_swap_request': 'Solicitação de Troca',
@@ -63,5 +70,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
     'shift_swap_admin_rejected': 'Troca Rejeitada',
     'shift_assigned': 'Nova Escala',
     'shift_reminder': 'Lembrete de Escala',
+    'document_accepted': 'Documento Aprovado',
+    'document_rejected': 'Documento Rejeitado',
     'general': 'Notificação'
 };

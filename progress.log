@@ -1185,3 +1185,74 @@
   * Total: ~1,100 lines of production code
   * Zero breaking changes
   * All acceptance criteria verified complete
+[2025-12-17 14:52:32] [F032] Create push notification system for attachment status updates - COMPLETED
+- Extended notification schema (packages/shared/src/schemas/notification.schema.ts):
+  * Added 'document_accepted' and 'document_rejected' to NOTIFICATION_TYPES enum
+  * Added Portuguese labels: 'Documento Aprovado', 'Documento Rejeitado'
+  * Created isDocumentNotification() helper function
+  * Updated TypeScript types to include new notification types
+- Created database migration (migrations/20251217_create_attachment_notification_trigger.sql):
+  * Updated notifications table type constraint to include document notification types
+  * Created notify_attachment_status_change() PL/pgSQL trigger function:
+    - Fires AFTER UPDATE on chat_attachments when status changes from 'pending' to 'accepted'/'rejected'
+    - Retrieves organization_id and conversation_id from chat_conversations JOIN
+    - Retrieves sender name from medical_staff table
+    - Constructs Portuguese notification title and body with filename
+    - Includes rejected_reason in notification body if provided
+    - Inserts notification record with comprehensive JSONB payload:
+      * attachment_id, file_name, file_type, conversation_id
+      * status, rejected_reason, reviewed_by, reviewed_at
+    - Logs notification creation with RAISE NOTICE for debugging
+  * Created trigger_attachment_status_notification trigger on chat_attachments table
+  * Added verification queries confirming successful migration
+  * Included rollback instructions in comments
+- Migration executed successfully via Supabase MCP:
+  * Constraint updated: notifications_type_check now includes document types
+  * Trigger function created: notify_attachment_status_change()
+  * Trigger enabled: trigger_attachment_status_notification
+  * All verification queries passed with ✅ confirmations
+- Updated mobile NotificationProvider (apps/mobile/providers/notification-provider.tsx):
+  * Enhanced handleNotificationResponse() to route document notifications
+  * Document notifications navigate to chat conversation: /(app)/chat/{conversation_id}
+  * Fallback to chat list if conversation_id missing: /(app)/(tabs)/chat
+  * Generic fallback for any notification with conversation_id field
+  * Maintains existing routing for shift and schedule notifications
+  * Navigation wrapped in setTimeout for layout mount safety
+- Notification payload structure verified:
+  * type: 'document_accepted' or 'document_rejected'
+  * title: Portuguese title (e.g., 'Documento Aprovado')
+  * body: Descriptive message with filename and optional rejection reason
+  * data: {
+      attachment_id: UUID,
+      file_name: string,
+      file_type: 'pdf' | 'image',
+      conversation_id: UUID (for navigation),
+      status: 'accepted' | 'rejected',
+      rejected_reason: string | null,
+      reviewed_by: UUID,
+      reviewed_at: timestamp
+    }
+- Verification completed:
+  * TypeScript compilation successful (pnpm typecheck passes)
+  * Database trigger function exists and contains document notification logic
+  * Trigger enabled on chat_attachments table with proper WHEN condition
+  * Notifications table constraint allows new notification types
+  * Test notification insert successful (document_accepted type accepted)
+  * Mobile app routes document notifications to correct chat conversation
+- All 5 acceptance criteria met:
+  ✅ New notification types added: 'document_accepted', 'document_rejected'
+  ✅ Notifications triggered automatically via database trigger on status change
+  ✅ Push notification includes filename, conversation_id, and complete attachment metadata
+  ✅ Tapping notification navigates to chat conversation: router.push(`/(app)/chat/${conversation_id}`)
+  ✅ Notification stored in notifications table with full audit trail (reviewed_by, reviewed_at)
+- Impact metrics:
+  * 1 schema file updated (notification.schema.ts, +10 lines)
+  * 1 migration file created (20251217_create_attachment_notification_trigger.sql, 203 lines)
+  * 1 mobile provider updated (notification-provider.tsx, +22 lines)
+  * Database trigger automatically creates notifications on every attachment status change
+  * Zero manual intervention required - fully automated workflow
+  * Notification payload enables direct navigation to relevant conversation
+  * Portuguese localization maintains app language consistency
+  * Trigger function uses SECURITY DEFINER for proper permission elevation
+  * Comprehensive JSONB payload supports future feature extensions
+  * All components production-ready with zero TypeScript errors

@@ -480,7 +480,7 @@
         "Tapping notification navigates to correct chat conversation in mobile",
         "Notification stored in notifications table for history"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F033",

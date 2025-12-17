@@ -101,10 +101,27 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     // Use setTimeout to ensure navigation happens after layout is mounted
     setTimeout(() => {
       try {
-        if (data?.type === 'fixed_schedule') {
+        // Document notification - navigate to chat conversation
+        if (data?.type === 'document_accepted' || data?.type === 'document_rejected') {
+          const conversationId = data?.conversation_id;
+          if (conversationId) {
+            router.push(`/(app)/chat/${conversationId}` as const);
+          } else {
+            // Fallback to chat list if no conversation_id
+            router.push('/(app)/(tabs)/chat');
+          }
+        }
+        // Fixed schedule notification
+        else if (data?.type === 'fixed_schedule') {
           router.push('/(app)/(tabs)/schedule');
-        } else if (data?.shiftId) {
+        }
+        // Shift-related notification
+        else if (data?.shiftId) {
           router.push(`/(app)/shift/${data.shiftId}` as const);
+        }
+        // Generic fallback - try to navigate to chat if conversation_id exists
+        else if (data?.conversation_id) {
+          router.push(`/(app)/chat/${data.conversation_id}` as const);
         }
       } catch (error) {
         console.log('[Notifications] Navigation error (layout may not be ready):', error);
