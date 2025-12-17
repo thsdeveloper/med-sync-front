@@ -452,7 +452,7 @@
         "Tap on PDF opens native document viewer or sharing sheet",
         "Status badges display correctly (pending, accepted, rejected)"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F031",

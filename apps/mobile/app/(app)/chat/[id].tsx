@@ -21,9 +21,13 @@ import { useAuth } from '@/providers/auth-provider';
 import { supabase } from '@/lib/supabase';
 import AttachmentPicker from '@/components/molecules/AttachmentPicker';
 import AttachmentPreview from '@/components/molecules/AttachmentPreview';
+import AttachmentDisplay from '@/components/molecules/AttachmentDisplay';
+import ImageViewer from '@/components/organisms/ImageViewer';
 import { useAttachmentUpload, linkAttachmentsToMessage } from '@/hooks/useAttachmentUpload';
+import { useAttachmentDownload } from '@/hooks/useAttachmentDownload';
+import * as Sharing from 'expo-sharing';
 import type { SelectedFile } from '@/lib/attachment-utils';
-import type { MessageWithSender, ConversationWithDetails } from '@medsync/shared';
+import type { MessageWithSender, ConversationWithDetails, ChatAttachment } from '@medsync/shared';
 
 export default function ChatConversationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -34,9 +38,12 @@ export default function ChatConversationScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
+  const [imageViewerVisible, setImageViewerVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{ uri: string; attachment: ChatAttachment } | null>(null);
   const flatListRef = useRef<FlatList>(null);
 
   const { isUploading, uploadProgress, uploadFiles, reset: resetUpload } = useAttachmentUpload();
+  const { downloadAttachment } = useAttachmentDownload();
 
   const loadConversation = useCallback(async () => {
     if (!id) return;
@@ -60,12 +67,22 @@ export default function ChatConversationScreen() {
         setConversation(convData);
       }
 
-      // Load messages
+      // Load messages with attachments
       const { data: messagesData } = await supabase
         .from('chat_messages')
         .select(`
           *,
-          sender:medical_staff (id, name, color, avatar_url)
+          sender:medical_staff (id, name, color, avatar_url),
+          attachments:chat_attachments (
+            id,
+            file_name,
+            file_type,
+            file_path,
+            file_size,
+            status,
+            rejected_reason,
+            created_at
+          )
         `)
         .eq('conversation_id', id)
         .order('created_at', { ascending: true });
@@ -112,12 +129,22 @@ export default function ChatConversationScreen() {
           filter: `conversation_id=eq.${id}`,
         },
         async (payload) => {
-          // Fetch the full message with sender info
+          // Fetch the full message with sender info and attachments
           const { data: newMsg } = await supabase
             .from('chat_messages')
             .select(`
               *,
-              sender:medical_staff (id, name, color, avatar_url)
+              sender:medical_staff (id, name, color, avatar_url),
+              attachments:chat_attachments (
+                id,
+                file_name,
+                file_type,
+                file_path,
+                file_size,
+                status,
+                rejected_reason,
+                created_at
+              )
             `)
             .eq('id', payload.new.id)
             .single();
@@ -152,6 +179,48 @@ export default function ChatConversationScreen() {
 
   const handleRemoveFile = useCallback((index: number) => {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  /**
+   * Handle image attachment press - open fullscreen viewer
+   */
+  const handleImagePress = useCallback((attachment: ChatAttachment, imageUri: string) => {
+    setSelectedImage({ uri: imageUri, attachment });
+    setImageViewerVisible(true);
+  }, []);
+
+  /**
+   * Handle PDF attachment press - download and share
+   */
+  const handlePdfPress = useCallback(
+    async (attachment: ChatAttachment, pdfUri: string) => {
+      try {
+        // Check if sharing is available
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (!isAvailable) {
+          Alert.alert('Erro', 'Compartilhamento não disponível neste dispositivo.');
+          return;
+        }
+
+        // Share the PDF
+        await Sharing.shareAsync(pdfUri, {
+          mimeType: 'application/pdf',
+          dialogTitle: attachment.file_name,
+        });
+      } catch (error) {
+        console.error('Error sharing PDF:', error);
+        Alert.alert('Erro', 'Não foi possível abrir o documento.');
+      }
+    },
+    []
+  );
+
+  /**
+   * Close image viewer
+   */
+  const handleCloseImageViewer = useCallback(() => {
+    setImageViewerVisible(false);
+    setSelectedImage(null);
   }, []);
 
   const sendMessage = async () => {
@@ -311,6 +380,17 @@ export default function ChatConversationScreen() {
             <Text style={[styles.messageText, isOwn && styles.ownMessageText]}>
               {item.content}
             </Text>
+
+            {/* Display attachments if present */}
+            {item.attachments && item.attachments.length > 0 && (
+              <AttachmentDisplay
+                attachments={item.attachments}
+                onImagePress={handleImagePress}
+                onPdfPress={handlePdfPress}
+                isOwnMessage={isOwn}
+              />
+            )}
+
             <Text style={[styles.messageTime, isOwn && styles.ownMessageTime]}>
               {format(parseISO(item.created_at), 'HH:mm')}
             </Text>
@@ -340,6 +420,17 @@ export default function ChatConversationScreen() {
           headerBackTitle: 'Chat',
         }}
       />
+
+      {/* Image Viewer Modal */}
+      {selectedImage && (
+        <ImageViewer
+          visible={imageViewerVisible}
+          imageUri={selectedImage.uri}
+          attachment={selectedImage.attachment}
+          onClose={handleCloseImageViewer}
+        />
+      )}
+
       <SafeAreaView style={styles.container}>
         <KeyboardAvoidingView
           style={styles.keyboardView}

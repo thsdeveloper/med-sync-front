@@ -130,7 +130,7 @@ export function useAttachmentUpload(): UseAttachmentUploadReturn {
    * Creates attachment metadata record in database
    */
   const createAttachmentRecord = async (
-    data: UploadAttachmentData
+    data: UploadAttachmentData & { sender_id: string; file_path: string }
   ): Promise<{ success: boolean; attachmentId?: string; error?: string }> => {
     try {
       const { data: attachment, error } = await supabase

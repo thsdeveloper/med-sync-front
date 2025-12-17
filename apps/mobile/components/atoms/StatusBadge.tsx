@@ -1,57 +1,92 @@
+/**
+ * StatusBadge Atom Component
+ *
+ * A reusable badge component for displaying attachment status.
+ * Shows color-coded badges for pending, accepted, and rejected states.
+ *
+ * Part of Atomic Design: Atom
+ */
+
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import type { ShiftStatus } from '@medsync/shared';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import type { AttachmentStatus } from '@medsync/shared/schemas';
 
 interface StatusBadgeProps {
-  status: ShiftStatus;
-  size?: 'sm' | 'md';
-  style?: ViewStyle;
+  status: AttachmentStatus;
+  rejectedReason?: string | null;
+  onReasonPress?: () => void;
 }
 
-const STATUS_CONFIG: Record<ShiftStatus, { label: string; color: string; bgColor: string }> = {
-  pending: { label: 'Aguardando', color: '#F59E0B', bgColor: '#FEF3C7' },
-  accepted: { label: 'Confirmado', color: '#10B981', bgColor: '#D1FAE5' },
-  declined: { label: 'Recusado', color: '#EF4444', bgColor: '#FEE2E2' },
-  swap_requested: { label: 'Troca Solicitada', color: '#8B5CF6', bgColor: '#EDE9FE' },
-};
+const STATUS_CONFIG = {
+  pending: {
+    label: 'Pendente',
+    backgroundColor: '#FEF3C7', // yellow-100
+    textColor: '#92400E', // yellow-900
+    borderColor: '#FCD34D', // yellow-300
+  },
+  accepted: {
+    label: 'Aceito',
+    backgroundColor: '#D1FAE5', // green-100
+    textColor: '#065F46', // green-900
+    borderColor: '#6EE7B7', // green-300
+  },
+  rejected: {
+    label: 'Rejeitado',
+    backgroundColor: '#FEE2E2', // red-100
+    textColor: '#991B1B', // red-900
+    borderColor: '#FCA5A5', // red-300
+  },
+} as const;
 
-export function StatusBadge({ status, size = 'md', style }: StatusBadgeProps) {
-  const config = STATUS_CONFIG[status] || { label: status, color: '#6B7280', bgColor: '#F3F4F6' };
-  const isSmall = size === 'sm';
+export const StatusBadge: React.FC<StatusBadgeProps> = ({
+  status,
+  rejectedReason,
+  onReasonPress,
+}) => {
+  const config = STATUS_CONFIG[status];
+  const isRejected = status === 'rejected';
+  const hasReason = isRejected && rejectedReason;
 
-  return (
-    <View style={[styles.badge, { backgroundColor: config.bgColor }, isSmall && styles.badgeSmall, style]}>
-      <View style={[styles.dot, { backgroundColor: config.color }]} />
-      <Text style={[styles.text, { color: config.color }, isSmall && styles.textSmall]}>
+  const BadgeContent = (
+    <View
+      style={[
+        styles.badge,
+        {
+          backgroundColor: config.backgroundColor,
+          borderColor: config.borderColor,
+        },
+      ]}
+    >
+      <Text style={[styles.text, { color: config.textColor }]}>
         {config.label}
       </Text>
     </View>
   );
-}
+
+  // If rejected with reason and onReasonPress provided, make it touchable
+  if (hasReason && onReasonPress) {
+    return (
+      <TouchableOpacity onPress={onReasonPress} activeOpacity={0.7}>
+        {BadgeContent}
+      </TouchableOpacity>
+    );
+  }
+
+  return BadgeContent;
+};
 
 const styles = StyleSheet.create({
   badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-    gap: 5,
-  },
-  badgeSmall: {
     paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignSelf: 'flex-start',
   },
   text: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  textSmall: {
     fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });
