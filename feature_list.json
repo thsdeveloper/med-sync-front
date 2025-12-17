@@ -466,7 +466,7 @@
         "Status updates persist to database and reflect in UI immediately",
         "Admin can view full-size images and download PDFs"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F032",

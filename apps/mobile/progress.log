@@ -971,3 +971,45 @@ MedSync Mobile initialized with Expo on 2025-12-12
   * Foundation for displaying avatars throughout app (F009)
   * Production-ready feature with comprehensive error handling
 
+[2025-12-17 14:30:00] [F030] Display document attachments in mobile chat messages - COMPLETED
+- Updated useAttachmentDownload hook with backwards compatibility methods (getCachedUri, isCached)
+- Verified AttachmentDisplay molecule component implementation:
+  * Displays image thumbnails (200x200px) with status badge overlay
+  * Shows PDF file cards with icon, filename, and size
+  * Implements tap handlers for images (fullscreen viewer) and PDFs (sharing sheet)
+  * Handles download progress indicators and offline caching
+  * Displays rejected reason for rejected attachments
+- Verified ImageViewer organism component:
+  * Fullscreen modal with image metadata display
+  * Info toggle button and close button
+  * Loading and error states handled
+  * Safe area support for iOS notch/dynamic island
+- Verified integration in chat conversation screen (app/(app)/chat/[id].tsx):
+  * AttachmentDisplay component integrated into message rendering
+  * ImageViewer modal for fullscreen image viewing
+  * PDF sharing via expo-sharing package
+  * Real-time attachment fetching via JOIN query
+- Status badge colors implemented:
+  * Pending: Yellow (#FEF3C7 bg, #92400E text, #FCD34D border)
+  * Accepted/Approved: Green (#D1FAE5 bg, #065F46 text, #6EE7B7 border)
+  * Rejected: Red (#FEE2E2 bg, #991B1B text, #FCA5A5 border)
+- All acceptance criteria met:
+  ✅ Image attachments display as thumbnails in message bubbles
+  ✅ PDF attachments show file icon, name, and size
+  ✅ Tap on image opens fullscreen viewer (ImageViewer organism)
+  ✅ Tap on PDF opens native document viewer or sharing sheet (expo-sharing)
+  ✅ Status badges display correctly (pending, accepted, rejected)
+- Additional features verified:
+  * Offline support via local file caching in expo-file-system
+  * Download progress tracking per file
+  * Rejected reason display when status is rejected
+  * Portuguese labels and formatting (date-fns/locale/ptBR)
+  * Proper file size formatting (KB, MB, GB)
+  * Error handling with user-friendly alerts
+- Impact metrics:
+  * 1 hook updated (useAttachmentDownload.ts, +45 lines backwards compatibility)
+  * 3 existing components verified (AttachmentDisplay, ImageViewer, chat conversation)
+  * Zero breaking changes to existing functionality
+  * TypeScript compilation successful (pnpm typecheck passes)
+  * Full feature already implemented and operational in codebase
+  * expo-sharing package already installed and configured
