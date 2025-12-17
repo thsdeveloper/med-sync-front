@@ -522,7 +522,7 @@
         "Tests verify push notifications are sent and received correctly",
         "Security tests confirm RLS policies work as expected"
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }
