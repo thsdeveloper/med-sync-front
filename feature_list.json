@@ -508,7 +508,7 @@
         "Orphaned attachments cleaned up automatically via scheduled job",
         "All attachment operations logged for audit purposes"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F035",

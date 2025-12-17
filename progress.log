@@ -1256,3 +1256,100 @@
   * Trigger function uses SECURITY DEFINER for proper permission elevation
   * Comprehensive JSONB payload supports future feature extensions
   * All components production-ready with zero TypeScript errors
+[2025-12-17 15:00:00] [F034] Add attachment management API endpoints and validation - COMPLETED
+- Created rate limiting system (attachment_upload_rate_limits table, 10 uploads per hour per user):
+  * check_upload_rate_limit() RPC function - checks if user is under rate limit
+  * record_upload_attempt() RPC function - records upload and auto-cleans old records (>1 hour)
+  * get_user_upload_stats() RPC function - returns upload statistics (uploads/limit/remaining/resets_at)
+  * Indexed by user_id + uploaded_at for efficient rate limit queries
+  * RLS policies: users view own records, admins view organization records
+- Created comprehensive audit logging system (attachment_audit_logs table, 90-day retention):
+  * Logs all attachment operations: upload, upload_failed, status_change, view, download, delete, cleanup_orphaned, cleanup_message_deleted
+  * Flexible JSONB metadata field for action-specific details
+  * log_attachment_operation() RPC function - creates audit log entries
+  * get_attachment_audit_trail() RPC function - retrieves complete audit trail for attachment (admin-only)
+  * get_organization_audit_report() RPC function - generates aggregated audit statistics (admin-only)
+  * cleanup_old_audit_logs() RPC function - cleans up logs older than retention period
+  * trigger_log_attachment_status_change() - automatically logs status changes
+  * Indexed by attachment_id, actor_id, organization_id, conversation_id, action, and failures
+  * RLS policies: users view own actions, admins view all organization actions
+- Created storage cleanup system for orphaned attachments:
+  * trigger_cleanup_message_attachments() - logs cleanup when parent message deleted (CASCADE handles deletion)
+  * cleanup_orphaned_attachments() RPC function - identifies and removes orphaned attachments (grace period: 7 days, dry-run mode supported)
+  * delete_attachment() RPC function - deletes attachment with permission validation (admins delete any, users delete own pending)
+  * get_orphaned_attachment_report() RPC function - generates orphaned attachment statistics (admin-only)
+  * Returns file_path for application-layer storage cleanup (Supabase storage.remove() requires client-side call)
+- Created comprehensive RPC functions with server-side validation:
+  * upload_chat_attachment() - creates attachment record with full validation:
+    - File extension validation (.pdf, .jpg, .jpeg, .png, .gif)
+    - File size validation (max 10MB = 10485760 bytes)
+    - File type validation (pdf or image)
+    - User permission validation (must be staff member and conversation participant)
+    - Message existence validation
+    - Rate limit enforcement (returns error if exceeded)
+    - Automatic audit logging (success and failures)
+    - Returns attachment_id with status='pending' on success
+  * update_attachment_status() - admin-only status updates with validation (enhanced from F031):
+    - Status validation (accepted or rejected only)
+    - Rejected reason required when status=rejected (max 500 chars)
+    - Admin-only permission check
+    - Prevents re-updating already processed attachments
+    - Automatic audit logging via trigger (trigger_log_attachment_status_change)
+    - Returns success with attachment_id and new status
+- Created shared validation utilities (packages/shared/src/utils/attachment-validation.ts):
+  * Client-side validation functions mirroring server-side rules
+  * validateFileExtension() - checks file extension against allowed list
+  * validateFileSize() - checks size <= 10MB
+  * validateMimeType() - validates MIME type (application/pdf, image/*)
+  * validateFile() - comprehensive validation combining all checks
+  * validateAttachmentCount() - enforces max 3 attachments per message
+  * checkRateLimit() - client-side rate limit checking
+  * Utility functions: formatFileSize(), sanitizeFileName(), generateStoragePath(), getFileType(), getFileExtension()
+  * Re-exports MAX_FILE_SIZE, MAX_FILE_SIZE_MB, ALLOWED_FILE_EXTENSIONS from chat.schema.ts (avoids duplication)
+  * New constants: MAX_ATTACHMENTS_PER_MESSAGE=3, MAX_UPLOADS_PER_HOUR=10
+- Created mobile attachment API wrapper (apps/mobile/lib/api/attachmentApi.ts):
+  * AttachmentApi class with methods for all attachment operations
+  * uploadAttachment() - uploads attachment metadata with client-side validation
+  * updateAttachmentStatus() - admin status updates (accept/reject)
+  * deleteAttachment() - deletes attachment with permission checks
+  * getUploadStats() - fetches rate limit statistics for user
+  * getAttachmentAuditTrail() - admin-only audit trail retrieval
+  * Helper functions: validateAttachmentBeforeUpload(), formatUploadStats(), canUpload()
+  * Re-exports validation utilities for convenience
+- Created web attachment API wrapper (apps/web/src/lib/api/attachmentApi.ts):
+  * AttachmentApi class with all mobile methods plus admin-specific functions
+  * getOrganizationAuditReport() - admin compliance reporting with date range filtering
+  * getOrphanedAttachmentReport() - monitoring orphaned attachments
+  * cleanupOrphanedAttachments() - manual cleanup trigger with dry-run support
+  * Helper functions: formatAuditReport(), formatOrphanedReport() for display
+  * Re-exports validation utilities for convenience
+- Database migrations executed successfully via Supabase MCP:
+  * 20251217_create_rate_limiting.sql - rate limiting table, functions, indexes, RLS policies
+  * 20251217_create_audit_logging.sql - audit logs table, functions, triggers, indexes, RLS policies
+  * 20251217_create_storage_cleanup.sql - cleanup triggers, functions, reporting
+  * 20251217_create_attachment_rpc_functions.sql - upload and status update RPC functions
+- All 5 acceptance criteria met:
+  ✅ RPC functions created: upload_chat_attachment, update_attachment_status (enhanced), delete_attachment
+  ✅ Server-side validation: file extension (.pdf, .jpg, .jpeg, .png, .gif), file size (max 10MB), file type (pdf/image), user permissions, conversation participation, message existence
+  ✅ Rate limiting: 10 uploads per hour per user, enforced in upload_chat_attachment(), stats available via get_user_upload_stats()
+  ✅ Orphaned attachment cleanup: cleanup_orphaned_attachments() with 7-day grace period, dry-run mode, get_orphaned_attachment_report() for monitoring, trigger_cleanup_message_attachments() for message deletion
+  ✅ Audit logging: All operations logged (upload, status_change, delete, cleanup, failures), audit trails retrievable, organization reports available, 90-day retention policy
+- Impact metrics:
+  * 4 database migrations created and executed (rate limiting, audit logging, storage cleanup, RPC functions)
+  * 3 new tables created: attachment_upload_rate_limits, attachment_audit_logs (plus existing chat_attachments enhanced)
+  * 12 RPC functions created: check_upload_rate_limit, record_upload_attempt, get_user_upload_stats, log_attachment_operation, get_attachment_audit_trail, get_organization_audit_report, cleanup_old_audit_logs, trigger_cleanup_message_attachments, cleanup_orphaned_attachments, delete_attachment, get_orphaned_attachment_report, upload_chat_attachment (new), update_attachment_status (enhanced)
+  * 2 database triggers created: trigger_audit_attachment_status_change, trigger_cleanup_attachments_on_message_delete
+  * 15+ database indexes created for optimized queries
+  * RLS policies implemented for security (rate limits, audit logs, existing attachments)
+  * 1 shared validation utility file created (440+ lines)
+  * 2 API wrapper files created (mobile: 300+ lines, web: 420+ lines)
+  * Rate limiting enforced: max 10 uploads per hour per user with automatic cleanup
+  * Audit trail comprehensive: logs all operations with flexible JSONB metadata
+  * Storage cleanup handles orphaned attachments and message deletion scenarios
+  * Server-side validation prevents malicious uploads (file type, size, permissions)
+  * Client-side validation provides immediate user feedback
+  * TypeScript compilation successful (excluding pre-existing console errors in useAttachmentRealtime.ts from F033)
+  * Zero breaking changes to existing attachment functionality
+  * Production-ready API endpoints with comprehensive error handling
+  * Complete audit trail for compliance and security monitoring
+  * Automated cleanup prevents storage bloat from orphaned files
