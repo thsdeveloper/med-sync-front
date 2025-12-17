@@ -1001,3 +1001,84 @@
   * File type validation: PDF + 4 image formats (jpg, jpeg, png, gif)
   * Zero breaking changes to existing code
   * All 5 acceptance criteria met: ChatAttachment type ✅, Zod schemas ✅, MessageWithSender extended ✅, File type validation ✅, File size limits ✅
+[2025-12-17 14:20:00] [F029] Implement file picker and upload in mobile chat - COMPLETED
+- Installed expo-document-picker dependency for PDF file selection
+- Created attachment-utils.ts utility library:
+  * File validation functions (type, size, count limits)
+  * MIME type detection for images (jpg, jpeg, png, gif) and PDFs
+  * File size formatting (human-readable: KB, MB, GB)
+  * Storage path generation (organization_id/conversation_id/filename structure)
+  * Filename sanitization and extension handling
+  * Max 10MB per file, max 3 files per message enforced
+- Created AttachmentPicker molecule component (274 lines):
+  * Bottom sheet modal with Camera/Gallery/Document options
+  * Permission handling for iOS and Android (camera, media library)
+  * expo-image-picker integration for photos (camera + gallery)
+  * expo-document-picker integration for PDF files
+  * Multiple file selection with remaining slots calculation
+  * Real-time file validation with user-friendly error alerts
+  * Platform-appropriate UI design with icons and descriptions
+- Created AttachmentPreview molecule component (158 lines):
+  * Horizontal scrollable file preview cards
+  * Image thumbnails with proper aspect ratio
+  * PDF file icons with filename and size display
+  * Individual file removal with delete button
+  * File count indicator and limit badge
+  * Visual feedback when limit reached (max 3 files)
+- Created useAttachmentUpload custom hook (250 lines):
+  * Parallel file upload to Supabase storage (chat-documents bucket)
+  * Real-time progress tracking per file (pending/uploading/success/error states)
+  * Base64 file reading using expo-file-system
+  * ArrayBuffer conversion for Supabase storage upload
+  * Automatic retry logic (max 2 retries with exponential backoff)
+  * Creates chat_attachments records in database with metadata
+  * Links attachments to messages via message_id foreign key
+  * Comprehensive error handling with detailed error messages
+- Integrated attachment functionality into chat conversation screen:
+  * Added AttachmentPicker button to chat input area (left of text input)
+  * AttachmentPreview component displays selected files before sending
+  * Upload progress indicator shows file upload status (N/M completed)
+  * Message sending logic updated to handle attachments:
+    - Uploads files to storage before creating message
+    - Creates chat_attachments records with file metadata
+    - Links attachments to message after successful message creation
+    - Handles partial failures (some files fail, some succeed)
+    - Shows detailed error messages for failed uploads
+  * Restores message text and files on error for user retry
+  * Disables input and buttons during upload (prevents duplicate sends)
+  * Supports sending attachments without text message
+- File upload flow:
+  1. User selects files via AttachmentPicker (camera/gallery/document)
+  2. Files validated (type, size, count) with immediate feedback
+  3. AttachmentPreview shows selected files with remove option
+  4. User taps send button to upload files and create message
+  5. Files uploaded to Supabase storage in parallel with progress tracking
+  6. chat_attachments records created with file metadata
+  7. Message created in chat_messages table
+  8. Attachments linked to message via message_id update
+  9. Upload state reset, user can send next message
+- Error handling:
+  * File type validation (only images and PDFs allowed)
+  * File size validation (max 10MB per file)
+  * File count validation (max 3 per message)
+  * Permission denied for camera/gallery handled gracefully
+  * Network failures during upload trigger retry mechanism
+  * Partial upload failures show detailed error per file
+  * Message creation failures restore input state for retry
+- All 5 acceptance criteria met:
+  ✅ Document picker button added to chat input (AttachmentPicker component)
+  ✅ Image picker integrated for gallery and camera selection
+  ✅ PDF picker integrated for document file selection
+  ✅ File upload to Supabase storage with real-time progress indicator
+  ✅ Attachment metadata saved to chat_attachments table with message_id reference
+- Impact metrics:
+  * 4 new files created: attachment-utils.ts (267 lines), AttachmentPicker.tsx (274 lines), AttachmentPreview.tsx (158 lines), useAttachmentUpload.ts (250 lines)
+  * 1 file modified: chat conversation screen (130+ lines added)
+  * 1 dependency installed: expo-document-picker
+  * Total: ~1,100 lines of fully documented TypeScript code
+  * Zero TypeScript compilation errors
+  * Atomic Design methodology followed (molecules, utility functions, custom hooks)
+  * Comprehensive error handling and user feedback implemented
+  * Supports Camera, Gallery, and Document file sources
+  * Platform-agnostic implementation (iOS and Android compatible)
+  * Production-ready file upload system with retry and progress tracking
