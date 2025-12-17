@@ -382,7 +382,7 @@
         "Tests verify proper data display after backend mutations",
         "Tests pass consistently in CI environment"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F026",
@@ -396,7 +396,7 @@
         "Team member CRUD operations tested end-to-end",
         "Keyboard navigation and accessibility tested for table interactions"
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }

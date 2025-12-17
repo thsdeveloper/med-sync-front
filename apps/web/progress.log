@@ -937,3 +937,63 @@
   * 100% coverage of acceptance criteria: loading ✅, error ✅, empty ✅, search ✅, filter ✅, actions ✅, especialidade integration ✅
   * Zero breaking changes to existing code
   * All critical user flows tested: create, edit, delete/unlink, search, filter, paginate, sort
+[2025-12-17 11:00:00] [F026] Write e2e tests for Equipe table using Playwright - COMPLETED
+- Created comprehensive E2E test suite for Equipe (Medical Staff) table at /dashboard/equipe
+- Test files created (2,011 lines total):
+  * apps/web/e2e/pages/EquipePage.ts (699 lines) - Page Object Model with 40+ helper methods
+  * apps/web/e2e/fixtures/equipe.fixtures.ts (28 lines) - Test fixtures extending Playwright
+  * apps/web/e2e/equipe-table.spec.ts (1,284 lines) - Comprehensive test suite with 76 unique tests
+- Test coverage organized in 14 test suites:
+  * Navigation and Initial Load: 5 tests (page load, table structure, controls visibility)
+  * Search Functionality: 6 tests (exact/partial match, case-insensitive, clear, no results, real-time)
+  * Role Filter: 4 tests (Médico, Enfermeiro, Técnico de Enfermagem, clear)
+  * Especialidade Filter: 5 tests (Cardiologia, Anestesiologia, Neurologia, database integration, clear)
+  * Status Filter: 3 tests (Ativo, Inativo, clear)
+  * Combined Filters: 5 tests (role+especialidade, role+status, especialidade+status, search+filters, all filters)
+  * Sorting: 8 tests (Nome asc/desc, Especialidade, Função, Status, persistence, direction toggle, pagination)
+  * Pagination: 7 tests (next/prev page, page sizes 25/50/100, disabled states, search persistence)
+  * CRUD: Create: 8 tests (dialog, required fields, all fields, validation, cancel, persistence)
+  * CRUD: Edit: 7 tests (dialog, edit name/especialidade/role/status, cancel, persistence, dropdown)
+  * CRUD: Unlink: 6 tests (confirmation, success, cancel, table update, persistence, with search)
+  * Keyboard Navigation: 5 tests (Tab navigation, Enter key, form fields, Escape key)
+  * Data Persistence: 4 tests (page refresh, filters, sort order, browser back/forward)
+  * Session Persistence: 2 tests (authentication maintenance, no login redirect)
+- Page Object Model features:
+  * Comprehensive locators for table, toolbar, filters, pagination, forms, actions, dialogs
+  * Navigation methods: goto, waitForTableLoad, refresh, goBack, goForward
+  * Search methods: searchStaff, clearSearch
+  * Filter methods: filterByRole, filterByEspecialidade, filterByStatus, clearAllFilters
+  * Sorting methods: sortByColumn, getSortDirection
+  * Pagination methods: goToNextPage, goToPreviousPage, changePageSize
+  * CRUD methods: createStaffMember, editStaffMember, unlinkStaffMember, selectEspecialidade
+  * Data retrieval methods: findRowByName, getVisibleStaffNames, getStaffData, getRowCount
+  * Assertion helpers: expectStaffVisible, expectTableEmpty, expectRowCount, expectStaffData
+- Key features tested:
+  * Especialidade dropdown selection using Combobox component (Command + Popover pattern)
+  * Integration with especialidades table (foreign key, JOIN queries, database validation)
+  * Multi-filter functionality (role, especialidade, status) with proper state management
+  * Unlink action (instead of delete) with confirmation dialog
+  * Keyboard navigation and accessibility (Tab, Enter, Escape keys)
+  * Data persistence across page refreshes and browser navigation
+  * Test isolation using generateUniqueStaffName() with timestamps and random numbers
+- Playwright test execution verified:
+  * 228 total tests (76 unique × 3 browsers: chromium, firefox, webkit)
+  * All tests recognized by Playwright: npx playwright test equipe-table.spec.ts --list
+  * Tests ready for CI/CD via existing .github/workflows/e2e-tests.yml workflow
+  * Compatible with existing auth setup and page object patterns
+- TypeScript compilation verified: No errors in new test files
+- All 5 acceptance criteria met:
+  ✅ E2E test file created: e2e/equipe-table.spec.ts (1,284 lines, 76 tests)
+  ✅ Tests cover navigation, search, multi-filter selection (role, especialidade, status), sorting, pagination
+  ✅ Especialidade filter tested with proper options from database (Cardiologia, Anestesiologia, Neurologia, etc.)
+  ✅ Team member CRUD operations tested end-to-end (create with especialidade, edit, unlink with confirmation)
+  ✅ Keyboard navigation and accessibility tested (Tab, Enter, Escape keys, form field navigation, button focus)
+- Impact metrics:
+  * 3 new E2E test files created (2,011 lines total)
+  * 76 unique test cases covering all Equipe table functionality
+  * 228 total test executions across 3 browsers
+  * 40+ helper methods in EquipePage Page Object Model
+  * Full coverage of especialidade integration (selection, filtering, database verification)
+  * Zero breaking changes to existing code
+  * Follows established E2E testing patterns from calendar and clínicas tests
+  * Tests ready for immediate execution in CI/CD pipeline

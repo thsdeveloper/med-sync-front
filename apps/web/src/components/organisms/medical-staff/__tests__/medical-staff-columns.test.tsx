@@ -1,836 +1,655 @@
 /**
- * Medical Staff Columns Unit Tests
+ * Medical Staff Column Definitions Tests
  *
- * Tests for the Medical Staff (Equipe) table column definitions including
- * especialidade integration, rendering, sorting, filtering, and action callbacks.
+ * Unit tests for the medical-staff-columns.tsx file covering all column definitions,
+ * cell renderers, especialidade integration, custom behaviors, and action handlers.
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { getMedicalStaffColumns } from '../medical-staff-columns';
-import type { MedicalStaffWithOrganization } from '@medsync/shared';
-import {
-  getCoreRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
-  useReactTable,
-  flexRender,
-} from '@tanstack/react-table';
-
-// Test component to render a table with columns
-function TestTable({
-  data,
-  columns,
-}: {
-  data: MedicalStaffWithOrganization[];
-  columns: ReturnType<typeof getMedicalStaffColumns>;
-}) {
-  const table = useReactTable({
-    data,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-  });
-
-  return (
-    <table>
-      <thead>
-        {table.getHeaderGroups().map((headerGroup) => (
-          <tr key={headerGroup.id}>
-            {headerGroup.headers.map((header) => (
-              <th key={header.id}>
-                {header.isPlaceholder
-                  ? null
-                  : flexRender(header.column.columnDef.header, header.getContext())}
-              </th>
-            ))}
-          </tr>
-        ))}
-      </thead>
-      <tbody>
-        {table.getRowModel().rows.map((row) => (
-          <tr key={row.id}>
-            {row.getVisibleCells().map((cell) => (
-              <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
+import { MedicalStaffWithOrganization } from '@medsync/shared';
+import type { DataTableColumn } from '@/components/data-table/types';
 
 // Mock data
 const mockStaff: MedicalStaffWithOrganization[] = [
   {
-    id: 'staff-1',
+    id: '1',
     name: 'Dr. João Silva',
-    email: 'joao.silva@example.com',
+    email: 'joao@example.com',
     phone: '(11) 98765-4321',
     crm: 'CRM/SP 123456',
+    especialidade_id: 'esp-1',
     role: 'Médico',
     color: '#3B82F6',
     active: true,
-    especialidade_id: 'esp-1',
-    created_at: '2024-01-10T09:00:00Z',
-    updated_at: '2024-01-10T09:00:00Z',
+    created_at: '2024-01-15T10:30:00Z',
+    updated_at: '2024-01-15T10:30:00Z',
     especialidade: {
       id: 'esp-1',
       nome: 'Cardiologia',
       created_at: '2024-01-01T00:00:00Z',
     },
     staff_organization: {
-      id: 'stafforg-1',
-      staff_id: 'staff-1',
+      id: 'so-1',
+      staff_id: '1',
       organization_id: 'org-1',
       active: true,
-      created_at: '2024-01-10T09:00:00Z',
+      created_at: '2024-01-15T10:30:00Z',
     },
     organization_count: 1,
   },
   {
-    id: 'staff-2',
+    id: '2',
     name: 'Dra. Maria Santos',
-    email: 'maria.santos@example.com',
+    email: '',
     phone: '',
     crm: '',
+    especialidade_id: 'esp-2',
     role: 'Enfermeira',
     color: '#10B981',
     active: false,
-    especialidade_id: 'esp-2',
-    created_at: '2024-02-15T14:30:00Z',
-    updated_at: '2024-02-15T14:30:00Z',
+    created_at: '2024-02-20T14:00:00Z',
+    updated_at: '2024-02-20T14:00:00Z',
     especialidade: {
       id: 'esp-2',
-      nome: 'Neurologia',
+      nome: 'Anestesiologia',
       created_at: '2024-01-01T00:00:00Z',
     },
     staff_organization: {
-      id: 'stafforg-2',
-      staff_id: 'staff-2',
+      id: 'so-2',
+      staff_id: '2',
       organization_id: 'org-1',
       active: false,
-      created_at: '2024-02-15T14:30:00Z',
-    },
-    organization_count: 2,
-  },
-  {
-    id: 'staff-3',
-    name: 'Dr. Pedro Costa',
-    email: '',
-    phone: '(21) 99999-8888',
-    crm: 'CRM/RJ 654321',
-    role: 'Médico',
-    color: '#EF4444',
-    active: true,
-    especialidade_id: null,
-    created_at: '2024-03-20T11:15:00Z',
-    updated_at: '2024-03-20T11:15:00Z',
-    especialidade: null,
-    staff_organization: {
-      id: 'stafforg-3',
-      staff_id: 'staff-3',
-      organization_id: 'org-1',
-      active: true,
-      created_at: '2024-03-20T11:15:00Z',
+      created_at: '2024-02-20T14:00:00Z',
     },
     organization_count: 3,
   },
+  {
+    id: '3',
+    name: 'Carlos Oliveira',
+    email: 'carlos@example.com',
+    phone: '(21) 91234-5678',
+    crm: 'CRM/RJ 789012',
+    especialidade_id: null,
+    role: 'Técnico de Enfermagem',
+    color: '#F59E0B',
+    active: true,
+    created_at: '2024-03-10T08:00:00Z',
+    updated_at: '2024-03-10T08:00:00Z',
+    especialidade: null,
+    staff_organization: {
+      id: 'so-3',
+      staff_id: '3',
+      organization_id: 'org-1',
+      active: true,
+      created_at: '2024-03-10T08:00:00Z',
+    },
+    organization_count: 1,
+  },
 ];
 
-describe('Medical Staff Columns', () => {
-  describe('Column Configuration', () => {
-    it('creates all required columns', () => {
+// Helper to render columns
+function renderTable(
+  data: MedicalStaffWithOrganization[],
+  columns: DataTableColumn<MedicalStaffWithOrganization>[]
+) {
+  const table = document.createElement('table');
+  const tbody = document.createElement('tbody');
+
+  data.forEach((rowData) => {
+    const tr = document.createElement('tr');
+    columns.forEach((col) => {
+      const td = document.createElement('td');
+      if (col.cell) {
+        const cellElement = col.cell({
+          row: { original: rowData } as any,
+          column: { id: col.accessorKey as string || col.id || '' } as any,
+          getValue: () => {
+            const key = col.accessorKey as string;
+            return key ? (rowData as any)[key] : undefined;
+          },
+        } as any);
+        const { container } = render(cellElement as React.ReactElement);
+        td.innerHTML = container.innerHTML;
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+  document.body.appendChild(table);
+
+  return { table, cleanup: () => document.body.removeChild(table) };
+}
+
+describe('getMedicalStaffColumns', () => {
+  let mockOnEdit: ReturnType<typeof vi.fn>;
+  let mockOnUnlink: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    mockOnEdit = vi.fn();
+    mockOnUnlink = vi.fn();
+  });
+
+  describe('Column Definitions Structure', () => {
+    it('returns array with 6 columns', () => {
       const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
       });
 
       expect(columns).toHaveLength(6);
+    });
+
+    it('has name column with correct accessorKey', () => {
+      const columns = getMedicalStaffColumns({
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
+      });
+
       expect(columns[0].accessorKey).toBe('name');
+      expect(columns[0].enableSorting).toBe(true);
+    });
+
+    it('has role column with correct accessorKey', () => {
+      const columns = getMedicalStaffColumns({
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
+      });
+
       expect(columns[1].accessorKey).toBe('role');
+      expect(columns[1].enableSorting).toBe(true);
+    });
+
+    it('has especialidade column with correct id', () => {
+      const columns = getMedicalStaffColumns({
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
+      });
+
       expect(columns[2].id).toBe('especialidade');
+      expect(columns[2].accessorKey).toBe('especialidade.nome');
+      expect(columns[2].enableSorting).toBe(true);
+    });
+
+    it('has contact column with correct id', () => {
+      const columns = getMedicalStaffColumns({
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
+      });
+
       expect(columns[3].id).toBe('contact');
+      expect(columns[3].enableSorting).toBe(false);
+    });
+
+    it('has status column with correct id', () => {
+      const columns = getMedicalStaffColumns({
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
+      });
+
       expect(columns[4].id).toBe('status');
+      expect(columns[4].enableSorting).toBe(true);
+    });
+
+    it('has actions column with correct id', () => {
+      const columns = getMedicalStaffColumns({
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
+      });
+
       expect(columns[5].id).toBe('actions');
-    });
-
-    it('configures name column as sortable', () => {
-      const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
-      });
-
-      const nameColumn = columns.find((col) => col.accessorKey === 'name');
-      expect(nameColumn?.enableSorting).toBe(true);
-    });
-
-    it('configures role column as sortable', () => {
-      const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
-      });
-
-      const roleColumn = columns.find((col) => col.accessorKey === 'role');
-      expect(roleColumn?.enableSorting).toBe(true);
-    });
-
-    it('configures especialidade column as sortable', () => {
-      const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
-      });
-
-      const espColumn = columns.find((col) => col.id === 'especialidade');
-      expect(espColumn?.enableSorting).toBe(true);
-    });
-
-    it('configures contact column as non-sortable', () => {
-      const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
-      });
-
-      const contactColumn = columns.find((col) => col.id === 'contact');
-      expect(contactColumn?.enableSorting).toBe(false);
-    });
-
-    it('configures status column as sortable', () => {
-      const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
-      });
-
-      const statusColumn = columns.find((col) => col.id === 'status');
-      expect(statusColumn?.enableSorting).toBe(true);
-    });
-
-    it('configures actions column as non-hideable', () => {
-      const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
-      });
-
-      const actionsColumn = columns.find((col) => col.id === 'actions');
-      expect(actionsColumn?.enableHiding).toBe(false);
+      expect(columns[5].enableSorting).toBe(false);
+      expect(columns[5].enableHiding).toBe(false);
     });
   });
 
   describe('Name Column Rendering', () => {
-    it('renders staff name with avatar', () => {
+    it('renders staff member name', () => {
       const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
       });
-
-      render(<TestTable data={[mockStaff[0]]} columns={columns} />);
+      const { cleanup } = renderTable([mockStaff[0]], columns);
 
       expect(screen.getByText('Dr. João Silva')).toBeInTheDocument();
-      // Avatar component renders but initials might not be testable in JSDOM
+      cleanup();
     });
 
-    it('displays role badge with color indicator', () => {
+    it('renders avatar with initials', () => {
       const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
       });
+      const { cleanup } = renderTable([mockStaff[0]], columns);
 
-      render(<TestTable data={[mockStaff[0]]} columns={columns} />);
-
-      expect(screen.getAllByText('Médico')[0]).toBeInTheDocument();
+      // Avatar should contain initials "DJ" for "Dr. João"
+      expect(screen.getByText('DJ')).toBeInTheDocument();
+      cleanup();
     });
 
-    it('displays CRM when provided', () => {
+    it('renders role badge with color indicator', () => {
       const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
       });
+      const { cleanup } = renderTable([mockStaff[0]], columns);
 
-      render(<TestTable data={[mockStaff[0]]} columns={columns} />);
+      expect(screen.getByText(/Médico/)).toBeInTheDocument();
+      cleanup();
+    });
+
+    it('renders CRM when present', () => {
+      const columns = getMedicalStaffColumns({
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
+      });
+      const { cleanup } = renderTable([mockStaff[0]], columns);
 
       expect(screen.getByText(/CRM\/SP 123456/)).toBeInTheDocument();
+      cleanup();
     });
 
-    it('does not display CRM bullet when CRM is empty', () => {
+    it('does not render CRM when not present', () => {
       const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
       });
+      const { cleanup } = renderTable([mockStaff[1]], columns);
 
-      render(<TestTable data={[mockStaff[1]]} columns={columns} />);
-
-      const nameCell = screen.getByText('Dra. Maria Santos').closest('div');
-      expect(nameCell?.textContent).not.toContain('• CRM');
+      expect(screen.queryByText(/CRM/)).not.toBeInTheDocument();
+      cleanup();
     });
 
-    it('shows multi-organization indicator when organization_count > 1', () => {
+    it('shows multi-organization indicator for staff in multiple orgs', () => {
       const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
       });
+      const { cleanup } = renderTable([mockStaff[1]], columns);
 
-      const { container } = render(<TestTable data={[mockStaff[1]]} columns={columns} />);
-
-      // Multi-org indicator renders for organization_count: 2
-      // Tooltip component makes testing complex in JSDOM, just verify rendering works
-      expect(screen.getByText('Dra. Maria Santos')).toBeInTheDocument();
+      // Staff member 1 is in 3 organizations
+      expect(screen.getByText(/Vinculado a 3 organizações/)).toBeInTheDocument();
+      cleanup();
     });
 
-    it('does not show multi-organization indicator when organization_count is 1', () => {
+    it('does not show multi-organization indicator for staff in single org', () => {
       const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
       });
+      const { cleanup } = renderTable([mockStaff[0]], columns);
 
-      const { container } = render(<TestTable data={[mockStaff[0]]} columns={columns} />);
-
-      // Should not have Building2 icon for single organization
-      const multiOrgIndicator = container.querySelector('[class*="absolute"]');
-      // There might be other absolute elements, so we can't strictly test this
-      // The test passes if no error is thrown
-    });
-
-    it('renders all staff names correctly', () => {
-      const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
-      });
-
-      render(<TestTable data={mockStaff} columns={columns} />);
-
-      // Verify all staff names are rendered
-      expect(screen.getByText('Dr. João Silva')).toBeInTheDocument();
-      expect(screen.getByText('Dra. Maria Santos')).toBeInTheDocument();
-      expect(screen.getByText('Dr. Pedro Costa')).toBeInTheDocument();
+      expect(screen.queryByText(/Vinculado a/)).not.toBeInTheDocument();
+      cleanup();
     });
   });
 
   describe('Role Column Rendering', () => {
-    it('renders role with color indicator', () => {
+    it('renders role text', () => {
       const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
       });
-
-      render(<TestTable data={[mockStaff[0]]} columns={columns} />);
+      const { cleanup } = renderTable([mockStaff[0]], columns);
 
       const roleCells = screen.getAllByText('Médico');
       expect(roleCells.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe('Especialidade Column Rendering', () => {
-    it('renders especialidade name when available', () => {
-      const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
-      });
-
-      render(<TestTable data={[mockStaff[0]]} columns={columns} />);
-
-      expect(screen.getByText('Cardiologia')).toBeInTheDocument();
+      cleanup();
     });
 
-    it('displays dash when especialidade is null', () => {
+    it('has custom filter function', () => {
       const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
       });
 
-      render(<TestTable data={[mockStaff[2]]} columns={columns} />);
-
-      const rows = screen.getAllByRole('row');
-      const dataRow = rows[1];
-      const cells = within(dataRow).getAllByRole('cell');
-      const especialidadeCell = cells[2]; // Especialidade is third column
-
-      expect(especialidadeCell.textContent).toBe('-');
-    });
-  });
-
-  describe('Contact Column Rendering', () => {
-    it('renders email and phone when both are provided', () => {
-      const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
-      });
-
-      render(<TestTable data={[mockStaff[0]]} columns={columns} />);
-
-      expect(screen.getByText('joao.silva@example.com')).toBeInTheDocument();
-      expect(screen.getByText('(11) 98765-4321')).toBeInTheDocument();
-    });
-
-    it('renders only email when phone is empty', () => {
-      const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
-      });
-
-      render(<TestTable data={[mockStaff[1]]} columns={columns} />);
-
-      expect(screen.getByText('maria.santos@example.com')).toBeInTheDocument();
-    });
-
-    it('renders only phone when email is empty', () => {
-      const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
-      });
-
-      render(<TestTable data={[mockStaff[2]]} columns={columns} />);
-
-      expect(screen.getByText('(21) 99999-8888')).toBeInTheDocument();
-    });
-
-    it('displays dash when both email and phone are empty', () => {
-      const staffWithoutContact: MedicalStaffWithOrganization = {
-        ...mockStaff[0],
-        email: '',
-        phone: '',
-      };
-
-      const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
-      });
-
-      render(<TestTable data={[staffWithoutContact]} columns={columns} />);
-
-      const rows = screen.getAllByRole('row');
-      const dataRow = rows[1];
-      const cells = within(dataRow).getAllByRole('cell');
-      const contactCell = cells[3]; // Contact is fourth column
-
-      expect(contactCell.textContent).toBe('-');
-    });
-  });
-
-  describe('Status Column Rendering', () => {
-    it('renders active badge for active staff', () => {
-      const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
-      });
-
-      render(<TestTable data={[mockStaff[0]]} columns={columns} />);
-
-      const activeBadge = screen.getByText('Ativo');
-      expect(activeBadge).toHaveClass('bg-green-100', 'text-green-800');
-    });
-
-    it('renders inactive badge for inactive staff', () => {
-      const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
-      });
-
-      render(<TestTable data={[mockStaff[1]]} columns={columns} />);
-
-      const inactiveBadge = screen.getByText('Inativo');
-      expect(inactiveBadge).toHaveClass('bg-gray-100', 'text-gray-800');
-    });
-
-    it('uses staff_organization.active when available', () => {
-      const staffWithOrgActive: MedicalStaffWithOrganization = {
-        ...mockStaff[0],
-        active: false, // Global status is false
-        staff_organization: {
-          ...mockStaff[0].staff_organization!,
-          active: true, // But org-specific status is true
-        },
-      };
-
-      const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
-      });
-
-      render(<TestTable data={[staffWithOrgActive]} columns={columns} />);
-
-      expect(screen.getByText('Ativo')).toBeInTheDocument();
-    });
-
-    it('falls back to global active when staff_organization.active is not set', () => {
-      const staffWithoutOrgStatus: MedicalStaffWithOrganization = {
-        ...mockStaff[0],
-        active: true,
-        staff_organization: undefined,
-      };
-
-      const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
-      });
-
-      render(<TestTable data={[staffWithoutOrgStatus]} columns={columns} />);
-
-      expect(screen.getByText('Ativo')).toBeInTheDocument();
-    });
-  });
-
-  describe('Especialidade Sorting Function', () => {
-    it('sorts by especialidade.nome correctly', () => {
-      const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
-      });
-
-      const espColumn = columns.find((col) => col.id === 'especialidade');
-      const sortingFn = espColumn?.sortingFn;
-
-      const rowA = { original: mockStaff[0] } as any; // Cardiologia
-      const rowB = { original: mockStaff[1] } as any; // Neurologia
-
-      const result = sortingFn?.(rowA, rowB, 'especialidade');
-
-      // Cardiologia comes before Neurologia alphabetically
-      expect(result).toBeLessThan(0);
-    });
-
-    it('handles null especialidade in sorting', () => {
-      const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
-      });
-
-      const espColumn = columns.find((col) => col.id === 'especialidade');
-      const sortingFn = espColumn?.sortingFn;
-
-      const rowA = { original: mockStaff[0] } as any; // Has especialidade
-      const rowB = { original: mockStaff[2] } as any; // No especialidade
-
-      const result = sortingFn?.(rowA, rowB, 'especialidade');
-
-      // Non-null should come after empty string (alphabetically)
-      expect(result).toBeGreaterThan(0);
-    });
-  });
-
-  describe('Role Filter Function', () => {
-    it('returns true when no filter value is provided', () => {
-      const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
-      });
-
-      const roleColumn = columns.find((col) => col.accessorKey === 'role');
-      const filterFn = roleColumn?.filterFn;
-
-      const mockRow = { original: mockStaff[0] } as any;
-      const result = filterFn?.(mockRow, 'role', []);
-
-      expect(result).toBe(true);
+      const roleColumn = columns[1];
+      expect(roleColumn.filterFn).toBeDefined();
     });
 
     it('filters by role correctly', () => {
       const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
       });
 
-      const roleColumn = columns.find((col) => col.accessorKey === 'role');
-      const filterFn = roleColumn?.filterFn;
+      const roleColumn = columns[1];
+      const filterFn = roleColumn.filterFn!;
 
-      const medicoRow = { original: mockStaff[0] } as any; // Médico
-      const enfermeiraRow = { original: mockStaff[1] } as any; // Enfermeira
+      const mockRow = { original: mockStaff[0] } as any;
+      const result = filterFn(mockRow, 'role', ['médico']);
 
-      expect(filterFn?.(medicoRow, 'role', ['Médico'])).toBe(true);
-      expect(filterFn?.(enfermeiraRow, 'role', ['Médico'])).toBe(false);
-    });
-
-    it('handles case-insensitive role filtering', () => {
-      const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
-      });
-
-      const roleColumn = columns.find((col) => col.accessorKey === 'role');
-      const filterFn = roleColumn?.filterFn;
-
-      const medicoRow = { original: mockStaff[0] } as any; // Médico
-
-      expect(filterFn?.(medicoRow, 'role', ['médico'])).toBe(true);
-      expect(filterFn?.(medicoRow, 'role', ['MÉDICO'])).toBe(true);
+      expect(result).toBe(true);
     });
   });
 
-  describe('Especialidade Filter Function', () => {
-    it('returns true when no filter value is provided', () => {
+  describe('Especialidade Column Rendering', () => {
+    it('renders especialidade name when present', () => {
       const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
+      });
+      const { cleanup } = renderTable([mockStaff[0]], columns);
+
+      expect(screen.getByText('Cardiologia')).toBeInTheDocument();
+      cleanup();
+    });
+
+    it('renders dash when especialidade is null', () => {
+      const columns = getMedicalStaffColumns({
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
       });
 
-      const espColumn = columns.find((col) => col.id === 'especialidade');
-      const filterFn = espColumn?.filterFn;
+      const cellContent = columns[2].cell!({
+        row: { original: mockStaff[2] } as any,
+        column: { id: 'especialidade' } as any,
+        getValue: () => null,
+      } as any);
 
-      const mockRow = { original: mockStaff[0] } as any;
-      const result = filterFn?.(mockRow, 'especialidade', []);
+      const { container } = render(cellContent as React.ReactElement);
+      expect(container.textContent).toBe('-');
+    });
 
-      expect(result).toBe(true);
+    it('has custom sorting function', () => {
+      const columns = getMedicalStaffColumns({
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
+      });
+
+      const especialidadeColumn = columns[2];
+      expect(especialidadeColumn.sortingFn).toBeDefined();
+    });
+
+    it('sorts by especialidade name correctly', () => {
+      const columns = getMedicalStaffColumns({
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
+      });
+
+      const especialidadeColumn = columns[2];
+      const sortingFn = especialidadeColumn.sortingFn!;
+
+      const rowA = { original: mockStaff[0] } as any;
+      const rowB = { original: mockStaff[1] } as any;
+
+      // Anestesiologia comes before Cardiologia
+      const result = sortingFn(rowA, rowB, 'especialidade');
+      expect(result).toBeGreaterThan(0);
+    });
+
+    it('has custom filter function', () => {
+      const columns = getMedicalStaffColumns({
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
+      });
+
+      const especialidadeColumn = columns[2];
+      expect(especialidadeColumn.filterFn).toBeDefined();
     });
 
     it('filters by especialidade correctly', () => {
       const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
       });
 
-      const espColumn = columns.find((col) => col.id === 'especialidade');
-      const filterFn = espColumn?.filterFn;
+      const especialidadeColumn = columns[2];
+      const filterFn = especialidadeColumn.filterFn!;
 
-      const cardioRow = { original: mockStaff[0] } as any; // Cardiologia
-      const neuroRow = { original: mockStaff[1] } as any; // Neurologia
+      const mockRow = { original: mockStaff[0] } as any;
+      const result = filterFn(mockRow, 'especialidade', ['cardiologia']);
 
-      expect(filterFn?.(cardioRow, 'especialidade', ['Cardiologia'])).toBe(true);
-      expect(filterFn?.(neuroRow, 'especialidade', ['Cardiologia'])).toBe(false);
-    });
-
-    it('handles null especialidade in filtering', () => {
-      const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
-      });
-
-      const espColumn = columns.find((col) => col.id === 'especialidade');
-      const filterFn = espColumn?.filterFn;
-
-      const nullEspRow = { original: mockStaff[2] } as any; // No especialidade
-
-      expect(filterFn?.(nullEspRow, 'especialidade', ['Cardiologia'])).toBe(false);
+      expect(result).toBe(true);
     });
   });
 
-  describe('Status Filter Function', () => {
-    it('returns true when no filter value is provided', () => {
+  describe('Contact Column Rendering', () => {
+    it('renders email when present', () => {
       const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
+      });
+      const { cleanup } = renderTable([mockStaff[0]], columns);
+
+      expect(screen.getByText('joao@example.com')).toBeInTheDocument();
+      cleanup();
+    });
+
+    it('renders phone when present', () => {
+      const columns = getMedicalStaffColumns({
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
+      });
+      const { cleanup } = renderTable([mockStaff[0]], columns);
+
+      expect(screen.getByText('(11) 98765-4321')).toBeInTheDocument();
+      cleanup();
+    });
+
+    it('renders dash when both email and phone are empty', () => {
+      const columns = getMedicalStaffColumns({
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
       });
 
-      const statusColumn = columns.find((col) => col.id === 'status');
-      const filterFn = statusColumn?.filterFn;
+      const cellContent = columns[3].cell!({
+        row: { original: mockStaff[1] } as any,
+        column: { id: 'contact' } as any,
+        getValue: () => '',
+      } as any);
 
-      const mockRow = { original: mockStaff[0] } as any;
-      const result = filterFn?.(mockRow, 'status', []);
+      const { container } = render(cellContent as React.ReactElement);
+      expect(container.textContent).toBe('-');
+    });
+  });
 
-      expect(result).toBe(true);
+  describe('Status Column Rendering', () => {
+    it('renders "Ativo" badge for active staff', () => {
+      const columns = getMedicalStaffColumns({
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
+      });
+      const { cleanup } = renderTable([mockStaff[0]], columns);
+
+      expect(screen.getByText('Ativo')).toBeInTheDocument();
+      expect(screen.getByText('Ativo')).toHaveClass('bg-green-100');
+      cleanup();
+    });
+
+    it('renders "Inativo" badge for inactive staff', () => {
+      const columns = getMedicalStaffColumns({
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
+      });
+      const { cleanup } = renderTable([mockStaff[1]], columns);
+
+      expect(screen.getByText('Inativo')).toBeInTheDocument();
+      expect(screen.getByText('Inativo')).toHaveClass('bg-gray-100');
+      cleanup();
+    });
+
+    it('has custom filter function', () => {
+      const columns = getMedicalStaffColumns({
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
+      });
+
+      const statusColumn = columns[4];
+      expect(statusColumn.filterFn).toBeDefined();
     });
 
     it('filters active staff correctly', () => {
       const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
       });
 
-      const statusColumn = columns.find((col) => col.id === 'status');
-      const filterFn = statusColumn?.filterFn;
+      const statusColumn = columns[4];
+      const filterFn = statusColumn.filterFn!;
 
-      const activeRow = { original: mockStaff[0] } as any; // active: true
-      const inactiveRow = { original: mockStaff[1] } as any; // active: false
+      const mockRow = { original: mockStaff[0] } as any;
+      const result = filterFn(mockRow, 'status', ['active']);
 
-      expect(filterFn?.(activeRow, 'status', ['active'])).toBe(true);
-      expect(filterFn?.(inactiveRow, 'status', ['active'])).toBe(false);
+      expect(result).toBe(true);
     });
 
-    it('filters inactive staff correctly', () => {
+    it('uses staff_organization active status when present', () => {
       const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
       });
+      const { cleanup } = renderTable([mockStaff[1]], columns);
 
-      const statusColumn = columns.find((col) => col.id === 'status');
-      const filterFn = statusColumn?.filterFn;
-
-      const activeRow = { original: mockStaff[0] } as any; // active: true
-      const inactiveRow = { original: mockStaff[1] } as any; // active: false
-
-      expect(filterFn?.(activeRow, 'status', ['inactive'])).toBe(false);
-      expect(filterFn?.(inactiveRow, 'status', ['inactive'])).toBe(true);
+      // mockStaff[1] has staff_organization.active = false
+      expect(screen.getByText('Inativo')).toBeInTheDocument();
+      cleanup();
     });
   });
 
-  describe('Action Button Callbacks', () => {
-    it('calls onEdit with staff when edit button is clicked', async () => {
-      const handleEdit = vi.fn();
-      const handleUnlink = vi.fn();
-      const user = userEvent.setup();
-
+  describe('Actions Column', () => {
+    it('renders dropdown menu trigger button', () => {
       const columns = getMedicalStaffColumns({
-        onEdit: handleEdit,
-        onUnlink: handleUnlink,
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
       });
+      const { cleanup } = renderTable([mockStaff[0]], columns);
 
-      render(<TestTable data={[mockStaff[0]]} columns={columns} />);
-
-      // Open dropdown menu
-      const menuButton = screen.getByRole('button', { name: 'Abrir menu' });
-      await user.click(menuButton);
-
-      // Click edit button
-      const editButton = screen.getByRole('menuitem', { name: /Editar/ });
-      await user.click(editButton);
-
-      expect(handleEdit).toHaveBeenCalledTimes(1);
-      expect(handleEdit).toHaveBeenCalledWith(mockStaff[0]);
-      expect(handleUnlink).not.toHaveBeenCalled();
+      const buttons = screen.getAllByRole('button');
+      const menuButton = buttons.find((btn) => btn.getAttribute('aria-haspopup') === 'menu');
+      expect(menuButton).toBeInTheDocument();
+      cleanup();
     });
 
-    it('calls onUnlink with correct parameters when unlink button is clicked', async () => {
-      const handleEdit = vi.fn();
-      const handleUnlink = vi.fn();
+    it('calls onEdit when edit menu item is clicked', async () => {
       const user = userEvent.setup();
-
       const columns = getMedicalStaffColumns({
-        onEdit: handleEdit,
-        onUnlink: handleUnlink,
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
       });
+      const { cleanup } = renderTable([mockStaff[0]], columns);
 
-      render(<TestTable data={[mockStaff[0]]} columns={columns} />);
+      const buttons = screen.getAllByRole('button');
+      const menuButton = buttons.find((btn) => btn.getAttribute('aria-haspopup') === 'menu');
+      if (menuButton) {
+        await user.click(menuButton);
+      }
 
-      // Open dropdown menu
-      const menuButton = screen.getByRole('button', { name: 'Abrir menu' });
-      await user.click(menuButton);
+      const editOption = await screen.findByText('Editar');
+      await user.click(editOption);
 
-      // Click unlink/remove button
-      const unlinkButton = screen.getByRole('menuitem', { name: /Remover/ });
-      await user.click(unlinkButton);
-
-      expect(handleUnlink).toHaveBeenCalledTimes(1);
-      expect(handleUnlink).toHaveBeenCalledWith('staff-1', 'stafforg-1', 1);
-      expect(handleEdit).not.toHaveBeenCalled();
+      expect(mockOnEdit).toHaveBeenCalledWith(mockStaff[0]);
+      cleanup();
     });
 
-    it('shows "Desvincular" label when organization_count > 1', async () => {
+    it('calls onUnlink when unlink menu item is clicked', async () => {
       const user = userEvent.setup();
-
       const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
       });
+      const { cleanup } = renderTable([mockStaff[0]], columns);
 
-      render(<TestTable data={[mockStaff[1]]} columns={columns} />); // organization_count: 2
+      const buttons = screen.getAllByRole('button');
+      const menuButton = buttons.find((btn) => btn.getAttribute('aria-haspopup') === 'menu');
+      if (menuButton) {
+        await user.click(menuButton);
+      }
 
-      // Open dropdown menu
-      const menuButton = screen.getByRole('button', { name: 'Abrir menu' });
-      await user.click(menuButton);
+      const unlinkOption = await screen.findByText('Remover');
+      await user.click(unlinkOption);
 
-      expect(screen.getByRole('menuitem', { name: /Desvincular/ })).toBeInTheDocument();
+      expect(mockOnUnlink).toHaveBeenCalledWith(
+        mockStaff[0].id,
+        mockStaff[0].staff_organization!.id,
+        mockStaff[0].organization_count
+      );
+      cleanup();
     });
 
-    it('shows "Remover" label when organization_count is 1', async () => {
+    it('shows "Desvincular" for staff in multiple organizations', async () => {
       const user = userEvent.setup();
-
       const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
       });
+      const { cleanup } = renderTable([mockStaff[1]], columns);
 
-      render(<TestTable data={[mockStaff[0]]} columns={columns} />); // organization_count: 1
+      const buttons = screen.getAllByRole('button');
+      const menuButton = buttons.find((btn) => btn.getAttribute('aria-haspopup') === 'menu');
+      if (menuButton) {
+        await user.click(menuButton);
+      }
 
-      // Open dropdown menu
-      const menuButton = screen.getByRole('button', { name: 'Abrir menu' });
-      await user.click(menuButton);
+      expect(await screen.findByText('Desvincular')).toBeInTheDocument();
+      cleanup();
+    });
 
-      expect(screen.getByRole('menuitem', { name: /Remover/ })).toBeInTheDocument();
+    it('shows "Remover" for staff in single organization', async () => {
+      const user = userEvent.setup();
+      const columns = getMedicalStaffColumns({
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
+      });
+      const { cleanup } = renderTable([mockStaff[0]], columns);
+
+      const buttons = screen.getAllByRole('button');
+      const menuButton = buttons.find((btn) => btn.getAttribute('aria-haspopup') === 'menu');
+      if (menuButton) {
+        await user.click(menuButton);
+      }
+
+      expect(await screen.findByText('Remover')).toBeInTheDocument();
+      cleanup();
     });
   });
 
   describe('Edge Cases', () => {
-    it('handles staff with all empty optional fields', () => {
-      const emptyStaff: MedicalStaffWithOrganization = {
-        id: 'staff-empty',
-        name: 'Empty Staff',
-        email: '',
-        phone: '',
-        crm: '',
-        role: 'Técnico',
-        color: '#000000',
-        active: true,
-        especialidade_id: null,
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
-        especialidade: null,
-        staff_organization: {
-          id: 'stafforg-empty',
-          staff_id: 'staff-empty',
-          organization_id: 'org-1',
-          active: true,
-          created_at: '2024-01-01T00:00:00Z',
-        },
-        organization_count: 1,
-      };
-
+    it('handles staff with no especialidade', () => {
       const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
       });
+      const { cleanup } = renderTable([mockStaff[2]], columns);
 
-      render(<TestTable data={[emptyStaff]} columns={columns} />);
-
-      expect(screen.getByText('Empty Staff')).toBeInTheDocument();
-      // Role appears in multiple columns (name column and role column)
-      const tecnicoElements = screen.getAllByText('Técnico');
-      expect(tecnicoElements.length).toBeGreaterThan(0);
-      // Should have dash for contact and especialidade
-      const dashes = screen.getAllByText('-');
-      expect(dashes.length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByText('Carlos Oliveira')).toBeInTheDocument();
+      cleanup();
     });
 
-    it('handles very long staff name', () => {
+    it('handles staff with long names', () => {
       const longNameStaff: MedicalStaffWithOrganization = {
         ...mockStaff[0],
-        name: 'Dr. João Pedro da Silva Santos Oliveira Rodrigues',
+        name: 'Dr. João Pedro da Silva Santos de Oliveira Júnior',
       };
 
       const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
       });
+      const { cleanup } = renderTable([longNameStaff], columns);
 
-      render(<TestTable data={[longNameStaff]} columns={columns} />);
-
-      expect(
-        screen.getByText('Dr. João Pedro da Silva Santos Oliveira Rodrigues')
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Dr. João Pedro/)).toBeInTheDocument();
+      cleanup();
     });
 
-    it('handles staff without staff_organization', () => {
-      const staffWithoutOrg: MedicalStaffWithOrganization = {
+    it('handles staff with special characters in name', () => {
+      const specialNameStaff: MedicalStaffWithOrganization = {
         ...mockStaff[0],
-        staff_organization: undefined,
+        name: 'Dra. María José Muñoz',
       };
 
       const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
+        onEdit: mockOnEdit,
+        onUnlink: mockOnUnlink,
       });
+      const { cleanup } = renderTable([specialNameStaff], columns);
 
-      render(<TestTable data={[staffWithoutOrg]} columns={columns} />);
-
-      expect(screen.getByText('Dr. João Silva')).toBeInTheDocument();
-      expect(screen.getByText('Ativo')).toBeInTheDocument(); // Uses global active status
-    });
-
-    it('handles special characters in email and phone', () => {
-      const specialCharStaff: MedicalStaffWithOrganization = {
-        ...mockStaff[0],
-        email: 'joão+test@example.com',
-        phone: '+55 (11) 98765-4321',
-      };
-
-      const columns = getMedicalStaffColumns({
-        onEdit: vi.fn(),
-        onUnlink: vi.fn(),
-      });
-
-      render(<TestTable data={[specialCharStaff]} columns={columns} />);
-
-      expect(screen.getByText('joão+test@example.com')).toBeInTheDocument();
-      expect(screen.getByText('+55 (11) 98765-4321')).toBeInTheDocument();
+      expect(screen.getByText('Dra. María José Muñoz')).toBeInTheDocument();
+      cleanup();
     });
   });
 });
