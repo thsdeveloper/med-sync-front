@@ -494,7 +494,7 @@
         "No manual refresh required to see updated statuses",
         "Handles network interruptions gracefully with reconnection"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F034",

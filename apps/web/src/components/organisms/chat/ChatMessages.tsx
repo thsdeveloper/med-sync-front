@@ -13,6 +13,8 @@ import { useChat } from '@/providers/ChatProvider';
 import { DocumentAttachmentCard } from '@/components/molecules/DocumentAttachmentCard';
 import { AttachmentReviewDialog } from '@/components/organisms/AttachmentReviewDialog';
 import { useAttachmentReview } from '@/hooks/useAttachmentReview';
+import { useAttachmentRealtime } from '@medsync/shared/hooks';
+import { toast } from 'sonner';
 import type { MessageWithSender, SupportConversationWithDetails, ChatAttachment } from '@medsync/shared';
 
 interface ChatMessagesProps {
@@ -176,6 +178,48 @@ export function ChatMessages({ conversationId }: ChatMessagesProps) {
       supabase.removeChannel(channel);
     };
   }, [conversationId, staffId, supabase]);
+
+  // Handle real-time attachment status changes
+  const handleAttachmentStatusChange = useCallback(
+    (updatedAttachment: ChatAttachment) => {
+      // Update messages with the new attachment status
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) => {
+          if (!msg.attachments || msg.attachments.length === 0) return msg;
+
+          // Check if this message contains the updated attachment
+          const hasAttachment = msg.attachments.some(
+            (att) => att.id === updatedAttachment.id
+          );
+
+          if (!hasAttachment) return msg;
+
+          // Update the specific attachment in this message
+          return {
+            ...msg,
+            attachments: msg.attachments.map((att) =>
+              att.id === updatedAttachment.id ? updatedAttachment : att
+            ),
+          };
+        })
+      );
+
+      // Show toast notification
+      if (updatedAttachment.status === 'accepted') {
+        toast.success('Documento Aprovado', {
+          description: `${updatedAttachment.file_name} foi aprovado`,
+        });
+      } else if (updatedAttachment.status === 'rejected') {
+        toast.error('Documento Rejeitado', {
+          description: updatedAttachment.rejected_reason || `${updatedAttachment.file_name} foi rejeitado`,
+        });
+      }
+    },
+    []
+  );
+
+  // Subscribe to real-time attachment status changes
+  useAttachmentRealtime(supabase, conversationId, handleAttachmentStatusChange);
 
   // Auto-scroll to bottom
   useEffect(() => {

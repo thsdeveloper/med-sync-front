@@ -25,6 +25,7 @@ import AttachmentDisplay from '@/components/molecules/AttachmentDisplay';
 import ImageViewer from '@/components/organisms/ImageViewer';
 import { useAttachmentUpload, linkAttachmentsToMessage } from '@/hooks/useAttachmentUpload';
 import { useAttachmentDownload } from '@/hooks/useAttachmentDownload';
+import { useAttachmentRealtime } from '@medsync/shared/hooks';
 import * as Sharing from 'expo-sharing';
 import type { SelectedFile } from '@/lib/attachment-utils';
 import type { MessageWithSender, ConversationWithDetails, ChatAttachment } from '@medsync/shared';
@@ -172,6 +173,54 @@ export default function ChatConversationScreen() {
       supabase.removeChannel(channel);
     };
   }, [id, staff?.id]);
+
+  // Handle real-time attachment status changes
+  const handleAttachmentStatusChange = useCallback(
+    (updatedAttachment: ChatAttachment) => {
+      // Update messages with the new attachment status
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) => {
+          if (!msg.attachments || msg.attachments.length === 0) return msg;
+
+          // Check if this message contains the updated attachment
+          const hasAttachment = msg.attachments.some(
+            (att) => att.id === updatedAttachment.id
+          );
+
+          if (!hasAttachment) return msg;
+
+          // Update the specific attachment in this message
+          return {
+            ...msg,
+            attachments: msg.attachments.map((att) =>
+              att.id === updatedAttachment.id ? updatedAttachment : att
+            ),
+          };
+        })
+      );
+
+      // Show alert notification if this attachment was uploaded by current user
+      if (updatedAttachment.sender_id === staff?.id) {
+        if (updatedAttachment.status === 'accepted') {
+          Alert.alert(
+            'Documento Aprovado',
+            `${updatedAttachment.file_name} foi aprovado`,
+            [{ text: 'OK' }]
+          );
+        } else if (updatedAttachment.status === 'rejected') {
+          Alert.alert(
+            'Documento Rejeitado',
+            updatedAttachment.rejected_reason || `${updatedAttachment.file_name} foi rejeitado`,
+            [{ text: 'OK' }]
+          );
+        }
+      }
+    },
+    [staff?.id]
+  );
+
+  // Subscribe to real-time attachment status changes
+  useAttachmentRealtime(supabase, id || null, handleAttachmentStatusChange);
 
   const handleFilesSelected = useCallback((files: SelectedFile[]) => {
     setSelectedFiles((prev) => [...prev, ...files]);

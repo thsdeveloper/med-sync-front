@@ -128,9 +128,40 @@ async function rejectAttachment({
 export function useAttachmentReview() {
   const queryClient = useQueryClient();
 
-  // Accept mutation
+  // Accept mutation with optimistic updates
   const acceptMutation = useMutation({
     mutationFn: acceptAttachment,
+    onMutate: async ({ attachmentId }) => {
+      // Cancel any outgoing refetches to prevent overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ['chat', 'messages'] });
+
+      // Snapshot the previous value for rollback
+      const previousMessages = queryClient.getQueryData(['chat', 'messages']);
+
+      // Optimistically update to the new value
+      queryClient.setQueriesData({ queryKey: ['chat', 'messages'] }, (old: any) => {
+        if (!old) return old;
+
+        // Update attachment status in cached data
+        return {
+          ...old,
+          pages: old.pages?.map((page: any) => ({
+            ...page,
+            data: page.data?.map((msg: any) => ({
+              ...msg,
+              attachments: msg.attachments?.map((att: ChatAttachment) =>
+                att.id === attachmentId
+                  ? { ...att, status: 'accepted' as const }
+                  : att
+              ),
+            })),
+          })),
+        };
+      });
+
+      // Return context with previous value for rollback
+      return { previousMessages };
+    },
     onSuccess: (response) => {
       if (response.success) {
         // Invalidate chat queries to refetch messages with updated attachments
@@ -142,15 +173,55 @@ export function useAttachmentReview() {
         toast.error(response.error || 'Erro ao aprovar documento');
       }
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables, context) => {
+      // Rollback to previous value on error
+      if (context?.previousMessages) {
+        queryClient.setQueryData(['chat', 'messages'], context.previousMessages);
+      }
+
       console.error('Accept mutation error:', error);
       toast.error('Erro ao aprovar documento. Tente novamente.');
     },
+    onSettled: () => {
+      // Always refetch after error or success to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ['chat', 'messages'] });
+    },
   });
 
-  // Reject mutation
+  // Reject mutation with optimistic updates
   const rejectMutation = useMutation({
     mutationFn: rejectAttachment,
+    onMutate: async ({ attachmentId, rejectionReason }) => {
+      // Cancel any outgoing refetches to prevent overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ['chat', 'messages'] });
+
+      // Snapshot the previous value for rollback
+      const previousMessages = queryClient.getQueryData(['chat', 'messages']);
+
+      // Optimistically update to the new value
+      queryClient.setQueriesData({ queryKey: ['chat', 'messages'] }, (old: any) => {
+        if (!old) return old;
+
+        // Update attachment status in cached data
+        return {
+          ...old,
+          pages: old.pages?.map((page: any) => ({
+            ...page,
+            data: page.data?.map((msg: any) => ({
+              ...msg,
+              attachments: msg.attachments?.map((att: ChatAttachment) =>
+                att.id === attachmentId
+                  ? { ...att, status: 'rejected' as const, rejected_reason: rejectionReason }
+                  : att
+              ),
+            })),
+          })),
+        };
+      });
+
+      // Return context with previous value for rollback
+      return { previousMessages };
+    },
     onSuccess: (response) => {
       if (response.success) {
         // Invalidate chat queries to refetch messages with updated attachments
@@ -162,9 +233,18 @@ export function useAttachmentReview() {
         toast.error(response.error || 'Erro ao rejeitar documento');
       }
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables, context) => {
+      // Rollback to previous value on error
+      if (context?.previousMessages) {
+        queryClient.setQueryData(['chat', 'messages'], context.previousMessages);
+      }
+
       console.error('Reject mutation error:', error);
       toast.error('Erro ao rejeitar documento. Tente novamente.');
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ['chat', 'messages'] });
     },
   });
 
