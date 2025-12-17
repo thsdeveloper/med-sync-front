@@ -962,3 +962,42 @@
   * File size limited to 10MB for performance and storage management
   * Path structure enables organization-level isolation and cleanup
   * All 5 acceptance criteria met: table created ✅, foreign keys established ✅, storage bucket configured ✅, staff RLS policies ✅, admin RLS policies ✅
+[2025-12-17 11:45:00] [F028] Update shared schemas for document attachments in chat - COMPLETED
+- Created attachment types and enums in packages/shared/src/schemas/chat.schema.ts:
+  * AttachmentStatus enum: 'pending', 'accepted', 'rejected'
+  * FileType enum: 'pdf', 'image'
+  * ChatAttachment type with all database fields (id, conversation_id, message_id, sender_id, file_name, file_type, file_path, file_size, status, rejected_reason, reviewed_by, reviewed_at, created_at)
+  * AttachmentWithSender type for display with sender info
+- Created Zod validation schemas:
+  * uploadAttachmentSchema: Validates file metadata before upload
+    - conversation_id (UUID validation)
+    - message_id (optional, nullable, UUID)
+    - file_name (1-255 chars, extension validation for .pdf, .jpg, .jpeg, .png, .gif)
+    - file_type (enum: 'pdf' or 'image')
+    - file_size (integer, positive, max 10MB = 10485760 bytes)
+  * updateAttachmentStatusSchema: Validates admin review actions
+    - attachment_id (UUID validation)
+    - status (enum: 'accepted' or 'rejected')
+    - rejected_reason (max 500 chars, required when status='rejected')
+- Extended existing message types:
+  * MessageWithSender: Added optional attachments?: ChatAttachment[] field
+  * AdminMessageWithSender: Added optional attachments?: ChatAttachment[] field
+- File validation constants:
+  * ALLOWED_FILE_EXTENSIONS: .pdf for PDF, .jpg/.jpeg/.png/.gif for images
+  * MAX_FILE_SIZE: 10485760 bytes (10MB)
+  * MAX_FILE_SIZE_MB: 10
+- Type inference:
+  * UploadAttachmentData type inferred from uploadAttachmentSchema
+  * UpdateAttachmentStatusData type inferred from updateAttachmentStatusSchema
+- TypeScript compilation verified: Zero errors (pnpm typecheck passes)
+- Web app build verified: 21 routes compiled successfully
+- All exports handled via existing packages/shared/src/schemas/index.ts
+- Impact metrics:
+  * 1 schema file extended (chat.schema.ts, +133 lines)
+  * 6 new types exported: AttachmentStatus, FileType, ChatAttachment, AttachmentWithSender, UploadAttachmentData, UpdateAttachmentStatusData
+  * 2 Zod schemas created with comprehensive validation
+  * 2 message types extended with attachments support
+  * File size validation: max 10MB enforced in schema
+  * File type validation: PDF + 4 image formats (jpg, jpeg, png, gif)
+  * Zero breaking changes to existing code
+  * All 5 acceptance criteria met: ChatAttachment type ✅, Zod schemas ✅, MessageWithSender extended ✅, File type validation ✅, File size limits ✅

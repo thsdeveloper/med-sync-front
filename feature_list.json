@@ -438,7 +438,7 @@
         "File upload to Supabase storage with progress indicator",
         "Attachment metadata saved to chat_attachments table with message reference"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F030",

@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack } from 'expo-router';
@@ -18,6 +19,10 @@ import { ptBR } from 'date-fns/locale';
 import { Avatar } from '@/components/ui';
 import { useAuth } from '@/providers/auth-provider';
 import { supabase } from '@/lib/supabase';
+import AttachmentPicker from '@/components/molecules/AttachmentPicker';
+import AttachmentPreview from '@/components/molecules/AttachmentPreview';
+import { useAttachmentUpload, linkAttachmentsToMessage } from '@/hooks/useAttachmentUpload';
+import type { SelectedFile } from '@/lib/attachment-utils';
 import type { MessageWithSender, ConversationWithDetails } from '@medsync/shared';
 
 export default function ChatConversationScreen() {
@@ -28,7 +33,10 @@ export default function ChatConversationScreen() {
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
   const flatListRef = useRef<FlatList>(null);
+
+  const { isUploading, uploadProgress, uploadFiles, reset: resetUpload } = useAttachmentUpload();
 
   const loadConversation = useCallback(async () => {
     if (!id) return;
@@ -138,30 +146,98 @@ export default function ChatConversationScreen() {
     };
   }, [id, staff?.id]);
 
+  const handleFilesSelected = useCallback((files: SelectedFile[]) => {
+    setSelectedFiles((prev) => [...prev, ...files]);
+  }, []);
+
+  const handleRemoveFile = useCallback((index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
   const sendMessage = async () => {
-    if (!newMessage.trim() || !id || !staff?.id || isSending) return;
+    if ((!newMessage.trim() && selectedFiles.length === 0) || !id || !staff?.id || isSending) {
+      return;
+    }
 
     setIsSending(true);
     const messageContent = newMessage.trim();
+    const filesToUpload = [...selectedFiles];
     setNewMessage('');
+    setSelectedFiles([]);
 
     try {
-      const { error } = await supabase.from('chat_messages').insert({
-        conversation_id: id,
-        sender_id: staff.id,
-        content: messageContent,
-      });
+      // Get organization ID from conversation
+      const convAny = conversation as any;
+      const organizationId = convAny?.organization_id || staff.organization_id;
 
-      if (error) throw error;
+      if (!organizationId) {
+        throw new Error('Organization ID not found');
+      }
+
+      // If there are attachments, upload them first
+      let attachmentIds: string[] = [];
+      if (filesToUpload.length > 0) {
+        const uploadResults = await uploadFiles(
+          filesToUpload,
+          id,
+          organizationId,
+          staff.id
+        );
+
+        // Check for upload failures
+        const failures = uploadResults.filter((r) => !r.success);
+        if (failures.length > 0) {
+          const errorMsg = failures.map((f) => `${f.fileName}: ${f.error}`).join('\n');
+          Alert.alert(
+            'Erro no Upload',
+            `Alguns arquivos não puderam ser enviados:\n\n${errorMsg}`,
+            [{ text: 'OK' }]
+          );
+        }
+
+        // Collect successful attachment IDs
+        attachmentIds = uploadResults
+          .filter((r) => r.success && r.attachmentId)
+          .map((r) => r.attachmentId!);
+      }
+
+      // Insert message (even if content is empty but has attachments)
+      const messageToSend = messageContent || '📎 Anexo enviado';
+      const { data: messageData, error: messageError } = await supabase
+        .from('chat_messages')
+        .insert({
+          conversation_id: id,
+          sender_id: staff.id,
+          content: messageToSend,
+        })
+        .select('id')
+        .single();
+
+      if (messageError) throw messageError;
+
+      // Link attachments to message
+      if (attachmentIds.length > 0 && messageData?.id) {
+        await linkAttachmentsToMessage(attachmentIds, messageData.id);
+      }
 
       // Update conversation updated_at
       await supabase
         .from('chat_conversations')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', id);
+
+      // Reset upload state
+      resetUpload();
     } catch (error) {
       console.error('Error sending message:', error);
+      Alert.alert(
+        'Erro',
+        'Não foi possível enviar a mensagem. Tente novamente.',
+        [{ text: 'OK' }]
+      );
+      // Restore message and files on error
       setNewMessage(messageContent);
+      setSelectedFiles(filesToUpload);
     } finally {
       setIsSending(false);
     }
@@ -254,6 +330,8 @@ export default function ChatConversationScreen() {
     );
   }
 
+  const canSend = (newMessage.trim() || selectedFiles.length > 0) && !isSending && !isUploading;
+
   return (
     <>
       <Stack.Screen
@@ -288,7 +366,31 @@ export default function ChatConversationScreen() {
             }
           />
 
+          {/* Attachment Preview */}
+          <AttachmentPreview
+            files={selectedFiles}
+            onRemoveFile={handleRemoveFile}
+          />
+
+          {/* Upload Progress Indicator */}
+          {isUploading && (
+            <View style={styles.uploadingContainer}>
+              <ActivityIndicator size="small" color="#0066CC" />
+              <Text style={styles.uploadingText}>
+                Enviando arquivos... ({uploadProgress.filter((p) => p.status === 'success').length}/
+                {uploadProgress.length})
+              </Text>
+            </View>
+          )}
+
           <View style={styles.inputContainer}>
+            {/* Attachment Picker Button */}
+            <AttachmentPicker
+              currentFileCount={selectedFiles.length}
+              onFilesSelected={handleFilesSelected}
+              disabled={isSending || isUploading}
+            />
+
             <TextInput
               style={styles.input}
               placeholder="Digite uma mensagem..."
@@ -297,16 +399,17 @@ export default function ChatConversationScreen() {
               onChangeText={setNewMessage}
               multiline
               maxLength={2000}
+              editable={!isSending && !isUploading}
             />
             <TouchableOpacity
               style={[
                 styles.sendButton,
-                (!newMessage.trim() || isSending) && styles.sendButtonDisabled,
+                !canSend && styles.sendButtonDisabled,
               ]}
               onPress={sendMessage}
-              disabled={!newMessage.trim() || isSending}
+              disabled={!canSend}
             >
-              {isSending ? (
+              {isSending || isUploading ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <Ionicons name="send" size={20} color="#FFFFFF" />
@@ -404,6 +507,20 @@ const styles = StyleSheet.create({
   },
   ownMessageTime: {
     color: 'rgba(255, 255, 255, 0.7)',
+  },
+  uploadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#EFF6FF',
+    borderTopWidth: 1,
+    borderTopColor: '#DBEAFE',
+  },
+  uploadingText: {
+    fontSize: 14,
+    color: '#1E40AF',
+    marginLeft: 8,
   },
   inputContainer: {
     flexDirection: 'row',
