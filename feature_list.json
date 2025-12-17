@@ -271,6 +271,132 @@
         "Tests successfully run in both local and CI environments"
       ],
       "passes": true
+    },
+    {
+      "id": "F018",
+      "type": "feature",
+      "title": "Create reusable DataTable component architecture with Atomic Design",
+      "description": "Design and implement a reusable DataTable component system following Atomic Design principles. Create atoms (TableCell, TableHeader, TableRow), molecules (TablePagination, TableToolbar, ColumnHeader), and organisms (DataTable). Set up folder structure in src/components/data-table/ with proper TypeScript types and TanStack Table integration. Include base configuration for sorting, filtering, and pagination.",
+      "acceptance_criteria": [
+        "Atomic Design folder structure created in src/components/data-table/",
+        "Base atoms created: TableCell, TableHeader, TableRow components",
+        "Molecules created: TablePagination, TableToolbar, ColumnHeader with sort indicators",
+        "DataTable organism created with TanStack Table integration",
+        "TypeScript types defined for generic table data and column configuration"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F019",
+      "type": "feature",
+      "title": "Install TanStack Table and configure core table utilities",
+      "description": "Install @tanstack/react-table package and create utility functions for table configuration. Implement helpers for column definitions, sorting state, filtering logic, and pagination handlers. Create useDataTable custom hook to encapsulate common table logic. Set up proper TypeScript generics for type-safe table operations.",
+      "acceptance_criteria": [
+        "@tanstack/react-table package installed in apps/web",
+        "useDataTable hook created with TypeScript generics support",
+        "Utility functions created for column helpers and table state management",
+        "Default table configuration exported for reuse across tables",
+        "Documentation added for hook usage and table configuration"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F020",
+      "type": "feature",
+      "title": "Refactor Clínicas table to use TanStack Table with DataTable components",
+      "description": "Migrate the existing clinicas table at /dashboard/organizacao/clinicas to use the new DataTable component system. Define column configurations for clinic data (name, address, phone, status). Implement sorting, filtering by name/status, and pagination. Preserve existing actions (edit, delete, view). Integrate with existing React Query hooks for clinicas data.",
+      "acceptance_criteria": [
+        "Clínicas page refactored to use DataTable component",
+        "Column definitions created for all clinic fields",
+        "Sorting implemented for name, created date columns",
+        "Search/filter functionality working for clinic name and status",
+        "Pagination working with configurable page sizes (10, 25, 50, 100)"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F021",
+      "type": "feature",
+      "title": "Refactor Equipe table to use TanStack Table with DataTable components",
+      "description": "Migrate the existing equipe table at /dashboard/equipe to use the new DataTable component system. Define column configurations for team member data (name, role, especialidade, email, phone, status). Implement sorting, filtering by role/especialidade/status, and pagination. Preserve existing actions. Integrate with React Query hooks and especialidades relationship.",
+      "acceptance_criteria": [
+        "Equipe page refactored to use DataTable component",
+        "Column definitions created for all team member fields including especialidade",
+        "Sorting implemented for name, role, especialidade columns",
+        "Multi-select filters working for role, especialidade, and status",
+        "Pagination working with same configurable page sizes as Clínicas"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F022",
+      "type": "feature",
+      "title": "Setup unit testing architecture with Vitest and React Testing Library",
+      "description": "Configure Vitest as the unit testing framework for apps/web. Install @testing-library/react, @testing-library/jest-dom, and @testing-library/user-event. Create test setup files, configure vitest.config.ts with proper aliases and globals. Create test utilities folder with custom render functions and mock providers (QueryClient, theme). Set up test scripts in package.json.",
+      "acceptance_criteria": [
+        "Vitest and Testing Library packages installed",
+        "vitest.config.ts created with proper TypeScript and path aliases",
+        "Test setup file created with jest-dom matchers",
+        "Custom render utility created with QueryClientProvider and ThemeProvider wrappers",
+        "npm scripts added: test, test:watch, test:coverage"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F023",
+      "type": "feature",
+      "title": "Write unit tests for DataTable component system",
+      "description": "Create comprehensive unit tests for all DataTable atoms, molecules, and organisms. Test TableCell rendering, TablePagination controls, ColumnHeader sorting, and DataTable with various configurations. Mock TanStack Table hooks. Test sorting state changes, pagination updates, and filter interactions. Achieve 80%+ code coverage for data-table components.",
+      "acceptance_criteria": [
+        "Unit tests created for all atoms: TableCell, TableHeader, TableRow",
+        "Unit tests created for molecules: TablePagination, TableToolbar, ColumnHeader",
+        "Unit tests created for DataTable organism with sorting, filtering, pagination",
+        "useDataTable hook tested with various data types and configurations",
+        "Code coverage above 80% for all data-table components"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F024",
+      "type": "feature",
+      "title": "Write unit tests for Clínicas and Equipe table implementations",
+      "description": "Create unit tests for the refactored Clínicas and Equipe table pages. Mock Supabase queries and React Query hooks. Test column definitions, filter logic, sorting behavior, and action button interactions. Test edge cases: empty data, loading states, error states. Mock user interactions like search input, filter selection, and pagination clicks.",
+      "acceptance_criteria": [
+        "Unit tests created for Clínicas table page with all interactions",
+        "Unit tests created for Equipe table page with especialidade integration",
+        "Loading and error states tested for both tables",
+        "Filter and search functionality tested with user-event simulations",
+        "Action buttons (edit, delete, view) tested with proper callbacks"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F025",
+      "type": "feature",
+      "title": "Write e2e tests for Clínicas table using Playwright",
+      "description": "Create Playwright e2e tests for the Clínicas table at /dashboard/organizacao/clinicas. Use existing auth.setup.ts for authentication. Test full user workflows: navigate to page, search clinics, apply filters, sort columns, paginate results, and perform CRUD actions. Test responsive behavior and accessibility. Verify data persistence after actions.",
+      "acceptance_criteria": [
+        "E2E test file created: e2e/clinicas-table.spec.ts",
+        "Tests cover navigation, search, filtering, sorting, and pagination",
+        "CRUD operations tested: create clinic, edit clinic, delete clinic",
+        "Tests verify proper data display after backend mutations",
+        "Tests pass consistently in CI environment"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F026",
+      "type": "feature",
+      "title": "Write e2e tests for Equipe table using Playwright",
+      "description": "Create Playwright e2e tests for the Equipe table at /dashboard/equipe. Test full user workflows: navigate to page, search team members, filter by role/especialidade/status, sort columns, paginate results, and perform team member actions. Test especialidade dropdown selection. Verify integration with especialidades table. Test accessibility and keyboard navigation.",
+      "acceptance_criteria": [
+        "E2E test file created: e2e/equipe-table.spec.ts",
+        "Tests cover navigation, search, multi-filter selection, sorting, pagination",
+        "Especialidade filter tested with proper options from database",
+        "Team member CRUD operations tested end-to-end",
+        "Keyboard navigation and accessibility tested for table interactions"
+      ],
+      "passes": false
     }
   ]
 }

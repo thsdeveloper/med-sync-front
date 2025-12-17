@@ -1,134 +1,134 @@
-=== Atomizer Debug Output (2025-12-16T22:25:56.192Z) ===
+=== Atomizer Debug Output (2025-12-17T02:55:10.485Z) ===
 SUCCESS: true
 ERROR: none
-OUTPUT LENGTH: 7785
+OUTPUT LENGTH: 8294
 
 OUTPUT:
 ```json
 [
   {
-    "id": "F009",
-    "title": "Investigate and document Calendário de Escalas current implementation",
+    "id": "F018",
     "type": "feature",
-    "description": "Analyze the current calendar component implementation to understand the filter functionality issues. Document the component structure, identify which filters are broken (Hoje/Anterior/Próximo navigation, dezembro 2025 month selector, Mês/Semana/Dia/Agenda view switcher), locate the relevant files in the project structure, and identify the root causes of the filtering issues. Create a technical summary of findings.",
+    "title": "Create reusable DataTable component architecture with Atomic Design",
+    "description": "Design and implement a reusable DataTable component system following Atomic Design principles. Create atoms (TableCell, TableHeader, TableRow), molecules (TablePagination, TableToolbar, ColumnHeader), and organisms (DataTable). Set up folder structure in src/components/data-table/ with proper TypeScript types and TanStack Table integration. Include base configuration for sorting, filtering, and pagination.",
     "acceptance_criteria": [
-      "Calendar component files located and documented",
-      "All broken filter functionalities identified and catalogued",
-      "Root causes of filter issues documented",
-      "Current state vs expected behavior clearly described",
-      "Technical summary created with fix recommendations"
+      "Atomic Design folder structure created in src/components/data-table/",
+      "Base atoms created: TableCell, TableHeader, TableRow components",
+      "Molecules created: TablePagination, TableToolbar, ColumnHeader with sort indicators",
+      "DataTable organism created with TanStack Table integration",
+      "TypeScript types defined for generic table data and column configuration"
     ],
     "passes": false
   },
   {
-    "id": "F010",
-    "title": "Fix Hoje/Anterior/Próximo date navigation controls",
+    "id": "F019",
     "type": "feature",
-    "description": "Repair the date navigation controls that allow users to jump to today, previous period, or next period in the calendar. Ensure proper state management for current date selection, implement correct date calculation logic using date-fns, and verify navigation works correctly across all view modes (Mês/Semana/Dia/Agenda). Add proper event handlers and state updates.",
+    "title": "Install TanStack Table and configure core table utilities",
+    "description": "Install @tanstack/react-table package and create utility functions for table configuration. Implement helpers for column definitions, sorting state, filtering logic, and pagination handlers. Create useDataTable custom hook to encapsulate common table logic. Set up proper TypeScript generics for type-safe table operations.",
     "acceptance_criteria": [
-      "Hoje button correctly navigates to current date",
-      "Anterior button moves to previous period based on current view",
-      "Próximo button moves to next period based on current view",
-      "Date state properly updates and reflects in calendar UI",
-      "Navigation works correctly in all view modes"
+      "@tanstack/react-table package installed in apps/web",
+      "useDataTable hook created with TypeScript generics support",
+      "Utility functions created for column helpers and table state management",
+      "Default table configuration exported for reuse across tables",
+      "Documentation added for hook usage and table configuration"
     ],
     "passes": false
   },
   {
-    "id": "F011",
-    "title": "Fix month/year selector (dezembro 2025) functionality",
+    "id": "F020",
     "type": "feature",
-    "description": "Repair the month and year selection controls that allow users to pick specific months and years. Implement proper onChange handlers, ensure state synchronization between selector and calendar display, add proper date validation, and verify the calendar correctly renders events for the selected month/year. Use date-fns for date manipulation.",
+    "title": "Refactor Clínicas table to use TanStack Table with DataTable components",
+    "description": "Migrate the existing clinicas table at /dashboard/organizacao/clinicas to use the new DataTable component system. Define column configurations for clinic data (name, address, phone, status). Implement sorting, filtering by name/status, and pagination. Preserve existing actions (edit, delete, view). Integrate with existing React Query hooks for clinicas data.",
     "acceptance_criteria": [
-      "Month selector dropdown functions correctly",
-      "Year selector dropdown functions correctly",
-      "Selected month/year properly updates calendar display",
-      "Calendar events load correctly for selected period",
-      "Date state remains consistent across component"
+      "Clínicas page refactored to use DataTable component",
+      "Column definitions created for all clinic fields",
+      "Sorting implemented for name, created date columns",
+      "Search/filter functionality working for clinic name and status",
+      "Pagination working with configurable page sizes (10, 25, 50, 100)"
     ],
     "passes": false
   },
   {
-    "id": "F012",
-    "title": "Fix view mode switcher (Mês/Semana/Dia/Agenda)",
+    "id": "F021",
     "type": "feature",
-    "description": "Repair the view mode toggle controls that switch between Month, Week, Day, and Agenda views. Implement proper view state management, ensure each view mode renders correctly with appropriate layout and event display, handle date range calculations for each view type, and maintain selected date when switching between views. Utilize React Big Calendar or custom view components.",
+    "title": "Refactor Equipe table to use TanStack Table with DataTable components",
+    "description": "Migrate the existing equipe table at /dashboard/equipe to use the new DataTable component system. Define column configurations for team member data (name, role, especialidade, email, phone, status). Implement sorting, filtering by role/especialidade/status, and pagination. Preserve existing actions. Integrate with React Query hooks and especialidades relationship.",
     "acceptance_criteria": [
-      "Mês (Month) view renders correctly with all dates",
-      "Semana (Week) view shows correct 7-day range",
-      "Dia (Day) view displays single day with hourly breakdown",
-      "Agenda view shows list of upcoming events",
-      "View switching maintains current date selection"
+      "Equipe page refactored to use DataTable component",
+      "Column definitions created for all team member fields including especialidade",
+      "Sorting implemented for name, role, especialidade columns",
+      "Multi-select filters working for role, especialidade, and status",
+      "Pagination working with same configurable page sizes as Clínicas"
     ],
     "passes": false
   },
   {
-    "id": "F013",
-    "title": "Integrate all calendar filters and verify complete functionality",
+    "id": "F022",
     "type": "feature",
-    "description": "Ensure all calendar filters work together harmoniously. Test interactions between date navigation, month/year selector, and view mode switcher. Verify state management is consistent across all filter types, fix any race conditions or state conflicts, ensure URL parameters or local state persist user selections, and validate calendar performance with multiple filters active.",
+    "title": "Setup unit testing architecture with Vitest and React Testing Library",
+    "description": "Configure Vitest as the unit testing framework for apps/web. Install @testing-library/react, @testing-library/jest-dom, and @testing-library/user-event. Create test setup files, configure vitest.config.ts with proper aliases and globals. Create test utilities folder with custom render functions and mock providers (QueryClient, theme). Set up test scripts in package.json.",
     "acceptance_criteria": [
-      "All filters work together without conflicts",
-      "Changing one filter doesn't break others",
-      "Calendar state persists correctly during filter changes",
-      "No console errors or warnings during filter usage",
-      "Calendar renders correctly with any filter combination"
+      "Vitest and Testing Library packages installed",
+      "vitest.config.ts created with proper TypeScript and path aliases",
+      "Test setup file created with jest-dom matchers",
+      "Custom render utility created with QueryClientProvider and ThemeProvider wrappers",
+      "npm scripts added: test, test:watch, test:coverage"
     ],
     "passes": false
   },
   {
-    "id": "F014",
-    "title": "Create Playwright e2e test setup with authentication",
+    "id": "F023",
     "type": "feature",
-    "description": "Set up Playwright testing framework for the web application. Configure Playwright with proper TypeScript support, create authentication helper that logs in with provided credentials (ths.pereira@gmail.com / Qsesbs2006), implement session storage to avoid repeated logins, create base test fixtures and page objects for calendar testing, and configure test environment variables.",
+    "title": "Write unit tests for DataTable component system",
+    "description": "Create comprehensive unit tests for all DataTable atoms, molecules, and organisms. Test TableCell rendering, TablePagination controls, ColumnHeader sorting, and DataTable with various configurations. Mock TanStack Table hooks. Test sorting state changes, pagination updates, and filter interactions. Achieve 80%+ code coverage for data-table components.",
     "acceptance_criteria": [
-      "Playwright installed and configured in apps/web",
-      "Authentication helper successfully logs in test user",
-      "Session state is reused across tests",
-      "Base fixtures and page objects created for calendar",
-      "Test configuration file created with proper settings"
+      "Unit tests created for all atoms: TableCell, TableHeader, TableRow",
+      "Unit tests created for molecules: TablePagination, TableToolbar, ColumnHeader",
+      "Unit tests created for DataTable organism with sorting, filtering, pagination",
+      "useDataTable hook tested with various data types and configurations",
+      "Code coverage above 80% for all data-table components"
     ],
     "passes": false
   },
   {
-    "id": "F015",
-    "title": "Write e2e tests for date navigation controls",
+    "id": "F024",
     "type": "feature",
-    "description": "Create comprehensive Playwright e2e tests for Hoje/Anterior/Próximo navigation controls. Test clicking Hoje button navigates to current date, test Anterior/Próximo buttons navigate correctly in each view mode, verify date display updates correctly, test edge cases like month/year boundaries, and ensure tests run reliably with proper waits and assertions.",
+    "title": "Write unit tests for Clínicas and Equipe table implementations",
+    "description": "Create unit tests for the refactored Clínicas and Equipe table pages. Mock Supabase queries and React Query hooks. Test column definitions, filter logic, sorting behavior, and action button interactions. Test edge cases: empty data, loading states, error states. Mock user interactions like search input, filter selection, and pagination clicks.",
     "acceptance_criteria": [
-      "Test suite covers Hoje button navigation",
-      "Test suite covers Anterior button in all views",
-      "Test suite covers Próximo button in all views",
-      "Edge cases tested (month boundaries, year transitions)",
-      "All tests pass consistently with proper assertions"
+      "Unit tests created for Clínicas table page with all interactions",
+      "Unit tests created for Equipe table page with especialidade integration",
+      "Loading and error states tested for both tables",
+      "Filter and search functionality tested with user-event simulations",
+      "Action buttons (edit, delete, view) tested with proper callbacks"
     ],
     "passes": false
   },
   {
-    "id": "F016",
-    "title": "Write e2e tests for month/year selector and view modes",
+    "id": "F025",
     "type": "feature",
-    "description": "Create comprehensive Playwright e2e tests for month/year selection and view mode switching. Test selecting different months and years updates calendar correctly, test switching between Mês/Semana/Dia/Agenda views, verify events display correctly in each view, test combined filter scenarios, and ensure all tests have proper assertions and error handling.",
+    "title": "Write e2e tests for Clínicas table using Playwright",
+    "description": "Create Playwright e2e tests for the Clínicas table at /dashboard/organizacao/clinicas. Use existing auth.setup.ts for authentication. Test full user workflows: navigate to page, search clinics, apply filters, sort columns, paginate results, and perform CRUD actions. Test responsive behavior and accessibility. Verify data persistence after actions.",
     "acceptance_criteria": [
-      "Tests verify month selector functionality",
-      "Tests verify year selector functionality",
-      "Tests verify all 4 view modes render correctly",
-      "Tests verify events display in each view mode",
-      "Combined filter scenarios tested successfully"
+      "E2E test file created: e2e/clinicas-table.spec.ts",
+      "Tests cover navigation, search, filtering, sorting, and pagination",
+      "CRUD operations tested: create clinic, edit clinic, delete clinic",
+      "Tests verify proper data display after backend mutations",
+      "Tests pass consistently in CI environment"
     ],
     "passes": false
   },
   {
-    "id": "F017",
-    "title": "Add calendar e2e tests to CI/CD and document test usage",
+    "id": "F026",
     "type": "feature",
-    "description": "Integrate Playwright calendar tests into the project's CI/CD pipeline. Update package.json with test scripts, configure test running in GitHub Actions or similar CI, create test documentation explaining how to run tests locally and in CI, document the test user credentials management approach, and ensure tests run in headless mode for CI while supporting headed mode for debugging.",
+    "title": "Write e2e tests for Equipe table using Playwright",
+    "description": "Create Playwright e2e tests for the Equipe table at /dashboard/equipe. Test full user workflows: navigate to page, search team members, filter by role/especialidade/status, sort columns, paginate results, and perform team member actions. Test especialidade dropdown selection. Verify integration with especialidades table. Test accessibility and keyboard navigation.",
     "acceptance_criteria": [
-      "Test scripts added to package.json (test:e2e, test:e2e:ui)",
-      "CI/CD pipeline configured to run calendar tests",
-      "README or docs updated with test running instructions",
-      "Test credentials securely managed (env vars/secrets)",
-      "Tests successfully run in both local and CI environments"
+      "E2E test file created: e2e/equipe-table.spec.ts",
+      "Tests cover navigation, search, multi-filter selection, sorting, pagination",
+      "Especialidade filter tested with proper options from database",
+      "Team member CRUD operations tested end-to-end",
+      "Keyboard navigation and accessibility tested for table interactions"
     ],
     "passes": false
   }
