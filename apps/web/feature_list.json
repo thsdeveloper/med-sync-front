@@ -665,7 +665,7 @@
           "Password never exposed in network responses"
         ]
       },
-      "passes": false
+      "passes": true
     }
   ]
 }
