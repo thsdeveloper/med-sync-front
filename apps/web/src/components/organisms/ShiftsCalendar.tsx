@@ -303,52 +303,93 @@ export function ShiftsCalendar({
     );
   }
 
-  return (
-    <>
-      {/* Calendar wrapper with conditional empty state overlay */}
-      <div className="relative">
-        {/* Calendar Component - Using controlled mode with custom toolbar */}
-        <CalendarWrapper
-          events={calendarEvents}
-          onSelectEvent={handleSelectEvent}
-          onView={handleViewChange}
-          onNavigate={handleNavigate}
-          view={currentView}
+  // Show empty state with standalone toolbar when no events
+  if (calendarEvents.length === 0) {
+    return (
+      <div className={className}>
+        {/* Standalone toolbar for navigation when calendar is empty */}
+        <CalendarToolbar
           date={currentDate}
-          defaultView={defaultView}
-          defaultDate={defaultDate}
-          views={['month', 'week', 'day', 'agenda']} // Enable all 4 view modes
-          height={height}
-          className={className}
-          selectable={allowCreation}
-          onSelectSlot={handleSlotSelect}
-          components={{
-            toolbar: ToolbarWithFilters, // Use custom toolbar with month/year selectors and filter slot
+          view={currentView}
+          views={['month', 'week', 'day', 'agenda']}
+          onView={handleViewChange}
+          onNavigate={(action, date) => {
+            if (action === 'TODAY') {
+              handleNavigate(new Date());
+            } else if (action === 'PREV') {
+              const newDate = new Date(currentDate);
+              if (currentView === 'month') {
+                newDate.setMonth(newDate.getMonth() - 1);
+              } else if (currentView === 'week') {
+                newDate.setDate(newDate.getDate() - 7);
+              } else if (currentView === 'day') {
+                newDate.setDate(newDate.getDate() - 1);
+              }
+              handleNavigate(newDate);
+            } else if (action === 'NEXT') {
+              const newDate = new Date(currentDate);
+              if (currentView === 'month') {
+                newDate.setMonth(newDate.getMonth() + 1);
+              } else if (currentView === 'week') {
+                newDate.setDate(newDate.getDate() + 7);
+              } else if (currentView === 'day') {
+                newDate.setDate(newDate.getDate() + 1);
+              }
+              handleNavigate(newDate);
+            } else if (action === 'DATE' && date) {
+              handleNavigate(date);
+            }
           }}
+          label=""
+          localizer={undefined as any}
+          filterSlot={filterSlot}
         />
 
-        {/* Empty state overlay - shown when no events, but calendar controls remain visible */}
-        {calendarEvents.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ top: '60px' }}>
-            <div className="pointer-events-auto bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-border p-8">
-              <div className="flex flex-col items-center justify-center max-w-md text-center space-y-4">
-                {/* Icon */}
-                <div className="rounded-full bg-muted p-6">
-                  <CalendarX className="h-12 w-12 text-muted-foreground" />
-                </div>
-
-                {/* Title */}
-                <h3 className="text-lg font-semibold text-foreground">Nenhum plantão encontrado</h3>
-
-                {/* Description */}
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Não há plantões cadastrados para o período selecionado. Ajuste os filtros ou selecione outro período.
-                </p>
-              </div>
+        {/* Empty state */}
+        <div
+          className="flex items-center justify-center border-2 border-dashed rounded-lg"
+          style={{ height: typeof height === 'number' ? `${height - 120}px` : `calc(${height} - 120px)` }}
+        >
+          <div className="flex flex-col items-center justify-center max-w-md text-center space-y-4 p-8">
+            {/* Icon */}
+            <div className="rounded-full bg-muted p-6">
+              <CalendarX className="h-12 w-12 text-muted-foreground" />
             </div>
+
+            {/* Title */}
+            <h3 className="text-lg font-semibold text-foreground">Nenhum plantão encontrado</h3>
+
+            {/* Description */}
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Não há plantões cadastrados para o período selecionado. Ajuste os filtros ou selecione outro período.
+            </p>
           </div>
-        )}
+        </div>
       </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Calendar Component - Using controlled mode with custom toolbar */}
+      <CalendarWrapper
+        events={calendarEvents}
+        onSelectEvent={handleSelectEvent}
+        onView={handleViewChange}
+        onNavigate={handleNavigate}
+        view={currentView}
+        date={currentDate}
+        defaultView={defaultView}
+        defaultDate={defaultDate}
+        views={['month', 'week', 'day', 'agenda']} // Enable all 4 view modes
+        height={height}
+        className={className}
+        selectable={allowCreation}
+        onSelectSlot={handleSlotSelect}
+        components={{
+          toolbar: ToolbarWithFilters, // Use custom toolbar with month/year selectors and filter slot
+        }}
+      />
 
       {/* Shift Detail Modal */}
       <ShiftDetailModal
