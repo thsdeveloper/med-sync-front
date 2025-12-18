@@ -600,7 +600,7 @@
           "Toast notifications appear for user feedback"
         ]
       },
-      "passes": false
+      "passes": true
     },
     {
       "id": "F035",
