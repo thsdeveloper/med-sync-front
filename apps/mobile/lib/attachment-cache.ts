@@ -12,7 +12,7 @@
  * - Safe file naming (sanitized filenames)
  */
 
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 /**
  * Maximum cache size in bytes (100 MB)

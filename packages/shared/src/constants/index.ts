@@ -1,4 +1,3 @@
-export { ROLES } from '../schemas/medical-staff.schema';
 export { FACILITY_TYPES, FACILITY_TYPE_LABELS } from '../schemas/facility.schema';
 export {
     SHIFT_TYPES,

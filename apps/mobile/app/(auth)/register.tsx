@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,67 +14,103 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, Input } from '@/components/ui';
-import { EspecialidadePicker } from '@/components/molecules';
+import { Button, Input, RegistroProfissionalInput, type RegistroProfissionalValue } from '@/components/ui';
+import { ProfissaoPicker, EspecialidadePicker } from '@/components/molecules';
 import { useAuth } from '@/providers/auth-provider';
-import { staffRegisterWithRegistroSchema, type StaffRegisterWithRegistroData, useProfissoes } from '@medsync/shared';
+import {
+  staffRegisterWithCpfSchema,
+  type StaffRegisterWithCpfData,
+  useProfissoes,
+  formatCpf,
+  type ProfissaoComConselho,
+} from '@medsync/shared';
+
+// Extended form type including registro as object
+interface RegisterFormData extends Omit<StaffRegisterWithCpfData, 'registro_numero' | 'registro_uf' | 'registro_categoria'> {
+  registro: RegistroProfissionalValue;
+}
 
 export default function RegisterScreen() {
-  const { profissao_id, conselhoSigla, numero, uf, categoria } = useLocalSearchParams<{
-    profissao_id: string;
-    conselhoSigla: string;
-    numero: string;
-    uf: string;
-    categoria?: string;
-  }>();
-  const { signUp } = useAuth();
+  const { cpf } = useLocalSearchParams<{ cpf: string }>();
+  const { signUpWithCpf } = useAuth();
   const { data: profissoes } = useProfissoes();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  // Find the selected profissao for display
-  const selectedProfissao = useMemo(() => {
-    return profissoes?.find(p => p.id === profissao_id);
-  }, [profissoes, profissao_id]);
+  const [selectedProfissao, setSelectedProfissao] = useState<ProfissaoComConselho | null>(null);
 
   const {
     control,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors },
-  } = useForm<StaffRegisterWithRegistroData>({
-    resolver: zodResolver(staffRegisterWithRegistroSchema),
+  } = useForm<RegisterFormData>({
     defaultValues: {
+      cpf: cpf || '',
       name: '',
       email: '',
       phone: '',
-      profissao_id: profissao_id || '',
-      registro_numero: numero || '',
-      registro_uf: uf || '',
-      registro_categoria: categoria || undefined,
+      profissao_id: '',
+      registro: {
+        numero: '',
+        uf: '',
+        categoria: undefined,
+      },
       especialidade_id: '',
       password: '',
       confirmPassword: '',
     },
   });
 
-  const onSubmit = async (data: StaffRegisterWithRegistroData) => {
-    if (!conselhoSigla) {
-      Alert.alert('Erro', 'Dados do conselho não encontrados. Volte e tente novamente.');
+  const registroValue = watch('registro');
+
+  const handleProfissaoChange = useCallback((id: string) => {
+    setValue('profissao_id', id);
+    // Find the selected profissao to get conselho info
+    const profissao = profissoes?.find(p => p.id === id);
+    setSelectedProfissao(profissao || null);
+    // Reset categoria when profissao changes
+    setValue('registro', {
+      ...registroValue,
+      categoria: undefined,
+    });
+  }, [profissoes, setValue, registroValue]);
+
+  const onSubmit = async (data: RegisterFormData) => {
+    // Validate required fields
+    if (!data.profissao_id) {
+      Alert.alert('Atenção', 'Selecione sua profissão');
+      return;
+    }
+
+    if (!data.registro.numero || !data.registro.uf) {
+      Alert.alert('Atenção', 'Preencha o número e UF do registro profissional');
+      return;
+    }
+
+    // Check categoria if required
+    if (selectedProfissao?.conselho?.requer_categoria && !data.registro.categoria) {
+      Alert.alert('Atenção', 'Selecione a categoria do registro');
+      return;
+    }
+
+    if (data.password !== data.confirmPassword) {
+      Alert.alert('Atenção', 'As senhas não coincidem');
       return;
     }
 
     setIsLoading(true);
     try {
-      const { error } = await signUp({
+      const { error } = await signUpWithCpf({
+        cpf: data.cpf,
         name: data.name,
         email: data.email,
         phone: data.phone || undefined,
         profissao_id: data.profissao_id,
-        registro_numero: data.registro_numero,
-        registro_uf: data.registro_uf,
-        registro_categoria: data.registro_categoria || undefined,
-        conselhoSigla: conselhoSigla,
+        registro_numero: data.registro.numero,
+        registro_uf: data.registro.uf,
+        registro_categoria: data.registro.categoria || undefined,
         especialidade_id: data.especialidade_id,
         password: data.password,
       });
@@ -89,8 +125,9 @@ export default function RegisterScreen() {
     }
   };
 
-  // Format registro display
-  const registroDisplay = `${conselhoSigla || ''} ${numero || ''}/${uf || ''}${categoria ? ` - ${categoria}` : ''}`;
+  // Format CPF display
+  const cpfDisplay = formatCpf(cpf || '');
+  const conselhoSigla = selectedProfissao?.conselho?.sigla || 'Registro';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -119,16 +156,13 @@ export default function RegisterScreen() {
             </Text>
           </View>
 
-          {/* Registro Info Card */}
-          <View style={styles.registroCard}>
-            <View style={styles.registroCardHeader}>
-              <Ionicons name="document-text-outline" size={20} color="#0066CC" />
-              <Text style={styles.registroLabel}>Registro Profissional</Text>
+          {/* CPF Info Card */}
+          <View style={styles.cpfCard}>
+            <View style={styles.cpfCardHeader}>
+              <Ionicons name="card-outline" size={20} color="#0066CC" />
+              <Text style={styles.cpfLabel}>CPF</Text>
             </View>
-            <Text style={styles.registroText}>{registroDisplay}</Text>
-            {selectedProfissao && (
-              <Text style={styles.profissaoText}>{selectedProfissao.nome}</Text>
-            )}
+            <Text style={styles.cpfText}>{cpfDisplay}</Text>
           </View>
 
           {/* Form */}
@@ -185,6 +219,47 @@ export default function RegisterScreen() {
               )}
             />
 
+            {/* Professional Registration Section */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Registro Profissional</Text>
+            </View>
+
+            {/* Profissão Picker */}
+            <Controller
+              control={control}
+              name="profissao_id"
+              render={({ field: { value } }) => (
+                <ProfissaoPicker
+                  label="Profissão"
+                  placeholder="Selecione sua profissão"
+                  value={value}
+                  onValueChange={handleProfissaoChange}
+                  error={errors.profissao_id?.message}
+                />
+              )}
+            />
+
+            {/* Registro Profissional Input */}
+            <Controller
+              control={control}
+              name="registro"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <RegistroProfissionalInput
+                  label={`Número do ${conselhoSigla}`}
+                  value={value}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  profissao={selectedProfissao}
+                  required
+                  errors={{
+                    numero: errors.registro?.numero?.message,
+                    uf: errors.registro?.uf?.message,
+                    categoria: errors.registro?.categoria?.message,
+                  }}
+                />
+              )}
+            />
+
             <Controller
               control={control}
               name="especialidade_id"
@@ -199,6 +274,11 @@ export default function RegisterScreen() {
                 />
               )}
             />
+
+            {/* Password Section */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Senha de Acesso</Text>
+            </View>
 
             <Controller
               control={control}
@@ -294,40 +374,50 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     lineHeight: 24,
   },
-  registroCard: {
+  cpfCard: {
     backgroundColor: '#EFF6FF',
     padding: 16,
     borderRadius: 12,
     marginBottom: 24,
   },
-  registroCardHeader: {
+  cpfCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     marginBottom: 8,
   },
-  registroLabel: {
+  cpfLabel: {
     fontSize: 12,
     fontWeight: '600',
     color: '#0066CC',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  registroText: {
+  cpfText: {
     fontSize: 18,
     fontWeight: '700',
     color: '#1F2937',
+    letterSpacing: 1,
   },
-  profissaoText: {
+  sectionHeader: {
+    marginTop: 16,
+    marginBottom: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  sectionTitle: {
     fontSize: 14,
-    color: '#6B7280',
-    marginTop: 4,
+    fontWeight: '600',
+    color: '#374151',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   form: {
     marginBottom: 24,
   },
   button: {
-    marginTop: 8,
+    marginTop: 16,
   },
   footer: {
     alignItems: 'center',

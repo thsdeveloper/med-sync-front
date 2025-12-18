@@ -6,8 +6,8 @@ import { test, expect } from './fixtures/equipe.fixtures';
  * Test Coverage:
  * - Navigation and initial page load
  * - Search functionality by staff name
- * - Multi-filter functionality (role, especialidade, status)
- * - Column sorting (name, especialidade, role, status, created_at)
+ * - Multi-filter functionality (especialidade, status)
+ * - Column sorting (name, especialidade, status, created_at)
  * - Pagination controls and page size selection
  * - CRUD operations with especialidade integration
  * - Keyboard navigation and accessibility
@@ -46,7 +46,6 @@ test.describe('Equipe Table - Navigation and Initial Load', () => {
     // Verify table headers
     await expect(equipePage.table.getByRole('columnheader', { name: /nome/i })).toBeVisible();
     await expect(equipePage.table.getByRole('columnheader', { name: /especialidade/i })).toBeVisible();
-    await expect(equipePage.table.getByRole('columnheader', { name: /função/i })).toBeVisible();
     await expect(equipePage.table.getByRole('columnheader', { name: /contato/i })).toBeVisible();
     await expect(equipePage.table.getByRole('columnheader', { name: /status/i })).toBeVisible();
   });
@@ -60,7 +59,6 @@ test.describe('Equipe Table - Navigation and Initial Load', () => {
     await equipePage.goto();
 
     await expect(equipePage.searchInput).toBeVisible();
-    await expect(equipePage.roleFilterButton).toBeVisible();
     await expect(equipePage.especialidadeFilterButton).toBeVisible();
     await expect(equipePage.statusFilterButton).toBeVisible();
   });
@@ -168,59 +166,6 @@ test.describe('Equipe Table - Search Functionality', () => {
       // Verify the staff member is visible
       await equipePage.expectStaffVisible(firstName);
     }
-  });
-});
-
-// ============================================
-// Role Filter
-// ============================================
-
-test.describe('Equipe Table - Role Filter', () => {
-  test('should filter staff by Médico role', async ({ equipePage }) => {
-    await equipePage.goto();
-
-    await equipePage.filterByRole('Médico');
-    await equipePage.page.waitForTimeout(1000);
-
-    // Verify filter is applied (check if role filter button shows active state)
-    // Note: Actual verification depends on data availability
-    const rowCount = await equipePage.getRowCount();
-    expect(rowCount).toBeGreaterThanOrEqual(0);
-  });
-
-  test('should filter staff by Enfermeiro role', async ({ equipePage }) => {
-    await equipePage.goto();
-
-    await equipePage.filterByRole('Enfermeiro');
-    await equipePage.page.waitForTimeout(1000);
-
-    const rowCount = await equipePage.getRowCount();
-    expect(rowCount).toBeGreaterThanOrEqual(0);
-  });
-
-  test('should filter staff by Técnico de Enfermagem role', async ({ equipePage }) => {
-    await equipePage.goto();
-
-    await equipePage.filterByRole('Técnico de Enfermagem');
-    await equipePage.page.waitForTimeout(1000);
-
-    const rowCount = await equipePage.getRowCount();
-    expect(rowCount).toBeGreaterThanOrEqual(0);
-  });
-
-  test('should clear role filter and show all staff', async ({ equipePage }) => {
-    await equipePage.goto();
-
-    // Apply role filter
-    await equipePage.filterByRole('Médico');
-    const filteredCount = await equipePage.getRowCount();
-
-    // Clear all filters
-    await equipePage.clearAllFilters();
-    const allCount = await equipePage.getRowCount();
-
-    // Should show equal or more results after clearing
-    expect(allCount).toBeGreaterThanOrEqual(filteredCount);
   });
 });
 
@@ -359,33 +304,6 @@ test.describe('Equipe Table - Status Filter', () => {
 // ============================================
 
 test.describe('Equipe Table - Combined Filters', () => {
-  test('should apply role and especialidade filters together', async ({ equipePage }) => {
-    await equipePage.goto();
-
-    await equipePage.filterByRole('Médico');
-    await equipePage.page.waitForTimeout(500);
-
-    await equipePage.filterByEspecialidade('Cardiologia');
-    await equipePage.page.waitForTimeout(1000);
-
-    // Verify both filters are active
-    const rowCount = await equipePage.getRowCount();
-    expect(rowCount).toBeGreaterThanOrEqual(0);
-  });
-
-  test('should apply role and status filters together', async ({ equipePage }) => {
-    await equipePage.goto();
-
-    await equipePage.filterByRole('Enfermeiro');
-    await equipePage.page.waitForTimeout(500);
-
-    await equipePage.filterByStatus('Ativo');
-    await equipePage.page.waitForTimeout(1000);
-
-    const rowCount = await equipePage.getRowCount();
-    expect(rowCount).toBeGreaterThanOrEqual(0);
-  });
-
   test('should apply especialidade and status filters together', async ({ equipePage }) => {
     await equipePage.goto();
 
@@ -416,11 +334,8 @@ test.describe('Equipe Table - Combined Filters', () => {
     }
   });
 
-  test('should apply all filters simultaneously (role + especialidade + status)', async ({ equipePage }) => {
+  test('should apply all filters simultaneously (especialidade + status)', async ({ equipePage }) => {
     await equipePage.goto();
-
-    await equipePage.filterByRole('Médico');
-    await equipePage.page.waitForTimeout(300);
 
     await equipePage.filterByEspecialidade('Cardiologia');
     await equipePage.page.waitForTimeout(300);
@@ -476,16 +391,6 @@ test.describe('Equipe Table - Sorting', () => {
     await equipePage.page.waitForTimeout(500);
 
     // Verify sorting is applied (check visual indicator or data order)
-    const rowCount = await equipePage.getRowCount();
-    expect(rowCount).toBeGreaterThanOrEqual(0);
-  });
-
-  test('should sort by Função column', async ({ equipePage }) => {
-    await equipePage.goto();
-
-    await equipePage.sortByColumn('Função');
-    await equipePage.page.waitForTimeout(500);
-
     const rowCount = await equipePage.getRowCount();
     expect(rowCount).toBeGreaterThanOrEqual(0);
   });
@@ -706,7 +611,6 @@ test.describe('Equipe Table - CRUD: Create', () => {
 
     await equipePage.createStaffMember({
       name: staffName,
-      role: 'Médico',
       especialidade: 'Cardiologia',
       phone: '(11) 98765-4321',
       email: 'test@example.com',
@@ -845,32 +749,6 @@ test.describe('Equipe Table - CRUD: Edit', () => {
     // Verify especialidade changed
     await equipePage.expectStaffData(staffName, {
       especialidade: 'Neurologia',
-    });
-
-    // Cleanup
-    await equipePage.unlinkStaffMember(staffName);
-  });
-
-  test('should edit staff member role', async ({ equipePage }) => {
-    await equipePage.goto();
-
-    const staffName = generateUniqueStaffName();
-
-    // Create with Médico role
-    await equipePage.createStaffMember({
-      name: staffName,
-      role: 'Médico',
-      especialidade: 'Ortopedia',
-    });
-
-    // Edit to Enfermeiro
-    await equipePage.editStaffMember(staffName, {
-      role: 'Enfermeiro',
-    });
-
-    // Verify role changed
-    await equipePage.expectStaffData(staffName, {
-      role: 'Enfermeiro',
     });
 
     // Cleanup
@@ -1139,7 +1017,7 @@ test.describe('Equipe Table - Keyboard Navigation and Accessibility', () => {
     await expect(equipePage.nameInput).toBeFocused();
 
     await page.keyboard.press('Tab');
-    // Should focus next field (role select or especialidade)
+    // Should focus next field (especialidade or phone)
 
     await equipePage.cancelForm();
   });

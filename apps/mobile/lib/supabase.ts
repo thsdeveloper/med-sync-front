@@ -187,7 +187,7 @@ export async function lookupStaffByCrm(crm: string) {
 
   const { data: staff, error } = await supabase
     .from('medical_staff')
-    .select('id, name, email, phone, crm, role, user_id, auth_email, especialidade:especialidade_id(id, nome)')
+    .select('id, name, email, phone, crm, user_id, auth_email, especialidade:especialidade_id(id, nome)')
     .eq('crm', crm)
     .maybeSingle(); // Use maybeSingle instead of single to avoid error when not found
 
@@ -214,7 +214,6 @@ export async function lookupStaffByCrm(crm: string) {
       phone: staff.phone,
       crm: staff.crm,
       especialidade: staff.especialidade,
-      role: staff.role,
     },
   };
 }
@@ -226,7 +225,7 @@ export async function lookupStaffByRegistro(numero: string, uf: string) {
   const { data: staff, error } = await supabase
     .from('medical_staff')
     .select(`
-      id, name, email, phone, crm, role, user_id, auth_email,
+      id, name, email, phone, crm, user_id, auth_email,
       registro_numero, registro_uf, registro_categoria,
       profissao_id,
       especialidade:especialidade_id(id, nome),
@@ -284,7 +283,76 @@ export async function lookupStaffByRegistro(numero: string, uf: string) {
       registro_categoria: staff.registro_categoria,
       especialidade: flatEspecialidade,
       profissao: flatProfissao,
-      role: staff.role,
+    },
+  };
+}
+
+// New function to lookup staff by CPF
+export async function lookupStaffByCpf(cpf: string) {
+  // Normalize CPF to digits only
+  const normalizedCpf = cpf.replace(/\D/g, '');
+  console.log('Looking up CPF:', normalizedCpf);
+
+  const { data: staff, error } = await supabase
+    .from('medical_staff')
+    .select(`
+      id, name, email, phone, cpf, user_id, auth_email,
+      registro_numero, registro_uf, registro_categoria,
+      profissao_id,
+      especialidade:especialidade_id(id, nome),
+      profissao:profissao_id(
+        id, nome,
+        conselho:conselho_id(id, sigla, nome_completo)
+      )
+    `)
+    .eq('cpf', normalizedCpf)
+    .maybeSingle();
+
+  console.log('Lookup result:', { staff, error });
+
+  if (error) {
+    console.error('Error looking up CPF:', error);
+    throw error;
+  }
+
+  if (!staff) {
+    console.log('No staff found for CPF:', normalizedCpf);
+    return { found: false, hasAuth: false, staff: undefined };
+  }
+
+  // Flatten nested relationships (Supabase returns arrays)
+  const flatEspecialidade = Array.isArray(staff.especialidade)
+    ? staff.especialidade[0]
+    : staff.especialidade;
+
+  const rawProfissao = Array.isArray(staff.profissao)
+    ? staff.profissao[0]
+    : staff.profissao;
+
+  const flatProfissao = rawProfissao ? {
+    id: rawProfissao.id,
+    nome: rawProfissao.nome,
+    conselho: Array.isArray(rawProfissao.conselho)
+      ? rawProfissao.conselho[0]
+      : rawProfissao.conselho,
+  } : null;
+
+  console.log('Found staff:', staff.name, 'hasAuth:', !!staff.user_id);
+  return {
+    found: true,
+    hasAuth: !!staff.user_id,
+    staff: {
+      id: staff.id,
+      name: staff.name,
+      email: staff.email,
+      phone: staff.phone,
+      cpf: staff.cpf,
+      profissao_id: staff.profissao_id,
+      registro_numero: staff.registro_numero,
+      registro_uf: staff.registro_uf,
+      registro_categoria: staff.registro_categoria,
+      especialidade: flatEspecialidade,
+      profissao: flatProfissao,
     },
   };
 }

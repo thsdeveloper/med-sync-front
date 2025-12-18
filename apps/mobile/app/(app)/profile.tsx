@@ -93,7 +93,7 @@ export default function ProfileScreen() {
             editable={true}
           />
           <Text style={styles.profileName}>{staff.name}</Text>
-          <Text style={styles.profileRole}>{staff.role || 'Profissional de Saúde'}</Text>
+          <Text style={styles.profileRole}>{staff.profissao?.nome || 'Profissional de Saúde'}</Text>
           {staff.especialidade?.nome && (
             <Text style={styles.profileSpecialty}>
               {staff.especialidade.nome}

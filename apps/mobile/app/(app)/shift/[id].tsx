@@ -91,7 +91,7 @@ export default function ShiftDetailScreen() {
           *,
           sectors (name, color),
           organizations (name),
-          medical_staff (name, role, color),
+          medical_staff (name, color, profissao:profissao_id(nome)),
           fixed_schedules (
             facility_id,
             facilities (

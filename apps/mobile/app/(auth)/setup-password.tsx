@@ -16,18 +16,16 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Input, Card, Avatar } from '@/components/ui';
 import { useAuth } from '@/providers/auth-provider';
-import { staffSetupPasswordWithRegistroSchema, type StaffSetupPasswordWithRegistroData } from '@medsync/shared';
+import { staffSetupPasswordWithCpfSchema, type StaffSetupPasswordWithCpfData, formatCpf } from '@medsync/shared';
 
 export default function SetupPasswordScreen() {
-  const { conselhoSigla, numero, uf, staffId, name, email } = useLocalSearchParams<{
-    conselhoSigla: string;
-    numero: string;
-    uf: string;
+  const { cpf, staffId, name, email } = useLocalSearchParams<{
+    cpf: string;
     staffId: string;
     name: string;
     email: string;
   }>();
-  const { setupPassword } = useAuth();
+  const { setupPasswordWithCpf } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -36,35 +34,27 @@ export default function SetupPasswordScreen() {
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm<StaffSetupPasswordWithRegistroData>({
-    resolver: zodResolver(staffSetupPasswordWithRegistroSchema),
+  } = useForm<StaffSetupPasswordWithCpfData>({
+    resolver: zodResolver(staffSetupPasswordWithCpfSchema),
     defaultValues: {
-      registro_numero: numero || '',
-      registro_uf: uf || '',
+      cpf: cpf || '',
       email: email || '',
       password: '',
       confirmPassword: '',
     },
   });
 
-  const onSubmit = async (data: StaffSetupPasswordWithRegistroData) => {
+  const onSubmit = async (data: StaffSetupPasswordWithCpfData) => {
     if (!staffId) {
       Alert.alert('Erro', 'ID do profissional não encontrado');
       return;
     }
 
-    if (!conselhoSigla) {
-      Alert.alert('Erro', 'Dados do conselho não encontrados. Volte e tente novamente.');
-      return;
-    }
-
     setIsLoading(true);
     try {
-      const { error } = await setupPassword({
+      const { error } = await setupPasswordWithCpf({
         staffId,
-        conselhoSigla,
-        registro_numero: data.registro_numero,
-        registro_uf: data.registro_uf,
+        cpf: data.cpf,
         email: data.email,
         password: data.password,
       });
@@ -79,8 +69,8 @@ export default function SetupPasswordScreen() {
     }
   };
 
-  // Format registro display
-  const registroDisplay = `${conselhoSigla || ''} ${numero || ''}/${uf || ''}`;
+  // Format CPF display
+  const cpfDisplay = formatCpf(cpf || '');
 
   return (
     <SafeAreaView style={styles.container}>
@@ -116,7 +106,10 @@ export default function SetupPasswordScreen() {
                 <Avatar name={name} size="lg" />
                 <View style={styles.infoCardText}>
                   <Text style={styles.infoCardName}>{name}</Text>
-                  <Text style={styles.infoCardRegistro}>{registroDisplay}</Text>
+                  <View style={styles.cpfRow}>
+                    <Ionicons name="card-outline" size={14} color="#6B7280" />
+                    <Text style={styles.infoCardCpf}>{cpfDisplay}</Text>
+                  </View>
                 </View>
               </View>
             </Card>
@@ -245,9 +238,15 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     marginBottom: 4,
   },
-  infoCardRegistro: {
+  cpfRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  infoCardCpf: {
     fontSize: 14,
     color: '#6B7280',
+    letterSpacing: 0.5,
   },
   form: {
     marginBottom: 24,

@@ -134,7 +134,6 @@ export async function getAttachmentUrl(
   filePath: string,
   expiresIn: number = 3600
 ): Promise<string | null> {
-  const supabase = createClient();
   return getAttachmentDownloadUrl(supabase, STORAGE_BUCKET, filePath, expiresIn);
 }
 

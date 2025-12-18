@@ -13,7 +13,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { decode as base64Decode } from 'base64-arraybuffer';
 import { supabase } from '@/lib/supabase';
 import {
@@ -89,8 +89,9 @@ export function useAttachmentUpload(): UseAttachmentUploadReturn {
   ): Promise<{ success: boolean; error?: string }> => {
     try {
       // Read file as base64
+      // Using string 'base64' directly as EncodingType enum can be undefined in some Metro bundler configurations
       const base64 = await FileSystem.readAsStringAsync(file.uri, {
-        encoding: FileSystem.EncodingType.Base64,
+        encoding: 'base64',
       });
 
       // Convert base64 to ArrayBuffer

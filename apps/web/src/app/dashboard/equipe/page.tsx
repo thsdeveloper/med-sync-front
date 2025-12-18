@@ -48,7 +48,7 @@ export default function TeamPage() {
                         phone,
                         crm,
                         especialidade_id,
-                        role,
+                        profissao_id,
                         color,
                         active,
                         created_at,
@@ -57,6 +57,13 @@ export default function TeamPage() {
                             id,
                             nome,
                             created_at
+                        ),
+                        profissao:profissoes (
+                            id,
+                            nome,
+                            conselho:conselhos_profissionais (
+                                sigla
+                            )
                         )
                     )
                 `)

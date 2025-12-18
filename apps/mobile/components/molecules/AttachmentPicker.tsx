@@ -9,12 +9,12 @@
  * Handles permission requests and file selection, returning selected files to parent.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
+  Pressable,
   Modal,
   Alert,
   Platform,
@@ -47,6 +47,21 @@ export default function AttachmentPicker({
   disabled = false,
 }: AttachmentPickerProps) {
   const [modalVisible, setModalVisible] = useState(false);
+  const isPickingRef = useRef(false);
+
+  /**
+   * Execute action and close modal after it completes
+   */
+  const executeAndCloseModal = useCallback(async (action: () => Promise<void>) => {
+    console.log('[AttachmentPicker] executeAndCloseModal called');
+    // Don't close modal first - let the native picker open while modal is visible
+    // The native picker will overlay the modal
+    try {
+      await action();
+    } finally {
+      setModalVisible(false);
+    }
+  }, []);
 
   /**
    * Requests camera permissions
@@ -83,18 +98,40 @@ export default function AttachmentPicker({
   /**
    * Handles camera photo capture
    */
-  const handleCamera = async () => {
-    setModalVisible(false);
-
-    const hasPermission = await requestCameraPermissions();
-    if (!hasPermission) return;
+  const launchCamera = async () => {
+    console.log('[AttachmentPicker] launchCamera called, isPickingRef:', isPickingRef.current);
+    if (isPickingRef.current) {
+      console.log('[AttachmentPicker] Already picking, returning');
+      return;
+    }
+    isPickingRef.current = true;
 
     try {
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        quality: 0.8,
+      console.log('[AttachmentPicker] Requesting camera permissions...');
+      const hasPermission = await requestCameraPermissions();
+      console.log('[AttachmentPicker] Camera permission result:', hasPermission);
+      if (!hasPermission) {
+        isPickingRef.current = false;
+        return;
+      }
+
+      console.log('[AttachmentPicker] Launching camera...');
+
+      // Wrap in Promise.race with timeout to detect hanging
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Camera picker timeout')), 30000);
       });
+
+      const result = await Promise.race([
+        ImagePicker.launchCameraAsync({
+          allowsEditing: true,
+          quality: 0.8,
+          exif: false,
+        }),
+        timeoutPromise,
+      ]);
+
+      console.log('[AttachmentPicker] Camera result:', JSON.stringify(result));
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
@@ -112,42 +149,63 @@ export default function AttachmentPicker({
         const validation = validateFile(file);
         if (!validation.isValid) {
           Alert.alert('Arquivo Inválido', validation.error);
+          isPickingRef.current = false;
           return;
         }
 
         onFilesSelected([file]);
       }
-    } catch (error) {
-      console.error('Error launching camera:', error);
-      Alert.alert('Erro', 'Não foi possível abrir a câmera.');
+    } catch (error: any) {
+      console.error('[AttachmentPicker] Error launching camera:', error?.message || error);
+      if (error?.message === 'Camera picker timeout') {
+        Alert.alert('Erro', 'A câmera demorou muito para responder. Tente novamente.');
+      } else {
+        Alert.alert('Erro', 'Não foi possível abrir a câmera.');
+      }
+    } finally {
+      console.log('[AttachmentPicker] Camera finally block, resetting isPickingRef');
+      isPickingRef.current = false;
     }
   };
 
   /**
    * Handles gallery image selection
    */
-  const handleGallery = async () => {
-    setModalVisible(false);
-
-    const hasPermission = await requestMediaLibraryPermissions();
-    if (!hasPermission) return;
-
-    const remainingSlots = maxFiles - currentFileCount;
-    if (remainingSlots <= 0) {
-      Alert.alert(
-        'Limite Atingido',
-        `Você já atingiu o limite de ${maxFiles} arquivos por mensagem.`
-      );
+  const launchGallery = async () => {
+    console.log('[AttachmentPicker] launchGallery called, isPickingRef:', isPickingRef.current);
+    if (isPickingRef.current) {
+      console.log('[AttachmentPicker] Already picking, returning');
       return;
     }
+    isPickingRef.current = true;
 
     try {
+      console.log('[AttachmentPicker] Requesting media library permissions...');
+      const hasPermission = await requestMediaLibraryPermissions();
+      console.log('[AttachmentPicker] Media library permission result:', hasPermission);
+      if (!hasPermission) {
+        isPickingRef.current = false;
+        return;
+      }
+
+      const remainingSlots = maxFiles - currentFileCount;
+      if (remainingSlots <= 0) {
+        Alert.alert(
+          'Limite Atingido',
+          `Você já atingiu o limite de ${maxFiles} arquivos por mensagem.`
+        );
+        isPickingRef.current = false;
+        return;
+      }
+
+      console.log('[AttachmentPicker] Launching image library...');
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
         allowsMultipleSelection: true,
         quality: 0.8,
         selectionLimit: remainingSlots,
+        exif: false,
       });
+      console.log('[AttachmentPicker] Image library result:', JSON.stringify(result));
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const files: SelectedFile[] = result.assets.map((asset, index) => {
@@ -166,6 +224,7 @@ export default function AttachmentPicker({
           const validation = validateFile(file);
           if (!validation.isValid) {
             Alert.alert('Arquivo Inválido', validation.error);
+            isPickingRef.current = false;
             return;
           }
         }
@@ -175,30 +234,40 @@ export default function AttachmentPicker({
     } catch (error) {
       console.error('Error launching image library:', error);
       Alert.alert('Erro', 'Não foi possível abrir a galeria.');
+    } finally {
+      isPickingRef.current = false;
     }
   };
 
   /**
    * Handles document selection
    */
-  const handleDocument = async () => {
-    setModalVisible(false);
-
-    const remainingSlots = maxFiles - currentFileCount;
-    if (remainingSlots <= 0) {
-      Alert.alert(
-        'Limite Atingido',
-        `Você já atingiu o limite de ${maxFiles} arquivos por mensagem.`
-      );
+  const launchDocumentPicker = async () => {
+    console.log('[AttachmentPicker] launchDocumentPicker called, isPickingRef:', isPickingRef.current);
+    if (isPickingRef.current) {
+      console.log('[AttachmentPicker] Already picking, returning');
       return;
     }
+    isPickingRef.current = true;
 
     try {
+      const remainingSlots = maxFiles - currentFileCount;
+      if (remainingSlots <= 0) {
+        Alert.alert(
+          'Limite Atingido',
+          `Você já atingiu o limite de ${maxFiles} arquivos por mensagem.`
+        );
+        isPickingRef.current = false;
+        return;
+      }
+
+      console.log('[AttachmentPicker] Launching document picker...');
       const result = await DocumentPicker.getDocumentAsync({
         type: 'application/pdf',
         multiple: remainingSlots > 1,
         copyToCacheDirectory: true,
       });
+      console.log('[AttachmentPicker] Document picker result:', result.canceled ? 'canceled' : 'success');
 
       if (result.canceled === false && result.assets && result.assets.length > 0) {
         const files: SelectedFile[] = result.assets
@@ -221,6 +290,7 @@ export default function AttachmentPicker({
           const validation = validateFile(file);
           if (!validation.isValid) {
             Alert.alert('Arquivo Inválido', validation.error);
+            isPickingRef.current = false;
             return;
           }
         }
@@ -232,14 +302,29 @@ export default function AttachmentPicker({
     } catch (error) {
       console.error('Error picking document:', error);
       Alert.alert('Erro', 'Não foi possível selecionar o documento.');
+    } finally {
+      isPickingRef.current = false;
     }
+  };
+
+  const handleCamera = () => {
+    console.log('[AttachmentPicker] handleCamera pressed');
+    executeAndCloseModal(launchCamera);
+  };
+  const handleGallery = () => {
+    console.log('[AttachmentPicker] handleGallery pressed');
+    executeAndCloseModal(launchGallery);
+  };
+  const handleDocument = () => {
+    console.log('[AttachmentPicker] handleDocument pressed');
+    executeAndCloseModal(launchDocumentPicker);
   };
 
   const isDisabled = disabled || currentFileCount >= maxFiles;
 
   return (
     <>
-      <TouchableOpacity
+      <Pressable
         style={[styles.button, isDisabled && styles.buttonDisabled]}
         onPress={() => setModalVisible(true)}
         disabled={isDisabled}
@@ -249,7 +334,7 @@ export default function AttachmentPicker({
           size={24}
           color={isDisabled ? '#D1D5DB' : '#6B7280'}
         />
-      </TouchableOpacity>
+      </Pressable>
 
       <Modal
         visible={modalVisible}
@@ -257,17 +342,19 @@ export default function AttachmentPicker({
         animationType="slide"
         onRequestClose={() => setModalVisible(false)}
       >
-        <TouchableOpacity
+        <Pressable
           style={styles.modalOverlay}
-          activeOpacity={1}
           onPress={() => setModalVisible(false)}
         >
-          <View style={styles.modalContent}>
+          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
             <View style={styles.modalHandle} />
 
             <Text style={styles.modalTitle}>Adicionar Anexo</Text>
 
-            <TouchableOpacity style={styles.option} onPress={handleCamera}>
+            <Pressable
+              style={({ pressed }) => [styles.option, pressed && styles.optionPressed]}
+              onPress={handleCamera}
+            >
               <View style={styles.optionIcon}>
                 <Ionicons name="camera" size={24} color="#0066CC" />
               </View>
@@ -278,9 +365,12 @@ export default function AttachmentPicker({
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity style={styles.option} onPress={handleGallery}>
+            <Pressable
+              style={({ pressed }) => [styles.option, pressed && styles.optionPressed]}
+              onPress={handleGallery}
+            >
               <View style={styles.optionIcon}>
                 <Ionicons name="images" size={24} color="#10B981" />
               </View>
@@ -291,9 +381,12 @@ export default function AttachmentPicker({
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity style={styles.option} onPress={handleDocument}>
+            <Pressable
+              style={({ pressed }) => [styles.option, pressed && styles.optionPressed]}
+              onPress={handleDocument}
+            >
               <View style={styles.optionIcon}>
                 <Ionicons name="document-text" size={24} color="#F59E0B" />
               </View>
@@ -304,16 +397,16 @@ export default function AttachmentPicker({
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
-              style={styles.cancelButton}
+            <Pressable
+              style={({ pressed }) => [styles.cancelButton, pressed && styles.cancelButtonPressed]}
               onPress={() => setModalVisible(false)}
             >
               <Text style={styles.cancelButtonText}>Cancelar</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
+            </Pressable>
+          </Pressable>
+        </Pressable>
       </Modal>
     </>
   );
@@ -367,6 +460,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
     marginBottom: 8,
   },
+  optionPressed: {
+    backgroundColor: '#E5E7EB',
+  },
   optionIcon: {
     width: 48,
     height: 48,
@@ -395,6 +491,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 12,
     backgroundColor: '#F3F4F6',
+  },
+  cancelButtonPressed: {
+    backgroundColor: '#E5E7EB',
   },
   cancelButtonText: {
     fontSize: 16,

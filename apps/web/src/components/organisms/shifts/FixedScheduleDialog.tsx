@@ -337,7 +337,7 @@ export function FixedScheduleDialog({
                                             placeholder="Selecione"
                                             options={staff.map((s) => ({
                                                 value: s.id,
-                                                label: `${s.name} (${s.role})`,
+                                                label: `${s.name} (${s.profissao?.nome || 'Profissional'})`,
                                             }))}
                                         />
                                     </FormControl>

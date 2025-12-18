@@ -71,7 +71,7 @@ export default function ScheduleScreen() {
             shift_type,
             facilities (name, type)
           ),
-          medical_staff (name, role, color),
+          medical_staff (name, color, profissao:profissao_id(nome)),
           shift_attendance (*)
         `)
         .eq('staff_id', staff.id)

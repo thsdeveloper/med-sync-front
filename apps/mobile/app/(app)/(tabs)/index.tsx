@@ -129,7 +129,7 @@ export default function HomeScreen() {
                 <Text style={styles.greetingText}>{getGreeting()},</Text>
               </View>
               <Text style={styles.userName}>{getFirstName()}</Text>
-              <Text style={styles.roleText}>{staff?.role || 'Profissional de Saúde'}</Text>
+              <Text style={styles.roleText}>{staff?.profissao?.nome || 'Profissional de Saúde'}</Text>
             </View>
 
             {/* Right side - Avatar & Notifications */}

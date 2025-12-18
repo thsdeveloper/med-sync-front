@@ -7,7 +7,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { supabase } from '../lib/supabase';
 import type { ChatAttachment } from '@medsync/shared/schemas';
 
@@ -127,9 +127,10 @@ export const useAttachmentDownload = (): UseAttachmentDownloadReturn => {
         const base64Data = await base64Promise;
 
         // Save to local file system
+        // Using string 'base64' directly as EncodingType enum can be undefined in some Metro bundler configurations
         const localPath = getLocalPath(attachment);
         await FileSystem.writeAsStringAsync(localPath, base64Data, {
-          encoding: FileSystem.EncodingType.Base64,
+          encoding: 'base64',
         });
 
         // Update progress to success

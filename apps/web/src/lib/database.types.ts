@@ -14,6 +14,188 @@ export type Database = {
   }
   public: {
     Tables: {
+      attachment_audit_log: {
+        Row: {
+          attachment_id: string | null
+          created_at: string
+          id: string
+          ip_address: unknown
+          metadata: Json | null
+          new_status: string | null
+          old_status: string | null
+          operation: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          attachment_id?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: unknown
+          metadata?: Json | null
+          new_status?: string | null
+          old_status?: string | null
+          operation: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          attachment_id?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: unknown
+          metadata?: Json | null
+          new_status?: string | null
+          old_status?: string | null
+          operation?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attachment_audit_log_attachment_id_fkey"
+            columns: ["attachment_id"]
+            isOneToOne: false
+            referencedRelation: "chat_attachments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attachment_audit_logs: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_role: string | null
+          attachment_id: string | null
+          conversation_id: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          ip_address: unknown
+          message_id: string | null
+          metadata: Json | null
+          organization_id: string
+          success: boolean
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_role?: string | null
+          attachment_id?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          ip_address?: unknown
+          message_id?: string | null
+          metadata?: Json | null
+          organization_id: string
+          success?: boolean
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_role?: string | null
+          attachment_id?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          ip_address?: unknown
+          message_id?: string | null
+          metadata?: Json | null
+          organization_id?: string
+          success?: boolean
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attachment_audit_logs_attachment_id_fkey"
+            columns: ["attachment_id"]
+            isOneToOne: false
+            referencedRelation: "chat_attachments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attachment_audit_logs_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attachment_audit_logs_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attachment_audit_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attachment_upload_rate_limits: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          file_name: string
+          file_size: number
+          id: string
+          organization_id: string
+          uploaded_at: string
+          user_id: string
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          file_name: string
+          file_size: number
+          id?: string
+          organization_id: string
+          uploaded_at?: string
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          file_name?: string
+          file_size?: number
+          id?: string
+          organization_id?: string
+          uploaded_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attachment_upload_rate_limits_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attachment_upload_rate_limits_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attachment_upload_rate_limits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "medical_staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brazilian_holidays: {
         Row: {
           created_at: string | null
@@ -69,6 +251,76 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_attachments: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id: string
+          message_id: string | null
+          rejected_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          sender_id: string
+          status: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id?: string
+          message_id?: string | null
+          rejected_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sender_id: string
+          status?: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          message_id?: string | null
+          rejected_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sender_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_attachments_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_attachments_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "medical_staff"
             referencedColumns: ["id"]
           },
         ]
@@ -473,6 +725,7 @@ export type Database = {
           auth_email: string | null
           avatar_url: string | null
           color: string | null
+          cpf: string | null
           created_at: string | null
           crm: string | null
           email: string | null
@@ -486,7 +739,6 @@ export type Database = {
           registro_categoria: string | null
           registro_numero: string | null
           registro_uf: string | null
-          role: string
           updated_at: string | null
           user_id: string | null
         }
@@ -495,6 +747,7 @@ export type Database = {
           auth_email?: string | null
           avatar_url?: string | null
           color?: string | null
+          cpf?: string | null
           created_at?: string | null
           crm?: string | null
           email?: string | null
@@ -508,7 +761,6 @@ export type Database = {
           registro_categoria?: string | null
           registro_numero?: string | null
           registro_uf?: string | null
-          role: string
           updated_at?: string | null
           user_id?: string | null
         }
@@ -517,6 +769,7 @@ export type Database = {
           auth_email?: string | null
           avatar_url?: string | null
           color?: string | null
+          cpf?: string | null
           created_at?: string | null
           crm?: string | null
           email?: string | null
@@ -530,7 +783,6 @@ export type Database = {
           registro_categoria?: string | null
           registro_numero?: string | null
           registro_uf?: string | null
-          role?: string
           updated_at?: string | null
           user_id?: string | null
         }
@@ -1329,6 +1581,36 @@ export type Database = {
           facility_name: string
         }[]
       }
+      check_upload_rate_limit:
+        | { Args: { p_user_id: string }; Returns: Json }
+        | {
+            Args: { p_organization_id: string; p_user_id: string }
+            Returns: boolean
+          }
+      cleanup_old_audit_logs: {
+        Args: { p_retention_days?: number }
+        Returns: {
+          deleted_count: number
+          oldest_remaining: string
+        }[]
+      }
+      cleanup_orphaned_attachments:
+        | { Args: { p_age_hours?: number }; Returns: Json }
+        | {
+            Args: {
+              p_dry_run?: boolean
+              p_grace_period_days?: number
+              p_organization_id: string
+            }
+            Returns: {
+              age_days: number
+              attachment_id: string
+              created_at: string
+              file_name: string
+              file_path: string
+              file_size: number
+            }[]
+          }
       create_support_conversation: {
         Args: {
           p_organization_id: string
@@ -1336,6 +1618,18 @@ export type Database = {
           p_staff_name: string
         }
         Returns: string
+      }
+      delete_attachment: {
+        Args: {
+          p_attachment_id: string
+          p_organization_id: string
+          p_reason?: string
+        }
+        Returns: Json
+      }
+      delete_chat_attachment: {
+        Args: { p_attachment_id: string }
+        Returns: Json
       }
       delete_future_shifts_from_fixed_schedule: {
         Args: { p_fixed_schedule_id: string }
@@ -1359,6 +1653,19 @@ export type Database = {
       }
       get_admin_support_conversation_ids: { Args: never; Returns: string[] }
       get_all_user_organization_ids: { Args: never; Returns: string[] }
+      get_attachment_audit_trail: {
+        Args: { p_attachment_id: string; p_organization_id: string }
+        Returns: {
+          action: string
+          actor_name: string
+          actor_role: string
+          created_at: string
+          error_message: string
+          id: string
+          metadata: Json
+          success: boolean
+        }[]
+      }
       get_calendar_shifts: {
         Args: {
           p_end_date: string
@@ -1371,6 +1678,32 @@ export type Database = {
       }
       get_current_staff_id: { Args: never; Returns: string }
       get_org_staff_ids: { Args: never; Returns: string[] }
+      get_organization_audit_report: {
+        Args: {
+          p_action_filter?: string
+          p_end_date?: string
+          p_organization_id: string
+          p_start_date?: string
+        }
+        Returns: {
+          action: string
+          failed_operations: number
+          successful_operations: number
+          total_operations: number
+          unique_actors: number
+          unique_attachments: number
+        }[]
+      }
+      get_orphaned_attachment_report: {
+        Args: { p_min_age_days?: number; p_organization_id: string }
+        Returns: {
+          eligible_for_cleanup: number
+          oldest_orphan_age_days: number
+          orphaned_by_type: Json
+          total_orphaned: number
+          total_size_bytes: number
+        }[]
+      }
       get_payment_records: {
         Args: {
           p_end_date?: string
@@ -1412,6 +1745,15 @@ export type Database = {
       get_staff_conversation_ids: { Args: never; Returns: string[] }
       get_staff_organization_ids: { Args: never; Returns: string[] }
       get_user_organization_ids: { Args: never; Returns: string[] }
+      get_user_upload_stats: {
+        Args: { p_organization_id: string; p_user_id: string }
+        Returns: {
+          limit_resets_at: string
+          rate_limit: number
+          remaining_uploads: number
+          uploads_in_last_hour: number
+        }[]
+      }
       insert_organization: {
         Args: {
           p_address?: string
@@ -1419,6 +1761,23 @@ export type Database = {
           p_name: string
           p_owner_id?: string
           p_phone?: string
+        }
+        Returns: string
+      }
+      log_attachment_operation: {
+        Args: {
+          p_action: string
+          p_actor_id: string
+          p_actor_role: string
+          p_attachment_id: string
+          p_conversation_id?: string
+          p_error_message?: string
+          p_ip_address?: unknown
+          p_message_id?: string
+          p_metadata?: Json
+          p_organization_id: string
+          p_success?: boolean
+          p_user_agent?: string
         }
         Returns: string
       }
@@ -1493,12 +1852,51 @@ export type Database = {
           total_weekend_bonus: number
         }[]
       }
-      reports_dashboard_metrics: {
+      record_upload_attempt: {
         Args: {
-          p_organization_id?: string
-          p_period?: string
-          p_specialty?: string
-          p_unit?: string
+          p_conversation_id: string
+          p_file_name: string
+          p_file_size: number
+          p_organization_id: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      reports_dashboard_metrics:
+        | {
+            Args: {
+              p_organization_id: string
+              p_period?: string
+              p_specialty?: string
+              p_unit?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_organization_id?: string
+              p_period?: string
+              p_specialty?: string
+              p_unit?: string
+            }
+            Returns: Json
+          }
+      update_attachment_status: {
+        Args: {
+          p_attachment_id: string
+          p_rejected_reason?: string
+          p_status: string
+        }
+        Returns: Json
+      }
+      upload_chat_attachment: {
+        Args: {
+          p_conversation_id: string
+          p_file_name: string
+          p_file_path: string
+          p_file_size: number
+          p_file_type: string
+          p_message_id: string
         }
         Returns: Json
       }

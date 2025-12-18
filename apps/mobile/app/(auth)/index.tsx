@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,123 +11,71 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, RegistroProfissionalInput, type RegistroProfissionalValue } from '@/components/ui';
-import { ProfissaoPicker } from '@/components/molecules';
+import { Button, CpfInput } from '@/components/ui';
 import { useAuth } from '@/providers/auth-provider';
-import { useProfissoes, type ProfissaoComConselho } from '@medsync/shared';
-import { registroLookupSchema, type RegistroLookupData, CONSELHOS } from '@medsync/shared';
+import { cpfLookupSchema, type CpfLookupData } from '@medsync/shared';
 
-// Form type for this screen (includes profissao_id for UI convenience)
-interface LookupFormData {
-  profissao_id: string;
-  registro: RegistroProfissionalValue;
-}
-
-export default function RegistroLookupScreen() {
-  const { lookupRegistro } = useAuth();
-  const { data: profissoes } = useProfissoes();
+export default function CpfLookupScreen() {
+  const { lookupCpf } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedProfissao, setSelectedProfissao] = useState<ProfissaoComConselho | null>(null);
 
   const {
     control,
     handleSubmit,
-    setValue,
     watch,
     formState: { errors },
-  } = useForm<LookupFormData>({
+  } = useForm<CpfLookupData>({
+    resolver: zodResolver(cpfLookupSchema),
     defaultValues: {
-      profissao_id: '',
-      registro: {
-        numero: '',
-        uf: '',
-        categoria: undefined,
-      },
+      cpf: '',
     },
   });
 
-  const registroValue = watch('registro');
-  const profissaoId = watch('profissao_id');
+  const cpfValue = watch('cpf');
 
-  const handleProfissaoChange = useCallback((id: string) => {
-    setValue('profissao_id', id);
-    // Find the selected profissao to get conselho info
-    const profissao = profissoes?.find(p => p.id === id);
-    setSelectedProfissao(profissao || null);
-    // Reset categoria when profissao changes
-    setValue('registro', {
-      ...registroValue,
-      categoria: undefined,
-    });
-  }, [profissoes, setValue, registroValue]);
-
-  const onSubmit = async (data: LookupFormData) => {
-    // Validate required fields
-    if (!data.registro.numero || !data.registro.uf) {
-      Alert.alert('Atenção', 'Preencha o número e UF do registro');
-      return;
-    }
-
-    if (!selectedProfissao?.conselho?.sigla) {
-      Alert.alert('Atenção', 'Selecione sua profissão');
-      return;
-    }
-
-    // Check categoria if required
-    if (selectedProfissao.conselho.requer_categoria && !data.registro.categoria) {
-      Alert.alert('Atenção', 'Selecione a categoria do registro');
-      return;
-    }
-
+  const onSubmit = async (data: CpfLookupData) => {
     setIsLoading(true);
     try {
-      const result = await lookupRegistro(data.registro.numero, data.registro.uf);
-      const conselhoSigla = selectedProfissao.conselho.sigla;
+      const result = await lookupCpf(data.cpf);
 
       if (result.found && result.hasAuth) {
-        // Registro exists and has auth setup - go to login
+        // CPF exists and has auth setup - go to login
         router.push({
           pathname: '/(auth)/login',
           params: {
-            conselhoSigla,
-            numero: data.registro.numero,
-            uf: data.registro.uf,
+            cpf: data.cpf,
           },
         });
       } else if (result.found && !result.hasAuth) {
-        // Registro exists but no auth - go to setup password
+        // CPF exists but no auth - go to setup password
         router.push({
           pathname: '/(auth)/setup-password',
           params: {
-            conselhoSigla,
-            numero: data.registro.numero,
-            uf: data.registro.uf,
+            cpf: data.cpf,
             staffId: result.staff?.id,
             name: result.staff?.name,
             email: result.staff?.email || '',
           },
         });
       } else {
-        // Registro not found - go to register
+        // CPF not found - go to register
         router.push({
           pathname: '/(auth)/register',
           params: {
-            profissao_id: data.profissao_id,
-            conselhoSigla,
-            numero: data.registro.numero,
-            uf: data.registro.uf,
-            categoria: data.registro.categoria || '',
+            cpf: data.cpf,
           },
         });
       }
     } catch (error) {
-      Alert.alert('Erro', 'Não foi possível verificar o registro. Tente novamente.');
+      Alert.alert('Erro', 'Não foi possível verificar o CPF. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const conselhoSigla = selectedProfissao?.conselho?.sigla || 'Registro';
+  // Check if CPF has 11 digits (normalized)
+  const cpfNormalized = cpfValue?.replace(/\D/g, '') || '';
+  const isValidLength = cpfNormalized.length === 11;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -143,44 +91,24 @@ export default function RegistroLookupScreen() {
             </View>
             <Text style={styles.title}>Bem-vindo</Text>
             <Text style={styles.subtitle}>
-              Insira seu registro profissional para acessar suas escalas de plantão
+              Insira seu CPF para acessar suas escalas de plantão
             </Text>
           </View>
 
           {/* Form */}
           <View style={styles.form}>
-            {/* Profissão Picker */}
+            {/* CPF Input */}
             <Controller
               control={control}
-              name="profissao_id"
-              render={({ field: { value } }) => (
-                <ProfissaoPicker
-                  label="Profissão"
-                  placeholder="Selecione sua profissão"
-                  value={value}
-                  onValueChange={handleProfissaoChange}
-                  error={errors.profissao_id?.message}
-                />
-              )}
-            />
-
-            {/* Registro Profissional Input */}
-            <Controller
-              control={control}
-              name="registro"
+              name="cpf"
               render={({ field: { onChange, onBlur, value } }) => (
-                <RegistroProfissionalInput
-                  label={`Número do ${conselhoSigla}`}
+                <CpfInput
+                  label="CPF"
                   value={value}
                   onChange={onChange}
                   onBlur={onBlur}
-                  profissao={selectedProfissao}
+                  error={errors.cpf?.message}
                   required
-                  errors={{
-                    numero: errors.registro?.numero?.message,
-                    uf: errors.registro?.uf?.message,
-                    categoria: errors.registro?.categoria?.message,
-                  }}
                 />
               )}
             />
@@ -189,7 +117,7 @@ export default function RegistroLookupScreen() {
               title="Continuar"
               onPress={handleSubmit(onSubmit)}
               loading={isLoading}
-              disabled={!profissaoId || !registroValue.numero || !registroValue.uf}
+              disabled={!isValidLength}
               style={styles.button}
             />
           </View>

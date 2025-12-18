@@ -2,11 +2,11 @@
  * Medical Staff Table Column Definitions
  *
  * TanStack Table column definitions for the Medical Staff (Equipe) data table.
- * Defines columns for medical staff name, role, especialidade, contact info, status, and actions.
+ * Defines columns for medical staff name, profissao, especialidade, contact info, status, and actions.
  *
  * Features:
- * - Sortable columns for name, role, and especialidade
- * - Multi-select filters for role, especialidade, and status
+ * - Sortable columns for name, profissao, and especialidade
+ * - Multi-select filters for profissao, especialidade, and status
  * - Custom cell renderers for contact info, status badges, and action buttons
  * - Edit and Unlink actions via dropdown menu
  * - Multi-organization indicator badge
@@ -136,7 +136,7 @@ export function getMedicalStaffColumns({
   onUnlink: (staffId: string, staffOrgId: string, organizationCount: number) => void;
 }): DataTableColumn<MedicalStaffWithOrganization>[] {
   return [
-    // Name column - sortable, with avatar and role badge
+    // Name column - sortable, with avatar and profissao badge
     {
       accessorKey: "name",
       header: ({ column }) => <ColumnHeader column={column} title="Profissional" />,
@@ -177,7 +177,7 @@ export function getMedicalStaffColumns({
                     className="inline-block w-2 h-2 rounded-full"
                     style={{ backgroundColor: staff.color }}
                   ></span>
-                  {staff.role}
+                  {staff.profissao?.nome || 'Profissional'}
                   {staff.crm && ` • ${staff.crm}`}
                 </div>
               </div>
@@ -186,33 +186,6 @@ export function getMedicalStaffColumns({
         );
       },
       enableSorting: true,
-    },
-
-    // Role column - sortable, hidden on mobile
-    {
-      accessorKey: "role",
-      header: ({ column }) => <ColumnHeader column={column} title="Função" />,
-      cell: ({ row }) => {
-        const staff = row.original;
-        return (
-          <div className="text-slate-600">
-            <div className="flex items-center gap-1.5">
-              <span
-                className="inline-block w-2 h-2 rounded-full"
-                style={{ backgroundColor: staff.color }}
-              ></span>
-              {staff.role}
-            </div>
-          </div>
-        );
-      },
-      enableSorting: true,
-      // Custom filter function for role multi-select
-      filterFn: (row, columnId, filterValue) => {
-        if (!filterValue || filterValue.length === 0) return true;
-        const role = row.original.role?.toLowerCase() || "";
-        return filterValue.some((val: string) => role.includes(val.toLowerCase()));
-      },
     },
 
     // Especialidade column - sortable, filterable

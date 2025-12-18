@@ -37,7 +37,7 @@ export function MedicalStaffList({
 
     const filteredStaff = staff.filter(member =>
         member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        member.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (member.profissao?.nome && member.profissao.nome.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (member.especialidade?.nome && member.especialidade.nome.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (member.crm && member.crm.toLowerCase().includes(searchTerm.toLowerCase()))
     );
@@ -90,7 +90,7 @@ export function MedicalStaffList({
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
                     <Input
-                        placeholder="Buscar por nome, função, especialidade ou CRM..."
+                        placeholder="Buscar por nome, profissão, especialidade ou CRM..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-10"
@@ -139,7 +139,7 @@ export function MedicalStaffList({
                                                 </div>
                                                 <div className="text-xs text-slate-500 flex items-center gap-1">
                                                     <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: member.color }}></span>
-                                                    {member.role}
+                                                    {member.profissao?.nome || 'Profissional'}
                                                     {member.crm && ` • ${member.crm}`}
                                                 </div>
                                             </div>

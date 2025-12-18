@@ -7,10 +7,9 @@ import { Page, Locator, expect } from '@playwright/test';
  * This page allows users to:
  * - View medical staff members linked to their organization
  * - Search staff by name
- * - Filter by role (Médico, Enfermeiro, Técnico de Enfermagem, etc.)
  * - Filter by especialidade (using especialidades table foreign key)
  * - Filter by status (active/inactive)
- * - Sort by multiple columns (name, especialidade, role, status, created_at)
+ * - Sort by multiple columns (name, especialidade, status, created_at)
  * - Paginate through results (10, 25, 50, 100 per page)
  * - Create new staff members with especialidade selection
  * - Edit existing staff members
@@ -35,7 +34,6 @@ export class EquipePage {
   readonly viewOptionsButton: Locator;
 
   // TanStack Table Faceted Filters
-  readonly roleFilterButton: Locator;
   readonly especialidadeFilterButton: Locator;
   readonly statusFilterButton: Locator;
 
@@ -53,7 +51,6 @@ export class EquipePage {
   readonly formDialog: Locator;
   readonly formTitle: Locator;
   readonly nameInput: Locator;
-  readonly roleSelect: Locator;
   readonly especialidadeCombobox: Locator;
   readonly especialidadeComboboxTrigger: Locator;
   readonly especialidadeComboboxSearch: Locator;
@@ -94,7 +91,6 @@ export class EquipePage {
     this.viewOptionsButton = page.getByRole('button', { name: /view/i });
 
     // Filter buttons (TanStack Table faceted filters)
-    this.roleFilterButton = page.getByRole('button', { name: /função/i });
     this.especialidadeFilterButton = page.getByRole('button', { name: /especialidade/i });
     this.statusFilterButton = page.getByRole('button', { name: /status/i });
 
@@ -108,7 +104,6 @@ export class EquipePage {
     this.formDialog = page.locator('[role="dialog"]');
     this.formTitle = this.formDialog.getByRole('heading');
     this.nameInput = this.formDialog.getByLabel(/nome/i);
-    this.roleSelect = this.formDialog.getByLabel(/função/i);
     this.especialidadeCombobox = this.formDialog.locator('[role="combobox"]').first();
     this.especialidadeComboboxTrigger = this.formDialog.getByRole('button', { name: /selecione uma especialidade/i });
     this.especialidadeComboboxSearch = this.formDialog.getByPlaceholder(/buscar especialidade/i);
@@ -202,24 +197,6 @@ export class EquipePage {
   // ============================================
   // Filter Methods
   // ============================================
-
-  /**
-   * Filter staff by role
-   * @param role - Role to filter by (e.g., "Médico", "Enfermeiro")
-   */
-  async filterByRole(role: string) {
-    await this.roleFilterButton.click();
-    await this.page.waitForTimeout(300);
-
-    // Find and click the role option in the dropdown
-    const roleOption = this.page.getByRole('option', { name: role }).or(
-      this.page.getByText(role, { exact: true })
-    );
-    await roleOption.click();
-
-    await this.page.waitForTimeout(500);
-    await this.waitForTableLoad();
-  }
 
   /**
    * Filter staff by especialidade
@@ -391,7 +368,6 @@ export class EquipePage {
    */
   async fillStaffForm(data: {
     name: string;
-    role?: string;
     especialidade?: string;
     phone?: string;
     email?: string;
@@ -399,16 +375,6 @@ export class EquipePage {
   }) {
     // Fill name (required)
     await this.nameInput.fill(data.name);
-
-    // Fill role if provided
-    if (data.role) {
-      await this.roleSelect.click();
-      await this.page.waitForTimeout(200);
-      const roleOption = this.page.getByRole('option', { name: data.role }).or(
-        this.page.getByText(data.role, { exact: true })
-      );
-      await roleOption.click();
-    }
 
     // Select especialidade if provided
     if (data.especialidade) {
@@ -457,7 +423,6 @@ export class EquipePage {
    */
   async createStaffMember(data: {
     name: string;
-    role?: string;
     especialidade?: string;
     phone?: string;
     email?: string;
@@ -492,7 +457,6 @@ export class EquipePage {
    */
   async editStaffMember(currentName: string, newData: {
     name?: string;
-    role?: string;
     especialidade?: string;
     phone?: string;
     email?: string;
@@ -501,7 +465,6 @@ export class EquipePage {
     await this.openEditDialog(currentName);
     await this.fillStaffForm({
       name: newData.name || currentName,
-      role: newData.role,
       especialidade: newData.especialidade,
       phone: newData.phone,
       email: newData.email,
@@ -584,7 +547,6 @@ export class EquipePage {
   async getStaffData(name: string): Promise<{
     name: string;
     especialidade?: string;
-    role?: string;
     contact?: string;
     status?: string;
   } | null> {
@@ -596,9 +558,8 @@ export class EquipePage {
     return {
       name: (await cells[0]?.textContent())?.trim() || '',
       especialidade: (await cells[1]?.textContent())?.trim() || '',
-      role: (await cells[2]?.textContent())?.trim() || '',
-      contact: (await cells[3]?.textContent())?.trim() || '',
-      status: (await cells[4]?.textContent())?.trim() || '',
+      contact: (await cells[2]?.textContent())?.trim() || '',
+      status: (await cells[3]?.textContent())?.trim() || '',
     };
   }
 
@@ -664,7 +625,6 @@ export class EquipePage {
    */
   async expectStaffData(name: string, expectedData: {
     especialidade?: string;
-    role?: string;
     status?: string;
   }) {
     const actualData = await this.getStaffData(name);
@@ -672,9 +632,6 @@ export class EquipePage {
 
     if (expectedData.especialidade) {
       expect(actualData?.especialidade).toContain(expectedData.especialidade);
-    }
-    if (expectedData.role) {
-      expect(actualData?.role).toContain(expectedData.role);
     }
     if (expectedData.status) {
       expect(actualData?.status).toContain(expectedData.status);

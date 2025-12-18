@@ -21,14 +21,14 @@ import { supabase } from '@/lib/supabase';
 export const dynamic = 'force-dynamic';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const attachmentId = params.id;
+    const { id: attachmentId } = await params;
 
     // Get authenticated user
     // Note: For production, you should implement proper authentication

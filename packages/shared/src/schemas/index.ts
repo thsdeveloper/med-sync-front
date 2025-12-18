@@ -1,6 +1,7 @@
 export * from './shifts.schema';
 export * from './medical-staff.schema';
 export * from './crm.schema';
+export * from './cpf.schema';
 export * from './registro-profissional.schema';
 export * from './facility.schema';
 export * from './fixed-schedule.schema';

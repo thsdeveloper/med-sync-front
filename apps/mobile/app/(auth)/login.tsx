@@ -15,9 +15,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Input } from '@/components/ui';
 import { useAuth } from '@/providers/auth-provider';
+import { formatCpf } from '@medsync/shared';
 import { z } from 'zod';
 
-// Local schema for login form (password only since registro comes from params)
+// Local schema for login form (password only since cpf comes from params)
 const loginFormSchema = z.object({
   password: z
     .string()
@@ -28,12 +29,8 @@ const loginFormSchema = z.object({
 type LoginFormData = z.infer<typeof loginFormSchema>;
 
 export default function LoginScreen() {
-  const { conselhoSigla, numero, uf } = useLocalSearchParams<{
-    conselhoSigla: string;
-    numero: string;
-    uf: string;
-  }>();
-  const { signInWithRegistro } = useAuth();
+  const { cpf } = useLocalSearchParams<{ cpf: string }>();
+  const { signInWithCpf } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -49,14 +46,14 @@ export default function LoginScreen() {
   });
 
   const onSubmit = async (data: LoginFormData) => {
-    if (!conselhoSigla || !numero || !uf) {
-      Alert.alert('Erro', 'Dados do registro não encontrados. Volte e tente novamente.');
+    if (!cpf) {
+      Alert.alert('Erro', 'CPF não encontrado. Volte e tente novamente.');
       return;
     }
 
     setIsLoading(true);
     try {
-      const { error } = await signInWithRegistro(conselhoSigla, numero, uf, data.password);
+      const { error } = await signInWithCpf(cpf, data.password);
       if (error) {
         Alert.alert('Erro', error.message);
       }
@@ -67,8 +64,8 @@ export default function LoginScreen() {
     }
   };
 
-  // Format registro display
-  const registroDisplay = `${conselhoSigla || ''} ${numero || ''}/${uf || ''}`;
+  // Format CPF display
+  const cpfDisplay = formatCpf(cpf || '');
 
   return (
     <SafeAreaView style={styles.container}>
@@ -93,10 +90,10 @@ export default function LoginScreen() {
             </Text>
           </View>
 
-          {/* Registro Info */}
-          <View style={styles.registroCard}>
-            <Ionicons name="document-text-outline" size={20} color="#0066CC" />
-            <Text style={styles.registroText}>{registroDisplay}</Text>
+          {/* CPF Info */}
+          <View style={styles.cpfCard}>
+            <Ionicons name="card-outline" size={20} color="#0066CC" />
+            <Text style={styles.cpfText}>{cpfDisplay}</Text>
           </View>
 
           {/* Form */}
@@ -170,7 +167,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     lineHeight: 24,
   },
-  registroCard: {
+  cpfCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#EFF6FF',
@@ -180,10 +177,11 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     gap: 10,
   },
-  registroText: {
+  cpfText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#0066CC',
+    letterSpacing: 1,
   },
   form: {
     marginBottom: 32,

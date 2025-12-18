@@ -1,7 +1,5 @@
 import { z } from 'zod';
 
-export const ROLES = ['Médico', 'Enfermeiro', 'Técnico', 'Administrativo', 'Outro'] as const;
-
 // Re-export from shared for backward compatibility
 // The canonical schemas are now in @medsync/shared
 export {

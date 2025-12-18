@@ -251,9 +251,9 @@ export function FixedScheduleList({
                                                         <span className="font-medium text-slate-900 truncate">
                                                             {schedule.medical_staff?.name || 'Profissional não encontrado'}
                                                         </span>
-                                                        {schedule.medical_staff?.role && (
+                                                        {schedule.medical_staff?.profissao?.nome && (
                                                             <span className="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600">
-                                                                {schedule.medical_staff.role}
+                                                                {schedule.medical_staff.profissao.nome}
                                                             </span>
                                                         )}
                                                     </div>

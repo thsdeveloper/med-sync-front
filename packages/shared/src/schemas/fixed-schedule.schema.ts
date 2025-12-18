@@ -93,7 +93,7 @@ export type FixedSchedule = {
     created_at: string;
     updated_at: string;
     facilities?: Facility;
-    medical_staff?: Pick<MedicalStaff, 'id' | 'name' | 'role' | 'color'>;
+    medical_staff?: Pick<MedicalStaff, 'id' | 'name' | 'color'> & { profissao?: { nome: string } | null };
     sectors?: Sector;
 };
 

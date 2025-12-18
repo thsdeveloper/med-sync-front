@@ -10,7 +10,7 @@
  */
 
 import { supabase } from './supabase';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 
 /**
@@ -649,7 +649,6 @@ export async function updateUserAvatar(
         avatar_url: updatedProfile.avatar_url,
         email: updatedProfile.email,
         phone: updatedProfile.phone,
-        role: updatedProfile.role,
         updated_at: updatedProfile.updated_at,
       },
     };

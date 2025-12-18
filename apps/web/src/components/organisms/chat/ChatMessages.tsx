@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useChat } from '@/providers/ChatProvider';
+import { useOrganization } from '@/providers/OrganizationProvider';
 import { DocumentAttachmentCard } from '@/components/molecules/DocumentAttachmentCard';
 import { AttachmentReviewDialog } from '@/components/organisms/AttachmentReviewDialog';
 import { useAttachmentReview } from '@/hooks/useAttachmentReview';
@@ -25,11 +26,14 @@ export function ChatMessages({ conversationId }: ChatMessagesProps) {
   const supabase = getSupabaseBrowserClient();
   const { user } = useSupabaseAuth();
   const { markAsRead, conversations } = useChat();
+  const { activeRole } = useOrganization();
   const [messages, setMessages] = useState<MessageWithSender[]>([]);
   const [conversation, setConversation] = useState<SupportConversationWithDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [staffId, setStaffId] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Admin can be owner or admin role from user_organizations
+  const isAdmin = activeRole === 'owner' || activeRole === 'admin';
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [selectedAttachment, setSelectedAttachment] = useState<ChatAttachment | null>(null);
   const [reviewAction, setReviewAction] = useState<'accept' | 'reject'>('accept');
@@ -38,22 +42,62 @@ export function ChatMessages({ conversationId }: ChatMessagesProps) {
   // Hook for attachment review operations
   const { acceptAttachment, rejectAttachment, isLoading: isReviewing } = useAttachmentReview();
 
-  // Get staff ID and admin status for current user
+  // Get staff ID for current user (if they are also a medical_staff)
   useEffect(() => {
     const getStaffInfo = async () => {
       if (!user?.id) return;
       const { data } = await supabase
         .from('medical_staff')
-        .select('id, funcao')
+        .select('id')
         .eq('user_id', user.id)
         .maybeSingle();
       if (data) {
         setStaffId(data.id);
-        setIsAdmin(data.funcao === 'Administrador');
       }
     };
     getStaffInfo();
   }, [user?.id, supabase]);
+
+  /**
+   * Associates attachments to messages using message_id or fallback to sender_id + timestamp
+   */
+  const associateAttachmentsToMessages = useCallback(
+    (messagesData: any[], attachmentsData: ChatAttachment[]) => {
+      // Track which attachments have been assigned
+      const assignedAttachmentIds = new Set<string>();
+
+      return messagesData.map((msg) => {
+        // First: try to match by message_id
+        let msgAttachments = attachmentsData.filter(
+          (a) => a.message_id === msg.id && !assignedAttachmentIds.has(a.id)
+        );
+
+        // Fallback: if no attachments found and message contains "Anexo enviado"
+        if (msgAttachments.length === 0 && msg.content?.includes('Anexo enviado')) {
+          const msgTime = new Date(msg.created_at).getTime();
+          // Find attachments from same sender created within 10 seconds of the message
+          msgAttachments = attachmentsData.filter((a) => {
+            if (assignedAttachmentIds.has(a.id)) return false;
+            if (a.message_id !== null) return false;
+
+            const attTime = new Date(a.created_at).getTime();
+            const timeDiff = Math.abs(attTime - msgTime);
+
+            // Match by sender_id (staff) or if message has no sender_id (admin message)
+            const senderMatch = a.sender_id === msg.sender_id;
+
+            return senderMatch && timeDiff < 10000; // 10 seconds window
+          });
+        }
+
+        // Mark these attachments as assigned
+        msgAttachments.forEach((a) => assignedAttachmentIds.add(a.id));
+
+        return { ...msg, attachments: msgAttachments };
+      });
+    },
+    []
+  );
 
   // Load messages with attachments
   const loadMessages = useCallback(async () => {
@@ -61,34 +105,46 @@ export function ChatMessages({ conversationId }: ChatMessagesProps) {
 
     setIsLoading(true);
     try {
-      // Load messages with attachments
+      // Load messages separately (without relying on message_id relation)
       const { data: messagesData } = await supabase
         .from('chat_messages')
         .select(`
           *,
-          sender:medical_staff (id, name, color),
-          attachments:chat_attachments (
-            id,
-            conversation_id,
-            message_id,
-            sender_id,
-            file_name,
-            file_type,
-            file_path,
-            file_size,
-            status,
-            rejected_reason,
-            reviewed_by,
-            reviewed_at,
-            created_at
-          )
+          sender:medical_staff (id, name, color)
+        `)
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
+
+      // Load ALL attachments for this conversation by conversation_id
+      const { data: attachmentsData } = await supabase
+        .from('chat_attachments')
+        .select(`
+          id,
+          conversation_id,
+          message_id,
+          sender_id,
+          file_name,
+          file_type,
+          file_path,
+          file_size,
+          status,
+          rejected_reason,
+          reviewed_by,
+          reviewed_at,
+          created_at
         `)
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
 
       if (messagesData) {
+        // Associate attachments to messages
+        const messagesWithAttachments = associateAttachmentsToMessages(
+          messagesData,
+          attachmentsData || []
+        );
+
         // Enrich messages with admin sender info if needed
-        const enrichedMessages = messagesData.map((msg) => {
+        const enrichedMessages = messagesWithAttachments.map((msg) => {
           // Check if this is an admin message
           if (msg.admin_sender_id && !msg.sender_id) {
             return {
@@ -109,7 +165,7 @@ export function ChatMessages({ conversationId }: ChatMessagesProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [conversationId, staffId, supabase, user?.id]);
+  }, [conversationId, staffId, supabase, user?.id, associateAttachmentsToMessages]);
 
   // Update conversation from context
   useEffect(() => {
@@ -157,7 +213,7 @@ export function ChatMessages({ conversationId }: ChatMessagesProps) {
             .maybeSingle();
 
           if (newMsg) {
-            let enrichedMsg = { ...newMsg, is_own: newMsg.sender_id === staffId };
+            let enrichedMsg: any = { ...newMsg, is_own: newMsg.sender_id === staffId, attachments: [] };
 
             // Handle admin messages
             if (newMsg.admin_sender_id && !newMsg.sender_id) {
@@ -165,7 +221,41 @@ export function ChatMessages({ conversationId }: ChatMessagesProps) {
                 ...newMsg,
                 sender: { id: newMsg.admin_sender_id, name: 'Administrador', color: '#6366F1' },
                 is_own: newMsg.admin_sender_id === user?.id,
+                attachments: [],
               };
+            }
+
+            // If message contains "Anexo enviado", fetch attachments for this conversation
+            // and associate them using the same logic as loadMessages
+            if (newMsg.content?.includes('Anexo enviado')) {
+              const msgTime = new Date(newMsg.created_at).getTime();
+              // Fetch attachments created around the same time by the same sender
+              const { data: attachmentsData } = await supabase
+                .from('chat_attachments')
+                .select(`
+                  id,
+                  conversation_id,
+                  message_id,
+                  sender_id,
+                  file_name,
+                  file_type,
+                  file_path,
+                  file_size,
+                  status,
+                  rejected_reason,
+                  reviewed_by,
+                  reviewed_at,
+                  created_at
+                `)
+                .eq('conversation_id', conversationId)
+                .eq('sender_id', newMsg.sender_id)
+                .is('message_id', null)
+                .gte('created_at', new Date(msgTime - 10000).toISOString())
+                .lte('created_at', new Date(msgTime + 10000).toISOString());
+
+              if (attachmentsData && attachmentsData.length > 0) {
+                enrichedMsg.attachments = attachmentsData;
+              }
             }
 
             setMessages((prev) => [...prev, enrichedMsg]);
@@ -177,7 +267,7 @@ export function ChatMessages({ conversationId }: ChatMessagesProps) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversationId, staffId, supabase]);
+  }, [conversationId, staffId, supabase, user?.id]);
 
   // Handle real-time attachment status changes
   const handleAttachmentStatusChange = useCallback(

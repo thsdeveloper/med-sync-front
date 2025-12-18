@@ -24,16 +24,17 @@ import { ColorPicker } from '@/components/molecules/ColorPicker';
 import { EspecialidadeCombobox } from '@/components/molecules/EspecialidadeCombobox';
 import { ProfissaoSelect } from '@/components/molecules/ProfissaoSelect';
 import { RegistroProfissionalInput, type RegistroProfissionalValue } from '@/components/molecules/RegistroProfissionalInput';
+import { CpfInput } from '@/components/molecules/CpfInput';
 import { SupabaseFileUploader, type UploadedFileInfo } from '@/components/organisms/upload/SupabaseFileUploader';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 import {
     medicalStaffSchema,
     MedicalStaffFormData,
-    ROLES,
     MedicalStaff,
     MedicalStaffWithOrganization,
     generateAuthEmail,
+    normalizeCpf,
 } from '@medsync/shared';
 import type { ProfissaoComConselho } from '@medsync/shared/schemas';
 
@@ -47,8 +48,8 @@ type ExistingStaffMatch = {
     id: string;
     name: string;
     email: string | null;
+    cpf: string | null;
     crm: string | null;
-    role: string;
     registro_numero: string | null;
     registro_uf: string | null;
     especialidade: {
@@ -83,6 +84,7 @@ export function MedicalStaffSheet({
     const [contractInfo, setContractInfo] = useState<StaffContractRecord | null>(null);
     const [isContractLoading, setIsContractLoading] = useState(false);
     const [isSearchingRegistro, setIsSearchingRegistro] = useState(false);
+    const [isSearchingCpf, setIsSearchingCpf] = useState(false);
     const [existingStaffMatch, setExistingStaffMatch] = useState<ExistingStaffMatch | null>(null);
     const [isLinking, setIsLinking] = useState(false);
     const [selectedProfissao, setSelectedProfissao] = useState<ProfissaoComConselho | null>(null);
@@ -93,13 +95,13 @@ export function MedicalStaffSheet({
             name: '',
             email: '',
             phone: '',
+            cpf: '',
             crm: '',
             profissao_id: '',
             registro_numero: '',
             registro_uf: '' as any,
             registro_categoria: '',
             especialidade_id: '',
-            role: 'Médico',
             color: '#3b82f6',
             active: true,
         },
@@ -107,6 +109,7 @@ export function MedicalStaffSheet({
 
     const registroNumero = form.watch('registro_numero');
     const registroUf = form.watch('registro_uf');
+    const cpfValue = form.watch('cpf');
 
     // Buscar profissional existente por registro profissional (numero + uf)
     const searchStaffByRegistro = useCallback(async (numero: string, uf: string) => {
@@ -117,7 +120,7 @@ export function MedicalStaffSheet({
             const { data, error } = await supabase
                 .from('medical_staff')
                 .select(`
-                    id, name, email, crm, role, registro_numero, registro_uf,
+                    id, name, email, cpf, crm, registro_numero, registro_uf,
                     especialidade:especialidade_id(id, nome),
                     profissao:profissao_id(id, nome, conselho:conselho_id(sigla))
                 `)
@@ -165,8 +168,8 @@ export function MedicalStaffSheet({
                         id: data.id,
                         name: data.name,
                         email: data.email,
+                        cpf: data.cpf,
                         crm: data.crm,
-                        role: data.role,
                         registro_numero: data.registro_numero,
                         registro_uf: data.registro_uf,
                         especialidade: Array.isArray(data.especialidade)
@@ -201,6 +204,96 @@ export function MedicalStaffSheet({
         return () => clearTimeout(timeoutId);
     }, [registroNumero, registroUf, searchStaffByRegistro, isEditing]);
 
+    // Buscar profissional existente por CPF
+    const searchStaffByCpf = useCallback(async (cpf: string) => {
+        const normalized = normalizeCpf(cpf);
+        if (!normalized || normalized.length !== 11 || isEditing) return;
+
+        setIsSearchingCpf(true);
+        try {
+            const { data, error } = await supabase
+                .from('medical_staff')
+                .select(`
+                    id, name, email, cpf, crm, registro_numero, registro_uf,
+                    especialidade:especialidade_id(id, nome),
+                    profissao:profissao_id(id, nome, conselho:conselho_id(sigla))
+                `)
+                .eq('cpf', normalized)
+                .limit(1)
+                .maybeSingle();
+
+            if (error) {
+                console.error('Erro ao buscar CPF:', error);
+                setExistingStaffMatch(null);
+                return;
+            }
+
+            if (data) {
+                // Verificar se ja esta vinculado a esta organizacao
+                const { data: existingLink } = await supabase
+                    .from('staff_organizations')
+                    .select('id')
+                    .eq('staff_id', data.id)
+                    .eq('organization_id', organizationId)
+                    .maybeSingle();
+
+                if (existingLink) {
+                    // Ja vinculado, nao mostrar
+                    setExistingStaffMatch(null);
+                } else {
+                    // Flatten nested relationships from Supabase
+                    const rawProfissao = Array.isArray(data.profissao)
+                        ? data.profissao[0]
+                        : data.profissao;
+
+                    const flattenedProfissao = rawProfissao ? {
+                        id: rawProfissao.id,
+                        nome: rawProfissao.nome,
+                        conselho: Array.isArray(rawProfissao.conselho)
+                            ? rawProfissao.conselho[0]
+                            : rawProfissao.conselho,
+                    } : null;
+
+                    const matchData: ExistingStaffMatch = {
+                        id: data.id,
+                        name: data.name,
+                        email: data.email,
+                        cpf: data.cpf,
+                        crm: data.crm,
+                        registro_numero: data.registro_numero,
+                        registro_uf: data.registro_uf,
+                        especialidade: Array.isArray(data.especialidade)
+                            ? (data.especialidade[0] || null)
+                            : (data.especialidade || null),
+                        profissao: flattenedProfissao,
+                    };
+                    setExistingStaffMatch(matchData);
+                }
+            } else {
+                setExistingStaffMatch(null);
+            }
+        } catch (error) {
+            console.error('Erro ao buscar CPF:', error);
+            setExistingStaffMatch(null);
+        } finally {
+            setIsSearchingCpf(false);
+        }
+    }, [isEditing, organizationId]);
+
+    // Debounce da busca por CPF
+    useEffect(() => {
+        const normalized = normalizeCpf(cpfValue || '');
+        if (isEditing || !normalized || normalized.length !== 11) {
+            return;
+        }
+
+        const timeoutId = setTimeout(() => {
+            searchStaffByCpf(cpfValue || '');
+        }, 500);
+
+        return () => clearTimeout(timeoutId);
+    }, [cpfValue, searchStaffByCpf, isEditing]);
+
     useEffect(() => {
         if (isOpen) {
             setExistingStaffMatch(null);
@@ -210,13 +303,13 @@ export function MedicalStaffSheet({
                     name: staffToEdit.name,
                     email: staffToEdit.email || '',
                     phone: staffToEdit.phone || '',
+                    cpf: staffToEdit.cpf || '',
                     crm: staffToEdit.crm || '',
                     profissao_id: staffToEdit.profissao_id || '',
                     registro_numero: staffToEdit.registro_numero || '',
                     registro_uf: (staffToEdit.registro_uf || '') as any,
                     registro_categoria: staffToEdit.registro_categoria || '',
                     especialidade_id: staffToEdit.especialidade_id || '',
-                    role: staffToEdit.role as any,
                     color: staffToEdit.color || '#3b82f6',
                     active: staffToEdit.staff_organization?.active ?? staffToEdit.active,
                 });
@@ -226,13 +319,13 @@ export function MedicalStaffSheet({
                     name: '',
                     email: '',
                     phone: '',
+                    cpf: '',
                     crm: '',
                     profissao_id: '',
                     registro_numero: '',
                     registro_uf: '' as any,
                     registro_categoria: '',
                     especialidade_id: '',
-                    role: 'Médico',
                     color: '#3b82f6',
                     active: true,
                 });
@@ -297,6 +390,9 @@ export function MedicalStaffSheet({
                 )
                 : null;
 
+            // Normalizar CPF para apenas dígitos
+            const normalizedCpf = data.cpf ? normalizeCpf(data.cpf) : null;
+
             if (isEditing && staffToEdit) {
                 // 1. Atualizar dados do profissional
                 const { error: staffError } = await supabase
@@ -305,6 +401,7 @@ export function MedicalStaffSheet({
                         name: data.name,
                         email: data.email || null,
                         phone: data.phone || null,
+                        cpf: normalizedCpf,
                         crm: data.crm || null,
                         profissao_id: data.profissao_id,
                         registro_numero: data.registro_numero,
@@ -312,7 +409,6 @@ export function MedicalStaffSheet({
                         registro_categoria: data.registro_categoria || null,
                         auth_email: authEmail,
                         especialidade_id: data.especialidade_id,
-                        role: data.role,
                         color: data.color,
                         active: data.active,
                     })
@@ -341,6 +437,7 @@ export function MedicalStaffSheet({
                         name: data.name,
                         email: data.email || null,
                         phone: data.phone || null,
+                        cpf: normalizedCpf,
                         crm: data.crm || null,
                         profissao_id: data.profissao_id,
                         registro_numero: data.registro_numero,
@@ -348,7 +445,6 @@ export function MedicalStaffSheet({
                         registro_categoria: data.registro_categoria || null,
                         auth_email: authEmail,
                         especialidade_id: data.especialidade_id,
-                        role: data.role,
                         color: data.color,
                         active: data.active,
                     })
@@ -475,6 +571,45 @@ export function MedicalStaffSheet({
                         </Alert>
                     )}
 
+                    {/* CPF Input - sempre visível para busca */}
+                    <FormField
+                        control={form.control}
+                        name="cpf"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="flex items-center gap-2">
+                                    CPF
+                                    {isSearchingCpf && (
+                                        <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
+                                    )}
+                                </FormLabel>
+                                <FormControl>
+                                    <CpfInput
+                                        value={field.value || ''}
+                                        onChange={(value) => {
+                                            field.onChange(value);
+                                            // Limpar match quando CPF muda
+                                            if (existingStaffMatch) {
+                                                setExistingStaffMatch(null);
+                                            }
+                                        }}
+                                        onBlur={field.onBlur}
+                                        error={form.formState.errors.cpf?.message}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                                {!isEditing && !existingStaffMatch && (
+                                    <p className="text-xs text-slate-500">
+                                        Digite o CPF para verificar se o profissional ja existe.
+                                    </p>
+                                )}
+                            </FormItem>
+                        )}
+                    />
+
+                    {/* Campos do formulário - ocultos quando profissional encontrado */}
+                    {!existingStaffMatch && (
+                        <>
                     {/* Profissao Select */}
                     <FormField
                         control={form.control}
@@ -539,41 +674,19 @@ export function MedicalStaffSheet({
                         )}
                     />
 
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Nome Completo</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Dr. João Silva" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="role"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Função</FormLabel>
-                                    <Select
-                                        value={field.value}
-                                        onValueChange={field.onChange}
-                                        placeholder="Selecione a função"
-                                        options={ROLES.map((role) => ({
-                                            value: role,
-                                            label: role,
-                                        }))}
-                                    />
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </div>
+                    <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Nome Completo</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Dr. João Silva" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
 
                     <FormField
                         control={form.control}
@@ -710,17 +823,21 @@ export function MedicalStaffSheet({
                             </div>
                         )}
                     </div>
+                        </>
+                    )}
 
                     <div className="flex justify-end gap-4 pt-4">
                         <Button type="button" variant="outline" onClick={onClose}>
                             Cancelar
                         </Button>
-                        <Button type="submit" disabled={form.formState.isSubmitting}>
-                            {form.formState.isSubmitting && (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            )}
-                            {isEditing ? 'Salvar Alterações' : 'Cadastrar Profissional'}
-                        </Button>
+                        {!existingStaffMatch && (
+                            <Button type="submit" disabled={form.formState.isSubmitting}>
+                                {form.formState.isSubmitting && (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                )}
+                                {isEditing ? 'Salvar Alterações' : 'Cadastrar Profissional'}
+                            </Button>
+                        )}
                     </div>
                 </form>
             </Form>

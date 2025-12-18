@@ -5,12 +5,7 @@ import {
     type Profissao,
     type ProfissaoComConselho,
 } from './registro-profissional.schema';
-
-/**
- * @deprecated Use profissao_id ao invés de role.
- * Mantido para backward compatibility.
- */
-export const ROLES = ['Médico', 'Enfermeiro', 'Técnico', 'Administrativo', 'Outro'] as const;
+import { normalizeCpf, isValidCpfChecksum } from './cpf.schema';
 
 // Especialidade type and schema (database record)
 export const especialidadeSchema = z.object({
@@ -37,6 +32,20 @@ export const medicalStaffSchema = z.object({
         .string()
         .optional()
         .or(z.literal('')),
+
+    // ========================================================================
+    // CPF - Cadastro de Pessoa Física (opcional, normalizado para 11 dígitos)
+    // ========================================================================
+    cpf: z
+        .string()
+        .optional()
+        .or(z.literal(''))
+        .refine((val) => !val || normalizeCpf(val).length === 11, {
+            message: 'CPF deve ter 11 dígitos',
+        })
+        .refine((val) => !val || isValidCpfChecksum(normalizeCpf(val)), {
+            message: 'CPF inválido',
+        }),
 
     // ========================================================================
     // Novos campos de registro profissional (substituem CRM)
@@ -66,9 +75,6 @@ export const medicalStaffSchema = z.object({
         .string()
         .uuid('ID da especialidade deve ser um UUID válido')
         .min(1, 'Especialidade é obrigatória'),
-
-    /** @deprecated Use profissao_id. O role será derivado da profissão. */
-    role: z.enum(ROLES),
 
     color: z
         .string()
@@ -136,6 +142,18 @@ export const searchStaffByRegistroSchema = z.object({
 });
 
 export type SearchStaffByRegistroData = z.infer<typeof searchStaffByRegistroSchema>;
+
+/**
+ * Schema para buscar profissional por CPF
+ */
+export const searchStaffByCpfSchema = z.object({
+    cpf: z
+        .string()
+        .min(11, 'CPF deve ter 11 dígitos')
+        .transform(normalizeCpf),
+});
+
+export type SearchStaffByCpfData = z.infer<typeof searchStaffByCpfSchema>;
 
 // Re-export types from registro-profissional for convenience
 export type { Profissao, ProfissaoComConselho };

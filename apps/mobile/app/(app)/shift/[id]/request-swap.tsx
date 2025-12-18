@@ -244,7 +244,7 @@ export default function RequestSwapScreen() {
                   </View>
                   <View style={styles.colleagueInfo}>
                     <Text style={styles.colleagueName}>{colleague.name}</Text>
-                    <Text style={styles.colleagueRole}>{colleague.especialidade?.nome || colleague.role}</Text>
+                    <Text style={styles.colleagueRole}>{colleague.especialidade?.nome || colleague.profissao?.nome || 'Profissional'}</Text>
                   </View>
                   {selectedColleague === colleague.id && (
                     <Ionicons name="checkmark-circle" size={24} color="#10B981" />

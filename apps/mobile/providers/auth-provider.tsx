@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase, lookupStaffByCrm, lookupStaffByRegistro, getCurrentStaff, clearAuthStorage } from '@/lib/supabase';
+import { supabase, lookupStaffByCrm, lookupStaffByRegistro, lookupStaffByCpf, getCurrentStaff, clearAuthStorage } from '@/lib/supabase';
 import { router } from 'expo-router';
-import type { MedicalStaff, CrmLookupResult, RegistroLookupResult } from '@medsync/shared';
-import { generateAuthEmail } from '@medsync/shared';
+import type { MedicalStaff, CrmLookupResult, RegistroLookupResult, CpfLookupResult } from '@medsync/shared';
+import { generateAuthEmail, normalizeCpf } from '@medsync/shared';
 
 type StaffData = MedicalStaff | null;
 
@@ -14,15 +14,24 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   // Legacy CRM methods (deprecated - kept for backward compatibility)
-  /** @deprecated Use lookupRegistro instead */
+  /** @deprecated Use lookupCpf instead */
   lookupCrm: (crm: string) => Promise<CrmLookupResult>;
-  /** @deprecated Use signInWithRegistro instead */
+  /** @deprecated Use signInWithCpf instead */
   signInWithCrm: (crm: string, password: string) => Promise<{ error: Error | null }>;
-  // New registro profissional methods
+  // Registro profissional methods (deprecated - use CPF methods)
+  /** @deprecated Use lookupCpf instead */
   lookupRegistro: (numero: string, uf: string) => Promise<RegistroLookupResult>;
+  /** @deprecated Use signInWithCpf instead */
   signInWithRegistro: (conselhoSigla: string, numero: string, uf: string, password: string) => Promise<{ error: Error | null }>;
+  /** @deprecated Use signUpWithCpf instead */
   signUp: (data: SignUpData) => Promise<{ error: Error | null }>;
+  /** @deprecated Use setupPasswordWithCpf instead */
   setupPassword: (data: SetupPasswordData) => Promise<{ error: Error | null }>;
+  // NEW: CPF-based methods (preferred)
+  lookupCpf: (cpf: string) => Promise<CpfLookupResult>;
+  signInWithCpf: (cpf: string, password: string) => Promise<{ error: Error | null }>;
+  signUpWithCpf: (data: SignUpWithCpfData) => Promise<{ error: Error | null }>;
+  setupPasswordWithCpf: (data: SetupPasswordWithCpfData) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshStaff: () => Promise<void>;
 }
@@ -55,6 +64,29 @@ interface SetupPasswordData {
   conselhoSigla: string;
   registro_numero: string;
   registro_uf: string;
+  email: string;
+  password: string;
+}
+
+// NEW: CPF-based signup data
+interface SignUpWithCpfData {
+  cpf: string;
+  name: string;
+  email: string;
+  phone?: string;
+  // Professional registration (still collected)
+  profissao_id: string;
+  registro_numero: string;
+  registro_uf: string;
+  registro_categoria?: string;
+  especialidade_id: string;
+  password: string;
+}
+
+// NEW: CPF-based setup password data
+interface SetupPasswordWithCpfData {
+  staffId: string;
+  cpf: string;
   email: string;
   password: string;
 }
@@ -307,7 +339,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           registro_uf: data.registro_uf,
           registro_categoria: data.registro_categoria || null,
           especialidade_id: data.especialidade_id,
-          role: 'Médico', // Role will be derived from profissao in future
           color: generateRandomColor(),
           active: true,
           user_id: authData.user.id,
@@ -401,6 +432,197 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // ============================================================================
+  // NEW: CPF-based methods (preferred)
+  // ============================================================================
+
+  const lookupCpf = useCallback(async (cpf: string): Promise<CpfLookupResult> => {
+    const result = await lookupStaffByCpf(cpf);
+    return {
+      found: result.found,
+      hasAuth: result.hasAuth,
+      staff: result.staff ? {
+        id: result.staff.id,
+        name: result.staff.name,
+        email: result.staff.email ?? null,
+        phone: result.staff.phone ?? null,
+        cpf: result.staff.cpf,
+        profissao_id: result.staff.profissao_id ?? null,
+        registro_numero: result.staff.registro_numero ?? null,
+        registro_uf: result.staff.registro_uf ?? null,
+        registro_categoria: result.staff.registro_categoria ?? null,
+        especialidade_id: result.staff.especialidade?.id ?? null,
+        profissao: result.staff.profissao,
+      } : undefined,
+    };
+  }, []);
+
+  const signInWithCpf = useCallback(async (cpf: string, password: string) => {
+    try {
+      const normalizedCpf = normalizeCpf(cpf);
+
+      // Look up staff by CPF to get their real email
+      const { data: staffData, error: lookupError } = await supabase
+        .from('medical_staff')
+        .select('email')
+        .eq('cpf', normalizedCpf)
+        .single();
+
+      if (lookupError || !staffData?.email) {
+        return { error: new Error('CPF não encontrado ou sem acesso configurado') };
+      }
+
+      // Sign in using the staff's real email
+      const { error } = await supabase.auth.signInWithPassword({
+        email: staffData.email,
+        password,
+      });
+
+      if (error) {
+        return { error: new Error('Senha incorreta') };
+      }
+
+      // Navigate to app
+      router.replace('/(app)/(tabs)');
+      return { error: null };
+    } catch (err) {
+      return { error: err as Error };
+    }
+  }, []);
+
+  const signUpWithCpf = useCallback(async (data: SignUpWithCpfData) => {
+    try {
+      const normalizedCpf = normalizeCpf(data.cpf);
+
+      // Use REAL email for auth (not generated auth_email)
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            name: data.name,
+            cpf: normalizedCpf,
+          },
+        },
+      });
+
+      if (authError) {
+        return { error: authError };
+      }
+
+      if (!authData.user) {
+        return { error: new Error('Falha ao criar usuário') };
+      }
+
+      // Sign in immediately to ensure session is active
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
+
+      if (signInError) {
+        console.error('SignIn after signup failed:', signInError);
+        return { error: signInError };
+      }
+
+      // Create medical_staff record with CPF as primary identifier
+      const { error: staffError } = await supabase
+        .from('medical_staff')
+        .insert({
+          name: data.name,
+          email: data.email,
+          phone: data.phone || null,
+          cpf: normalizedCpf,
+          profissao_id: data.profissao_id,
+          registro_numero: data.registro_numero,
+          registro_uf: data.registro_uf,
+          registro_categoria: data.registro_categoria || null,
+          especialidade_id: data.especialidade_id,
+          color: generateRandomColor(),
+          active: true,
+          user_id: authData.user.id,
+          auth_email: null, // No longer using generated auth_email
+        });
+
+      if (staffError) {
+        // Rollback: sign out and try to clean up
+        await supabase.auth.signOut();
+        return { error: staffError };
+      }
+
+      // Refresh staff data after insert
+      await refreshStaff();
+
+      // Navigate to app
+      router.replace('/(app)/(tabs)');
+      return { error: null };
+    } catch (err) {
+      return { error: err as Error };
+    }
+  }, [refreshStaff]);
+
+  const setupPasswordWithCpf = useCallback(async (data: SetupPasswordWithCpfData) => {
+    try {
+      console.log('Setup password with CPF for staff:', data.staffId);
+
+      // Create auth user with REAL email
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+      });
+
+      console.log('SignUp result:', { user: authData?.user?.id, error: authError });
+
+      if (authError) {
+        return { error: authError };
+      }
+
+      if (!authData.user) {
+        return { error: new Error('Falha ao criar usuário') };
+      }
+
+      // Sign in immediately to ensure session is active
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
+
+      if (signInError) {
+        console.error('SignIn after signup failed:', signInError);
+        return { error: signInError };
+      }
+
+      console.log('Updating medical_staff:', data.staffId, 'with user_id:', authData.user.id);
+
+      // Update medical_staff record with user_id and email
+      const { error: updateError } = await supabase
+        .from('medical_staff')
+        .update({
+          user_id: authData.user.id,
+          email: data.email,
+          auth_email: null, // Clear legacy auth_email
+        })
+        .eq('id', data.staffId);
+
+      if (updateError) {
+        console.error('Update medical_staff failed:', updateError);
+        return { error: updateError };
+      }
+
+      console.log('Setup password with CPF completed successfully');
+
+      // Refresh staff data after update
+      await refreshStaff();
+
+      // Navigate to app
+      router.replace('/(app)/(tabs)');
+      return { error: null };
+    } catch (err) {
+      console.error('Setup password with CPF error:', err);
+      return { error: err as Error };
+    }
+  }, [refreshStaff]);
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     setStaff(null);
@@ -416,11 +638,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Legacy CRM methods (deprecated)
     lookupCrm,
     signInWithCrm,
-    // New registro profissional methods
+    // Registro profissional methods (deprecated - use CPF methods)
     lookupRegistro,
     signInWithRegistro,
     signUp,
     setupPassword,
+    // NEW: CPF-based methods (preferred)
+    lookupCpf,
+    signInWithCpf,
+    signUpWithCpf,
+    setupPasswordWithCpf,
     signOut,
     refreshStaff,
   };

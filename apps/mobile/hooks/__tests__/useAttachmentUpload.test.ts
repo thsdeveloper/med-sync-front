@@ -1,10 +1,10 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import useAttachmentUpload from '../useAttachmentUpload';
 
 // Mock dependencies
-jest.mock('expo-file-system');
+jest.mock('expo-file-system/legacy');
 jest.mock('../../lib/supabase', () => ({
   supabase: {
     storage: {
@@ -77,7 +77,7 @@ describe('useAttachmentUpload', () => {
 
       expect(FileSystem.readAsStringAsync).toHaveBeenCalledWith(
         mockFile.uri,
-        { encoding: FileSystem.EncodingType.Base64 }
+        { encoding: 'base64' }
       );
 
       expect(mockUpload).toHaveBeenCalled();
