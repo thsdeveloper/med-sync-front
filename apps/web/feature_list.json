@@ -752,7 +752,7 @@
           "Status badge shows correct color based on status"
         ]
       },
-      "passes": false
+      "passes": true
     },
     {
       "id": "F040",
