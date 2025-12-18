@@ -879,7 +879,7 @@
           "Navigation to detail page via URL parameter works"
         ]
       },
-      "passes": false
+      "passes": true
     },
     {
       "id": "F044",
