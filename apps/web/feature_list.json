@@ -846,7 +846,7 @@
           "Time range selector updates chart data"
         ]
       },
-      "passes": false
+      "passes": true
     },
     {
       "id": "F043",
