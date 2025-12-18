@@ -632,7 +632,7 @@
           "Admin check prevents unauthorized access"
         ]
       },
-      "passes": false
+      "passes": true
     },
     {
       "id": "F036",
