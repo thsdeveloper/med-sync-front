@@ -944,7 +944,7 @@
           "Back navigation returns to listing with preserved state"
         ]
       },
-      "passes": false
+      "passes": true
     }
   ]
 }
