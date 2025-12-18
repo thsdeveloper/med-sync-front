@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { Plus, Users } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Button } from '@/components/atoms/Button';
@@ -14,6 +15,7 @@ import { DataTable } from '@/components/data-table/organisms/DataTable';
 import { getMedicalStaffColumns } from '@/components/organisms/medical-staff/medical-staff-columns';
 
 export default function TeamPage() {
+    const router = useRouter();
     const { activeOrganization, loading: orgLoading } = useOrganization();
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [editingStaff, setEditingStaff] = useState<MedicalStaffWithOrganization | null>(null);
@@ -154,13 +156,19 @@ export default function TeamPage() {
         setEditingStaff(null);
     };
 
+    const handleViewDetails = (staffId: string) => {
+        router.push(`/dashboard/corpo-clinico/${staffId}`);
+    };
+
     // Create column definitions with action handlers using useMemo
     const columns = useMemo(
         () =>
             getMedicalStaffColumns({
                 onEdit: handleEdit,
                 onUnlink: handleUnlink,
+                onViewDetails: handleViewDetails,
             }),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         []
     );
 

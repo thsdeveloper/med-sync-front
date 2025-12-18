@@ -23,6 +23,7 @@ import {
   Mail,
   Phone,
   Building2,
+  Eye,
 } from "lucide-react";
 import { MedicalStaffWithOrganization } from "@medsync/shared";
 import type { DataTableColumn } from "@/components/data-table/types";
@@ -49,25 +50,38 @@ interface MedicalStaffActionsProps {
   staff: MedicalStaffWithOrganization;
   onEdit: (staff: MedicalStaffWithOrganization) => void;
   onUnlink: (staffId: string, staffOrgId: string, organizationCount: number) => void;
+  onViewDetails: (staffId: string) => void;
 }
 
 /**
- * Actions cell component - Edit and Unlink buttons
+ * Actions cell component - View Details, Edit and Unlink buttons
  */
 function MedicalStaffActions({
   staff,
   onEdit,
   onUnlink,
+  onViewDetails,
 }: MedicalStaffActionsProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-8 w-8 p-0">
+        <Button
+          variant="ghost"
+          className="h-8 w-8 p-0"
+          data-testid="row-actions-menu"
+        >
           <span className="sr-only">Abrir menu</span>
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        <DropdownMenuItem
+          onClick={() => onViewDetails(staff.id)}
+          data-testid="view-details-action"
+        >
+          <Eye className="mr-2 h-4 w-4" />
+          Visualizar
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => onEdit(staff)}>
           <Edit className="mr-2 h-4 w-4" />
           Editar
@@ -116,6 +130,7 @@ function isActiveInOrg(staff: MedicalStaffWithOrganization): boolean {
  *
  * @param onEdit - Callback function when edit action is triggered
  * @param onUnlink - Callback function when unlink action is triggered
+ * @param onViewDetails - Callback function when view details action is triggered
  * @returns Array of column definitions for TanStack Table
  *
  * @example
@@ -123,6 +138,7 @@ function isActiveInOrg(staff: MedicalStaffWithOrganization): boolean {
  * const columns = getMedicalStaffColumns({
  *   onEdit: (staff) => console.log("Edit", staff),
  *   onUnlink: (staffId, staffOrgId, count) => console.log("Unlink", staffId),
+ *   onViewDetails: (staffId) => router.push(`/dashboard/corpo-clinico/${staffId}`),
  * });
  *
  * <DataTable data={staff} columns={columns} />
@@ -131,9 +147,11 @@ function isActiveInOrg(staff: MedicalStaffWithOrganization): boolean {
 export function getMedicalStaffColumns({
   onEdit,
   onUnlink,
+  onViewDetails,
 }: {
   onEdit: (staff: MedicalStaffWithOrganization) => void;
   onUnlink: (staffId: string, staffOrgId: string, organizationCount: number) => void;
+  onViewDetails: (staffId: string) => void;
 }): DataTableColumn<MedicalStaffWithOrganization>[] {
   return [
     // Name column - sortable, with avatar and profissao badge
@@ -171,7 +189,13 @@ export function getMedicalStaffColumns({
                 )}
               </div>
               <div>
-                <div className="font-medium text-slate-900">{staff.name}</div>
+                <button
+                  onClick={() => onViewDetails(staff.id)}
+                  className="font-medium text-slate-900 hover:text-blue-600 hover:underline transition-colors text-left"
+                  data-testid="staff-name-link"
+                >
+                  {staff.name}
+                </button>
                 <div className="text-xs text-slate-500 flex items-center gap-1">
                   <span
                     className="inline-block w-2 h-2 rounded-full"
@@ -284,7 +308,7 @@ export function getMedicalStaffColumns({
       },
     },
 
-    // Actions column - edit and unlink buttons
+    // Actions column - view details, edit and unlink buttons
     {
       id: "actions",
       header: () => <div className="text-right">Ações</div>,
@@ -294,6 +318,7 @@ export function getMedicalStaffColumns({
             staff={row.original}
             onEdit={onEdit}
             onUnlink={onUnlink}
+            onViewDetails={onViewDetails}
           />
         </div>
       ),

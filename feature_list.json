@@ -523,6 +523,37 @@
         "Security tests confirm RLS policies work as expected"
       ],
       "passes": true
+    },
+    {
+      "id": "F044",
+      "title": "Add 'View Details' action to medical staff table and navigation",
+      "type": "feature",
+      "description": "Modify existing medical staff table component to add 'Visualizar' option in row actions menu (DropdownMenu) and make staff name clickable to navigate to detail view. Update table actions to include Eye icon from Lucide React. Implement navigation using next/navigation router. Ensure consistent behavior across all table interaction points.",
+      "acceptance_criteria": [
+        "'Visualizar' option added to table row actions dropdown menu",
+        "Medical staff name in table is clickable and navigates to detail page",
+        "Eye icon from Lucide React used for 'Visualizar' action",
+        "Navigation uses Next.js router with proper dynamic route",
+        "Both name click and menu action navigate to same detail page"
+      ],
+      "test_criteria": {
+        "scenarios": [
+          "Clicking staff name navigates to detail page with correct ID",
+          "Clicking 'Visualizar' in dropdown menu navigates to detail page",
+          "Navigation preserves query parameters (filters, pagination)"
+        ],
+        "selectors": [
+          "[data-testid='staff-name-link']",
+          "[data-testid='row-actions-menu']",
+          "[data-testid='view-details-action']"
+        ],
+        "assertions": [
+          "Both navigation methods lead to /dashboard/corpo-clinico/[id]",
+          "Staff name appears as clickable link with hover effect",
+          "'Visualizar' option visible in dropdown menu"
+        ]
+      },
+      "passes": true
     }
   ]
 }
