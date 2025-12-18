@@ -1062,3 +1062,51 @@
 - Zero breaking changes to existing code
 - Password encryption handled at rest by Supabase (note: not application-level encryption)
 
+[2025-12-17T22:04:00] [F030] Create SMTP settings Zod validation schema - COMPLETED
+- Created comprehensive Zod validation schema in src/schemas/smtp-settings.schema.ts
+- Implemented validation for all 8 SMTP configuration fields:
+  * smtp_host: Domain/IP validation with regex (supports domains, IPv4, localhost)
+  * smtp_port: Integer validation with range 1-65535 (valid TCP port range)
+  * smtp_user: Required email validation with lowercase normalization
+  * smtp_password: Minimum 8 characters, maximum 255 characters
+  * smtp_from_email: Required email validation with lowercase normalization
+  * smtp_from_name: Optional string field with default empty string
+  * use_tls: Boolean field with default true (recommended for security)
+  * is_enabled: Boolean field with default false (must be explicitly enabled)
+- Exported SmtpSettingsFormData TypeScript type using z.infer for type safety
+- Exported smtpSettingsUpdateSchema for partial updates (PATCH operations)
+- Created 30 comprehensive unit tests in src/schemas/__tests__/smtp-settings.schema.test.ts
+- Test coverage includes:
+  * Valid configurations (all fields, minimal fields, IPv4, localhost, subdomains, plus addressing)
+  * Invalid email tests (missing @, missing domain, invalid format)
+  * Invalid port tests (below 1, above 65535, negative, decimal, string type)
+  * Invalid host tests (empty, invalid domain format)
+  * Invalid password tests (too short, empty)
+  * Required fields enforcement (all 5 required fields tested)
+  * Type export verification
+  * Partial update schema tests
+- All 30 tests passing successfully
+- Portuguese error messages for user-friendly validation feedback
+- String trimming on all text fields to prevent whitespace issues
+- Email normalization (lowercase) for consistent database storage
+- Helpful regex patterns for robust domain/IP validation
+- Full JSDoc documentation with usage examples
+- All acceptance criteria met:
+  ✅ Zod schema created in src/schemas/smtp-settings.schema.ts
+  ✅ All SMTP fields have appropriate validation rules
+  ✅ Email fields validated with proper email format
+  ✅ Port number validated within valid range (1-65535)
+  ✅ TypeScript type exported from schema
+- All test criteria met:
+  ✅ Valid SMTP configuration passes schema validation
+  ✅ Invalid email format triggers validation error
+  ✅ Invalid port number triggers validation error
+  ✅ Schema exports SmtpSettingsFormData type
+  ✅ Validation errors contain helpful Portuguese messages
+  ✅ All required fields are enforced
+- Impact metrics:
+  * 1 schema file created (200 lines with full documentation)
+  * 1 test file created (489 lines with 30 test cases)
+  * 688 total lines of code added (schema + tests)
+  * Zero breaking changes to existing code
+  * Foundation ready for F031 (SMTP settings API endpoints implementation)
