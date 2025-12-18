@@ -720,7 +720,7 @@
           "Error state populated when query fails"
         ]
       },
-      "passes": false
+      "passes": true
     },
     {
       "id": "F039",

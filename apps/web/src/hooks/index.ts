@@ -9,3 +9,4 @@
 
 export { useDataTable, type UseDataTableOptions, type UseDataTableResult } from './useDataTable';
 export { useSmtpSettings, type UseSmtpSettingsResult, type SmtpSettings } from './useSmtpSettings';
+export { useMedicalStaffDetail, type UseMedicalStaffDetailResult } from './useMedicalStaffDetail';
