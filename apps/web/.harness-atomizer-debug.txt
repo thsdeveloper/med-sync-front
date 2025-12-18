@@ -1,242 +1,286 @@
-=== Atomizer Debug Output (2025-12-18T00:39:15.754Z) ===
+=== Atomizer Debug Output (2025-12-18T03:52:42.614Z) ===
 SUCCESS: true
 ERROR: none
-OUTPUT LENGTH: 11350
+OUTPUT LENGTH: 13637
 
 OUTPUT:
 ```json
 [
   {
-    "id": "F029",
-    "title": "Create SMTP configuration database schema and migration",
+    "id": "F037",
+    "title": "Create medical staff detail view database query function",
     "type": "feature",
-    "description": "Create Supabase migration to add email_smtp_settings table with columns: organization_id (FK), smtp_host, smtp_port, smtp_user, smtp_password (encrypted), smtp_from_email, smtp_from_name, use_tls, is_enabled, created_at, updated_at. Add RLS policies to restrict access to admin users only. Include unique constraint on organization_id.",
+    "description": "Create RPC function or server-side query to fetch comprehensive medical staff details including personal info, specialties, facilities, shift history, performance metrics, and contact information. Implement in src/lib/supabase/ with proper organization filtering and RLS. Query should join medical_staff with related tables (facilities, specialties, shifts) to provide complete professional profile data.",
     "acceptance_criteria": [
-      "Migration file created in migrations/ directory",
-      "email_smtp_settings table created with all required columns",
-      "RLS policies implemented for admin-only access",
-      "Foreign key relationship to organizations table established",
-      "Unique constraint on organization_id enforced"
+      "Database query function created in src/lib/supabase/",
+      "Function fetches medical staff by ID with all related data (specialties, facilities, shifts)",
+      "Organization-based RLS filtering implemented correctly",
+      "Function returns properly typed data matching Database types",
+      "Query optimized with proper joins to avoid N+1 problems"
     ],
     "test_criteria": {
       "scenarios": [
-        "Admin user can insert SMTP settings for their organization",
-        "Non-admin user cannot access email_smtp_settings table",
-        "Cannot create duplicate SMTP settings for same organization"
+        "Query returns complete medical staff details for valid ID",
+        "Query respects organization boundaries (RLS)",
+        "Query returns null for non-existent medical staff ID"
       ],
       "selectors": [],
       "assertions": [
-        "Table exists in database schema",
-        "RLS policies prevent unauthorized access",
-        "Unique constraint prevents duplicate entries"
+        "Returned data includes all required fields (name, specialties, facilities, contact)",
+        "Query executes within acceptable performance threshold (<500ms)",
+        "Data is properly typed with TypeScript"
       ]
     },
     "passes": false
   },
   {
-    "id": "F030",
-    "title": "Create SMTP settings Zod validation schema",
+    "id": "F038",
+    "title": "Create useMedicalStaffDetail hook for data fetching",
     "type": "feature",
-    "description": "Create Zod schema in src/schemas/smtp-settings.schema.ts for SMTP configuration validation. Include validation for smtp_host (required domain/IP), smtp_port (number 1-65535), smtp_user (required email), smtp_password (min 8 chars), smtp_from_email (valid email), smtp_from_name (optional string), use_tls (boolean), is_enabled (boolean). Export type SmtpSettingsFormData.",
+    "description": "Implement custom React hook in src/hooks/useMedicalStaffDetail.ts to fetch and manage medical staff detail data. Hook should handle loading states, error states, refetching, and caching. Use Supabase real-time subscriptions for live updates. Export hook from src/hooks/index.ts following existing patterns.",
     "acceptance_criteria": [
-      "Zod schema created in src/schemas/smtp-settings.schema.ts",
-      "All SMTP fields have appropriate validation rules",
-      "Email fields validated with proper email format",
-      "Port number validated within valid range (1-65535)",
-      "TypeScript type exported from schema"
+      "useMedicalStaffDetail hook created in src/hooks/useMedicalStaffDetail.ts",
+      "Hook manages loading, error, and data states",
+      "Hook accepts medical staff ID as parameter",
+      "Real-time subscription implemented for live data updates",
+      "Hook exported from src/hooks/index.ts"
     ],
     "test_criteria": {
       "scenarios": [
-        "Valid SMTP configuration passes schema validation",
-        "Invalid email format triggers validation error",
-        "Invalid port number triggers validation error"
+        "Hook fetches data successfully on mount",
+        "Hook handles loading state correctly",
+        "Hook handles error state when fetch fails",
+        "Hook updates data when real-time changes occur"
       ],
       "selectors": [],
       "assertions": [
-        "Schema exports SmtpSettingsFormData type",
-        "Validation errors contain helpful messages",
-        "All required fields are enforced"
+        "Hook returns { data, isLoading, error, refetch } interface",
+        "Loading state is true during fetch",
+        "Error state populated when query fails"
       ]
     },
     "passes": false
   },
   {
-    "id": "F031",
-    "title": "Implement SMTP settings API endpoints (GET, POST, PATCH)",
+    "id": "F039",
+    "title": "Create MedicalStaffHeader atom component",
     "type": "feature",
-    "description": "Create API routes in src/app/api/smtp-settings/route.ts for GET (fetch current settings), POST (create settings), and PATCH (update settings). Implement server-side validation using Zod schema. Add admin authorization check. Encrypt smtp_password before storage using Supabase Vault or environment-based encryption key. Return sanitized data (no password in response).",
+    "description": "Create atomic component in src/components/atoms/MedicalStaffHeader.tsx to display professional's name, photo, primary specialty, and status badge. Component should accept props for avatar URL, name, specialty, and online/active status. Use shadcn/ui Avatar, Badge components. Implement skeleton loader variant for loading states. Follow atomic design principles.",
     "acceptance_criteria": [
-      "GET /api/smtp-settings returns current organization SMTP settings",
-      "POST /api/smtp-settings creates new SMTP configuration",
-      "PATCH /api/smtp-settings updates existing configuration",
-      "Admin authorization enforced on all endpoints",
-      "smtp_password encrypted before database storage"
+      "MedicalStaffHeader component created in src/components/atoms/",
+      "Component displays avatar, name, specialty, and status badge",
+      "Skeleton loader variant implemented",
+      "Component properly typed with TypeScript interface",
+      "Component follows existing atomic design patterns"
     ],
     "test_criteria": {
       "scenarios": [
-        "GET request returns SMTP settings without password field",
-        "POST request creates new settings with encrypted password",
-        "PATCH request updates settings successfully",
-        "Non-admin user receives 403 Forbidden response"
-      ],
-      "selectors": [],
-      "assertions": [
-        "API returns 200 status for valid requests",
-        "Password never appears in API responses",
-        "Validation errors return 400 status with details"
-      ]
-    },
-    "passes": false
-  },
-  {
-    "id": "F032",
-    "title": "Create SMTP test connection endpoint",
-    "type": "feature",
-    "description": "Create API route POST /api/smtp-settings/test-connection to validate SMTP credentials by sending test email. Use nodemailer package to establish SMTP connection with provided credentials. Send test email to configured smtp_from_email. Return connection success/failure status with detailed error messages. Implement timeout handling (10s max).",
-    "acceptance_criteria": [
-      "POST /api/smtp-settings/test-connection endpoint created",
-      "nodemailer package installed and configured",
-      "Test email sent successfully with valid credentials",
-      "Detailed error messages returned for connection failures",
-      "Connection timeout enforced at 10 seconds"
-    ],
-    "test_criteria": {
-      "scenarios": [
-        "Valid SMTP credentials result in successful test email",
-        "Invalid credentials return connection error",
-        "Connection timeout triggers appropriate error message"
-      ],
-      "selectors": [],
-      "assertions": [
-        "API returns success status when email sent",
-        "API returns error details when connection fails",
-        "Request completes within timeout period"
-      ]
-    },
-    "passes": false
-  },
-  {
-    "id": "F033",
-    "title": "Create SmtpSettingsForm component with all configuration fields",
-    "type": "feature",
-    "description": "Create SmtpSettingsForm component in src/components/organisms/ using React Hook Form and Zod schema. Include form fields: smtp_host (Input), smtp_port (Input type number), smtp_user (Input email), smtp_password (Input password with show/hide toggle), smtp_from_email (Input email), smtp_from_name (Input), use_tls (Switch), is_enabled (Switch). Add 'Test Connection' button. Implement loading states and error handling.",
-    "acceptance_criteria": [
-      "SmtpSettingsForm component created with all SMTP fields",
-      "React Hook Form integrated with Zod validation",
-      "Password field has show/hide toggle functionality",
-      "Test Connection button triggers connection test",
-      "Loading states displayed during form submission and testing"
-    ],
-    "test_criteria": {
-      "scenarios": [
-        "User can fill all SMTP configuration fields",
-        "Form validation displays errors for invalid inputs",
-        "Test Connection button sends test request",
-        "Password visibility can be toggled on/off"
+        "Component renders with valid data",
+        "Component shows skeleton when in loading state",
+        "Component handles missing avatar gracefully (shows initials)"
       ],
       "selectors": [
-        "input[name='smtp_host']",
-        "input[name='smtp_port']",
-        "input[name='smtp_password']",
-        "button:has-text('Test Connection')"
+        "[data-testid='medical-staff-header']",
+        "[data-testid='staff-avatar']",
+        "[data-testid='staff-name']",
+        "[data-testid='staff-specialty']"
       ],
       "assertions": [
-        "Form renders all input fields",
-        "Validation errors appear below invalid fields",
-        "Test Connection button is clickable when form valid"
+        "Avatar displays image when URL provided",
+        "Name and specialty text are visible",
+        "Status badge shows correct color based on status"
       ]
     },
     "passes": false
   },
   {
-    "id": "F034",
-    "title": "Create useSmtpSettings hook for SMTP data management",
+    "id": "F040",
+    "title": "Create MedicalStaffInfoCard molecule component",
     "type": "feature",
-    "description": "Create useSmtpSettings custom hook in src/hooks/useSmtpSettings.ts to manage SMTP settings state. Implement methods: fetchSettings (GET), saveSettings (POST/PATCH), testConnection. Use React Query for caching and loading states. Add toast notifications for success/error feedback. Handle organization context to fetch settings for current organization.",
+    "description": "Create molecule component in src/components/molecules/MedicalStaffInfoCard.tsx to display categorized information sections (Contact Info, Professional Details, Documents). Use shadcn/ui Card, Separator. Component should accept sections as props and render icon + label + value rows. Implement responsive grid layout. Support loading skeleton state.",
     "acceptance_criteria": [
-      "useSmtpSettings hook created in src/hooks/",
-      "React Query integrated for data fetching and caching",
-      "Methods implemented: fetchSettings, saveSettings, testConnection",
-      "Toast notifications shown for all operations",
-      "Organization context properly handled"
+      "MedicalStaffInfoCard component created in src/components/molecules/",
+      "Component displays multiple information sections with icons",
+      "Responsive grid layout implemented (1 column mobile, 2 columns desktop)",
+      "Skeleton loader state implemented",
+      "Uses Lucide React icons for visual enhancement"
     ],
     "test_criteria": {
       "scenarios": [
-        "Hook fetches SMTP settings on mount",
-        "saveSettings triggers API call and updates cache",
-        "testConnection displays success/error toast",
-        "Loading states properly managed during operations"
-      ],
-      "selectors": [],
-      "assertions": [
-        "Hook exports all required methods",
-        "React Query cache updates after mutations",
-        "Toast notifications appear for user feedback"
-      ]
-    },
-    "passes": false
-  },
-  {
-    "id": "F035",
-    "title": "Add Email Notifications section to /dashboard/configuracoes page",
-    "type": "feature",
-    "description": "Update existing /dashboard/configuracoes page to include new 'Notificações por E-mail' section. Add TabsList item for 'E-mail' tab. Create TabsContent with heading, description, and SmtpSettingsForm component. Add admin-only visibility check - show access denied message for non-admin users. Style section consistently with existing configuration tabs.",
-    "acceptance_criteria": [
-      "E-mail tab added to configuration page TabsList",
-      "TabsContent displays Email Notifications section",
-      "SmtpSettingsForm component rendered in tab content",
-      "Admin-only access enforced with appropriate messaging",
-      "Section styling consistent with other configuration tabs"
-    ],
-    "test_criteria": {
-      "scenarios": [
-        "Admin user navigates to /dashboard/configuracoes and sees E-mail tab",
-        "Clicking E-mail tab displays SMTP configuration form",
-        "Non-admin user sees access denied message instead of form",
-        "Form saves and displays success notification"
+        "Component renders multiple information sections",
+        "Component adapts layout for mobile and desktop viewports",
+        "Component shows skeleton loaders during data fetch"
       ],
       "selectors": [
-        "[role='tab']:has-text('E-mail')",
-        "[role='tabpanel'] >> text='Notificações por E-mail'",
-        "form >> text='Configurações SMTP'"
+        "[data-testid='info-card']",
+        "[data-testid='info-section']",
+        "[data-testid='info-row']"
       ],
       "assertions": [
-        "E-mail tab is visible in navigation",
-        "SMTP form appears when tab selected",
-        "Admin check prevents unauthorized access"
+        "All provided sections render correctly",
+        "Icons display next to each information row",
+        "Card is responsive and adjusts to viewport size"
       ]
     },
     "passes": false
   },
   {
-    "id": "F036",
-    "title": "Add SMTP settings e2e tests for configuration page",
+    "id": "F041",
+    "title": "Create MedicalStaffShiftHistory molecule component",
     "type": "feature",
-    "description": "Create e2e test file e2e/smtp-settings.spec.ts with comprehensive test coverage. Test scenarios: admin can view SMTP form, admin can save SMTP settings, test connection success/failure, non-admin cannot access form, validation errors display correctly, password encryption verified (password not in response). Use existing test patterns from e2e/clinicas-table.spec.ts.",
+    "description": "Create molecule component in src/components/molecules/MedicalStaffShiftHistory.tsx to display recent shift history in a timeline or list format. Show shift date, facility, specialty, hours worked, and status. Use shadcn/ui Card, Badge, ScrollArea. Implement virtual scrolling for performance with large datasets. Support empty state when no shifts found.",
     "acceptance_criteria": [
-      "e2e test file created at e2e/smtp-settings.spec.ts",
-      "Test scenarios cover admin access, form submission, validation",
-      "Test connection feature validated in e2e tests",
-      "Non-admin access restriction tested",
-      "Password encryption verified (no plain password in responses)"
+      "MedicalStaffShiftHistory component created in src/components/molecules/",
+      "Component displays shift history in chronological order (most recent first)",
+      "Virtual scrolling implemented for performance",
+      "Empty state component shown when no shifts available",
+      "Each shift shows date, facility, specialty, hours, and status badge"
     ],
     "test_criteria": {
       "scenarios": [
-        "Admin user can access and submit SMTP configuration form",
-        "Test connection button triggers connection validation",
-        "Form validation prevents invalid submissions",
-        "Non-admin user sees access denied message",
-        "Saved settings persist and reload correctly"
+        "Component renders list of shifts with all details",
+        "Component shows empty state when no shifts exist",
+        "Component handles large datasets efficiently with virtual scrolling"
       ],
       "selectors": [
-        "[data-testid='smtp-settings-form']",
-        "button:has-text('Test Connection')",
-        "button:has-text('Salvar Configurações')"
+        "[data-testid='shift-history']",
+        "[data-testid='shift-item']",
+        "[data-testid='shift-empty-state']"
       ],
       "assertions": [
-        "All test scenarios pass successfully",
-        "Form submission creates/updates database record",
-        "Password never exposed in network responses"
+        "Shifts are ordered by date (newest first)",
+        "Status badges display correct colors",
+        "Scrolling is smooth with 100+ shift records"
+      ]
+    },
+    "passes": false
+  },
+  {
+    "id": "F042",
+    "title": "Create MedicalStaffPerformanceMetrics organism component",
+    "type": "feature",
+    "description": "Create organism component in src/components/organisms/MedicalStaffPerformanceMetrics.tsx to display performance statistics and charts. Show total shifts, total hours, facilities worked, attendance rate. Use Recharts for visual data representation (bar/line charts). Implement time range selector (last 30/90/365 days). Use shadcn/ui Card, Tabs for chart switching.",
+    "acceptance_criteria": [
+      "MedicalStaffPerformanceMetrics component created in src/components/organisms/",
+      "Component displays key metrics: total shifts, hours, facilities, attendance rate",
+      "Recharts integration with responsive charts (bar/line)",
+      "Time range selector implemented (30/90/365 days)",
+      "Loading and error states handled gracefully"
+    ],
+    "test_criteria": {
+      "scenarios": [
+        "Component renders all performance metrics correctly",
+        "Charts update when time range is changed",
+        "Charts are responsive and adapt to container width"
+      ],
+      "selectors": [
+        "[data-testid='performance-metrics']",
+        "[data-testid='metric-card']",
+        "[data-testid='performance-chart']",
+        "[data-testid='time-range-selector']"
+      ],
+      "assertions": [
+        "All metric cards display numerical values",
+        "Charts render without errors",
+        "Time range selector updates chart data"
+      ]
+    },
+    "passes": false
+  },
+  {
+    "id": "F043",
+    "title": "Create MedicalStaffDetailView page component",
+    "type": "feature",
+    "description": "Create page component in src/app/dashboard/corpo-clinico/[id]/page.tsx that composes all detail components into cohesive layout. Implement responsive grid layout with MedicalStaffHeader, MedicalStaffInfoCard, MedicalStaffShiftHistory, and MedicalStaffPerformanceMetrics. Use useMedicalStaffDetail hook for data fetching. Add back button to return to listing. Implement proper loading and error states.",
+    "acceptance_criteria": [
+      "Detail page created at src/app/dashboard/corpo-clinico/[id]/page.tsx",
+      "Page composes all detail components in responsive grid layout",
+      "useMedicalStaffDetail hook integrated for data fetching",
+      "Back button navigates to medical staff listing page",
+      "Loading skeleton and error states implemented"
+    ],
+    "test_criteria": {
+      "scenarios": [
+        "Page loads and displays all sections when valid ID provided",
+        "Page shows loading skeletons during data fetch",
+        "Page shows error message for invalid/non-existent ID",
+        "Back button navigates to /dashboard/corpo-clinico"
+      ],
+      "selectors": [
+        "[data-testid='medical-staff-detail-page']",
+        "[data-testid='back-button']",
+        "[data-testid='loading-skeleton']",
+        "[data-testid='error-message']"
+      ],
+      "assertions": [
+        "All components render in correct layout order",
+        "Page is responsive on mobile, tablet, and desktop",
+        "Navigation to detail page via URL parameter works"
+      ]
+    },
+    "passes": false
+  },
+  {
+    "id": "F044",
+    "title": "Add 'View Details' action to medical staff table and navigation",
+    "type": "feature",
+    "description": "Modify existing medical staff table component to add 'Visualizar' option in row actions menu (DropdownMenu) and make staff name clickable to navigate to detail view. Update table actions to include Eye icon from Lucide React. Implement navigation using next/navigation router. Ensure consistent behavior across all table interaction points.",
+    "acceptance_criteria": [
+      "'Visualizar' option added to table row actions dropdown menu",
+      "Medical staff name in table is clickable and navigates to detail page",
+      "Eye icon from Lucide React used for 'Visualizar' action",
+      "Navigation uses Next.js router with proper dynamic route",
+      "Both name click and menu action navigate to same detail page"
+    ],
+    "test_criteria": {
+      "scenarios": [
+        "Clicking staff name navigates to detail page with correct ID",
+        "Clicking 'Visualizar' in dropdown menu navigates to detail page",
+        "Navigation preserves query parameters (filters, pagination)"
+      ],
+      "selectors": [
+        "[data-testid='staff-name-link']",
+        "[data-testid='row-actions-menu']",
+        "[data-testid='view-details-action']"
+      ],
+      "assertions": [
+        "Both navigation methods lead to /dashboard/corpo-clinico/[id]",
+        "Staff name appears as clickable link with hover effect",
+        "'Visualizar' option visible in dropdown menu"
+      ]
+    },
+    "passes": false
+  },
+  {
+    "id": "F045",
+    "title": "Add e2e tests for medical staff detail view",
+    "type": "feature",
+    "description": "Create comprehensive e2e test file in e2e/tests/medical-staff-detail.spec.ts to verify detail page functionality. Test navigation from table (name click and menu action), data rendering, component interactions, loading states, error handling, and back navigation. Use existing Playwright fixtures and test helpers. Verify responsive behavior and accessibility.",
+    "acceptance_criteria": [
+      "E2E test file created at e2e/tests/medical-staff-detail.spec.ts",
+      "Tests verify navigation from table to detail page (both methods)",
+      "Tests verify all components render with correct data",
+      "Tests verify loading states and error handling",
+      "Tests verify back button navigation to listing page"
+    ],
+    "test_criteria": {
+      "scenarios": [
+        "User clicks staff name in table and sees detail page",
+        "User clicks 'Visualizar' in menu and sees detail page",
+        "Detail page displays all information sections correctly",
+        "Performance metrics charts render and are interactive",
+        "Back button returns user to medical staff listing"
+      ],
+      "selectors": [
+        "[data-testid='staff-name-link']",
+        "[data-testid='view-details-action']",
+        "[data-testid='medical-staff-detail-page']",
+        "[data-testid='back-button']"
+      ],
+      "assertions": [
+        "Navigation to detail page completes successfully",
+        "All page sections are visible and contain data",
+        "Back navigation returns to listing with preserved state"
       ]
     },
     "passes": false

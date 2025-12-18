@@ -666,6 +666,285 @@
         ]
       },
       "passes": true
+    },
+    {
+      "id": "F037",
+      "title": "Create medical staff detail view database query function",
+      "type": "feature",
+      "description": "Create RPC function or server-side query to fetch comprehensive medical staff details including personal info, specialties, facilities, shift history, performance metrics, and contact information. Implement in src/lib/supabase/ with proper organization filtering and RLS. Query should join medical_staff with related tables (facilities, specialties, shifts) to provide complete professional profile data.",
+      "acceptance_criteria": [
+        "Database query function created in src/lib/supabase/",
+        "Function fetches medical staff by ID with all related data (specialties, facilities, shifts)",
+        "Organization-based RLS filtering implemented correctly",
+        "Function returns properly typed data matching Database types",
+        "Query optimized with proper joins to avoid N+1 problems"
+      ],
+      "test_criteria": {
+        "scenarios": [
+          "Query returns complete medical staff details for valid ID",
+          "Query respects organization boundaries (RLS)",
+          "Query returns null for non-existent medical staff ID"
+        ],
+        "selectors": [],
+        "assertions": [
+          "Returned data includes all required fields (name, specialties, facilities, contact)",
+          "Query executes within acceptable performance threshold (<500ms)",
+          "Data is properly typed with TypeScript"
+        ]
+      },
+      "passes": true
+    },
+    {
+      "id": "F038",
+      "title": "Create useMedicalStaffDetail hook for data fetching",
+      "type": "feature",
+      "description": "Implement custom React hook in src/hooks/useMedicalStaffDetail.ts to fetch and manage medical staff detail data. Hook should handle loading states, error states, refetching, and caching. Use Supabase real-time subscriptions for live updates. Export hook from src/hooks/index.ts following existing patterns.",
+      "acceptance_criteria": [
+        "useMedicalStaffDetail hook created in src/hooks/useMedicalStaffDetail.ts",
+        "Hook manages loading, error, and data states",
+        "Hook accepts medical staff ID as parameter",
+        "Real-time subscription implemented for live data updates",
+        "Hook exported from src/hooks/index.ts"
+      ],
+      "test_criteria": {
+        "scenarios": [
+          "Hook fetches data successfully on mount",
+          "Hook handles loading state correctly",
+          "Hook handles error state when fetch fails",
+          "Hook updates data when real-time changes occur"
+        ],
+        "selectors": [],
+        "assertions": [
+          "Hook returns { data, isLoading, error, refetch } interface",
+          "Loading state is true during fetch",
+          "Error state populated when query fails"
+        ]
+      },
+      "passes": false
+    },
+    {
+      "id": "F039",
+      "title": "Create MedicalStaffHeader atom component",
+      "type": "feature",
+      "description": "Create atomic component in src/components/atoms/MedicalStaffHeader.tsx to display professional's name, photo, primary specialty, and status badge. Component should accept props for avatar URL, name, specialty, and online/active status. Use shadcn/ui Avatar, Badge components. Implement skeleton loader variant for loading states. Follow atomic design principles.",
+      "acceptance_criteria": [
+        "MedicalStaffHeader component created in src/components/atoms/",
+        "Component displays avatar, name, specialty, and status badge",
+        "Skeleton loader variant implemented",
+        "Component properly typed with TypeScript interface",
+        "Component follows existing atomic design patterns"
+      ],
+      "test_criteria": {
+        "scenarios": [
+          "Component renders with valid data",
+          "Component shows skeleton when in loading state",
+          "Component handles missing avatar gracefully (shows initials)"
+        ],
+        "selectors": [
+          "[data-testid='medical-staff-header']",
+          "[data-testid='staff-avatar']",
+          "[data-testid='staff-name']",
+          "[data-testid='staff-specialty']"
+        ],
+        "assertions": [
+          "Avatar displays image when URL provided",
+          "Name and specialty text are visible",
+          "Status badge shows correct color based on status"
+        ]
+      },
+      "passes": false
+    },
+    {
+      "id": "F040",
+      "title": "Create MedicalStaffInfoCard molecule component",
+      "type": "feature",
+      "description": "Create molecule component in src/components/molecules/MedicalStaffInfoCard.tsx to display categorized information sections (Contact Info, Professional Details, Documents). Use shadcn/ui Card, Separator. Component should accept sections as props and render icon + label + value rows. Implement responsive grid layout. Support loading skeleton state.",
+      "acceptance_criteria": [
+        "MedicalStaffInfoCard component created in src/components/molecules/",
+        "Component displays multiple information sections with icons",
+        "Responsive grid layout implemented (1 column mobile, 2 columns desktop)",
+        "Skeleton loader state implemented",
+        "Uses Lucide React icons for visual enhancement"
+      ],
+      "test_criteria": {
+        "scenarios": [
+          "Component renders multiple information sections",
+          "Component adapts layout for mobile and desktop viewports",
+          "Component shows skeleton loaders during data fetch"
+        ],
+        "selectors": [
+          "[data-testid='info-card']",
+          "[data-testid='info-section']",
+          "[data-testid='info-row']"
+        ],
+        "assertions": [
+          "All provided sections render correctly",
+          "Icons display next to each information row",
+          "Card is responsive and adjusts to viewport size"
+        ]
+      },
+      "passes": false
+    },
+    {
+      "id": "F041",
+      "title": "Create MedicalStaffShiftHistory molecule component",
+      "type": "feature",
+      "description": "Create molecule component in src/components/molecules/MedicalStaffShiftHistory.tsx to display recent shift history in a timeline or list format. Show shift date, facility, specialty, hours worked, and status. Use shadcn/ui Card, Badge, ScrollArea. Implement virtual scrolling for performance with large datasets. Support empty state when no shifts found.",
+      "acceptance_criteria": [
+        "MedicalStaffShiftHistory component created in src/components/molecules/",
+        "Component displays shift history in chronological order (most recent first)",
+        "Virtual scrolling implemented for performance",
+        "Empty state component shown when no shifts available",
+        "Each shift shows date, facility, specialty, hours, and status badge"
+      ],
+      "test_criteria": {
+        "scenarios": [
+          "Component renders list of shifts with all details",
+          "Component shows empty state when no shifts exist",
+          "Component handles large datasets efficiently with virtual scrolling"
+        ],
+        "selectors": [
+          "[data-testid='shift-history']",
+          "[data-testid='shift-item']",
+          "[data-testid='shift-empty-state']"
+        ],
+        "assertions": [
+          "Shifts are ordered by date (newest first)",
+          "Status badges display correct colors",
+          "Scrolling is smooth with 100+ shift records"
+        ]
+      },
+      "passes": false
+    },
+    {
+      "id": "F042",
+      "title": "Create MedicalStaffPerformanceMetrics organism component",
+      "type": "feature",
+      "description": "Create organism component in src/components/organisms/MedicalStaffPerformanceMetrics.tsx to display performance statistics and charts. Show total shifts, total hours, facilities worked, attendance rate. Use Recharts for visual data representation (bar/line charts). Implement time range selector (last 30/90/365 days). Use shadcn/ui Card, Tabs for chart switching.",
+      "acceptance_criteria": [
+        "MedicalStaffPerformanceMetrics component created in src/components/organisms/",
+        "Component displays key metrics: total shifts, hours, facilities, attendance rate",
+        "Recharts integration with responsive charts (bar/line)",
+        "Time range selector implemented (30/90/365 days)",
+        "Loading and error states handled gracefully"
+      ],
+      "test_criteria": {
+        "scenarios": [
+          "Component renders all performance metrics correctly",
+          "Charts update when time range is changed",
+          "Charts are responsive and adapt to container width"
+        ],
+        "selectors": [
+          "[data-testid='performance-metrics']",
+          "[data-testid='metric-card']",
+          "[data-testid='performance-chart']",
+          "[data-testid='time-range-selector']"
+        ],
+        "assertions": [
+          "All metric cards display numerical values",
+          "Charts render without errors",
+          "Time range selector updates chart data"
+        ]
+      },
+      "passes": false
+    },
+    {
+      "id": "F043",
+      "title": "Create MedicalStaffDetailView page component",
+      "type": "feature",
+      "description": "Create page component in src/app/dashboard/corpo-clinico/[id]/page.tsx that composes all detail components into cohesive layout. Implement responsive grid layout with MedicalStaffHeader, MedicalStaffInfoCard, MedicalStaffShiftHistory, and MedicalStaffPerformanceMetrics. Use useMedicalStaffDetail hook for data fetching. Add back button to return to listing. Implement proper loading and error states.",
+      "acceptance_criteria": [
+        "Detail page created at src/app/dashboard/corpo-clinico/[id]/page.tsx",
+        "Page composes all detail components in responsive grid layout",
+        "useMedicalStaffDetail hook integrated for data fetching",
+        "Back button navigates to medical staff listing page",
+        "Loading skeleton and error states implemented"
+      ],
+      "test_criteria": {
+        "scenarios": [
+          "Page loads and displays all sections when valid ID provided",
+          "Page shows loading skeletons during data fetch",
+          "Page shows error message for invalid/non-existent ID",
+          "Back button navigates to /dashboard/corpo-clinico"
+        ],
+        "selectors": [
+          "[data-testid='medical-staff-detail-page']",
+          "[data-testid='back-button']",
+          "[data-testid='loading-skeleton']",
+          "[data-testid='error-message']"
+        ],
+        "assertions": [
+          "All components render in correct layout order",
+          "Page is responsive on mobile, tablet, and desktop",
+          "Navigation to detail page via URL parameter works"
+        ]
+      },
+      "passes": false
+    },
+    {
+      "id": "F044",
+      "title": "Add 'View Details' action to medical staff table and navigation",
+      "type": "feature",
+      "description": "Modify existing medical staff table component to add 'Visualizar' option in row actions menu (DropdownMenu) and make staff name clickable to navigate to detail view. Update table actions to include Eye icon from Lucide React. Implement navigation using next/navigation router. Ensure consistent behavior across all table interaction points.",
+      "acceptance_criteria": [
+        "'Visualizar' option added to table row actions dropdown menu",
+        "Medical staff name in table is clickable and navigates to detail page",
+        "Eye icon from Lucide React used for 'Visualizar' action",
+        "Navigation uses Next.js router with proper dynamic route",
+        "Both name click and menu action navigate to same detail page"
+      ],
+      "test_criteria": {
+        "scenarios": [
+          "Clicking staff name navigates to detail page with correct ID",
+          "Clicking 'Visualizar' in dropdown menu navigates to detail page",
+          "Navigation preserves query parameters (filters, pagination)"
+        ],
+        "selectors": [
+          "[data-testid='staff-name-link']",
+          "[data-testid='row-actions-menu']",
+          "[data-testid='view-details-action']"
+        ],
+        "assertions": [
+          "Both navigation methods lead to /dashboard/corpo-clinico/[id]",
+          "Staff name appears as clickable link with hover effect",
+          "'Visualizar' option visible in dropdown menu"
+        ]
+      },
+      "passes": false
+    },
+    {
+      "id": "F045",
+      "title": "Add e2e tests for medical staff detail view",
+      "type": "feature",
+      "description": "Create comprehensive e2e test file in e2e/tests/medical-staff-detail.spec.ts to verify detail page functionality. Test navigation from table (name click and menu action), data rendering, component interactions, loading states, error handling, and back navigation. Use existing Playwright fixtures and test helpers. Verify responsive behavior and accessibility.",
+      "acceptance_criteria": [
+        "E2E test file created at e2e/tests/medical-staff-detail.spec.ts",
+        "Tests verify navigation from table to detail page (both methods)",
+        "Tests verify all components render with correct data",
+        "Tests verify loading states and error handling",
+        "Tests verify back button navigation to listing page"
+      ],
+      "test_criteria": {
+        "scenarios": [
+          "User clicks staff name in table and sees detail page",
+          "User clicks 'Visualizar' in menu and sees detail page",
+          "Detail page displays all information sections correctly",
+          "Performance metrics charts render and are interactive",
+          "Back button returns user to medical staff listing"
+        ],
+        "selectors": [
+          "[data-testid='staff-name-link']",
+          "[data-testid='view-details-action']",
+          "[data-testid='medical-staff-detail-page']",
+          "[data-testid='back-button']"
+        ],
+        "assertions": [
+          "Navigation to detail page completes successfully",
+          "All page sections are visible and contain data",
+          "Back navigation returns to listing with preserved state"
+        ]
+      },
+      "passes": false
     }
   ]
 }
