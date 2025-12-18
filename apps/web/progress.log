@@ -1665,3 +1665,110 @@
   * Follows established patterns from useSmtpSettings and useShiftsCalendar hooks
   * Real-time subscriptions ensure UI stays synchronized with database changes
   * Complete separation of concerns: hook manages data fetching and real-time updates, components manage UI
+[2025-12-18T01:14:48] [F039] Create MedicalStaffHeader atom component - COMPLETED
+- Created comprehensive MedicalStaffHeader atom component in src/components/atoms/MedicalStaffHeader.tsx (200 lines)
+- Component displays professional's name, avatar, specialty, and status badge following Atomic Design principles
+- Implemented all required features:
+  * Avatar display with URL support using shadcn/ui Avatar component
+  * Initials fallback when no avatar URL provided (first + last name initials)
+  * Professional name display with semantic HTML (h3 heading)
+  * Primary specialty display with secondary text styling
+  * Status badge with 4 color-coded variants (online/active/offline/busy)
+  * Skeleton loader variant matching component structure
+  * Size variants (sm/md/lg) for different use cases
+- Component props interface (MedicalStaffHeaderProps):
+  * avatarUrl: string | null (optional) - Avatar image URL
+  * name: string (required) - Professional's full name
+  * specialty: string | null (optional) - Primary specialty
+  * status: MedicalStaffStatus (optional, default 'offline') - Current availability status
+  * loading: boolean (optional, default false) - Loading state for skeleton display
+  * size: 'sm' | 'md' | 'lg' (optional, default 'md') - Avatar size variant
+  * className: string (optional) - Additional CSS classes for customization
+- Status badge configuration with Portuguese labels and Tailwind color classes:
+  * online: "Online" with green theme (bg-green-100, text-green-700, border-green-200)
+  * active: "Ativo" with blue theme (bg-blue-100, text-blue-700, border-blue-200)
+  * offline: "Offline" with gray theme (bg-gray-100, text-gray-600, border-gray-200)
+  * busy: "Ocupado" with orange theme (bg-orange-100, text-orange-700, border-orange-200)
+- Initials extraction logic (getInitials function):
+  * Extracts first letter of first name + first letter of last name
+  * Handles single-word names (returns single initial)
+  * Handles multi-word names with middle names (uses first and last only)
+  * Handles empty/whitespace names gracefully (returns '?')
+  * Converts all initials to uppercase for consistency
+- Avatar size variants with Tailwind size classes:
+  * sm: size-8 (32px × 32px)
+  * md: size-10 (40px × 40px) - default
+  * lg: size-12 (48px × 48px)
+- Skeleton loader implementation:
+  * Displays when loading prop is true
+  * Matches component structure: avatar skeleton + name skeleton + specialty skeleton
+  * Uses shadcn/ui Skeleton component with animate-pulse animation
+  * Maintains layout consistency during loading
+- Created comprehensive unit tests (src/components/atoms/__tests__/MedicalStaffHeader.test.tsx, 350+ lines):
+  * 35 test cases total, all passing
+  * Test suites organized by functionality:
+    - Rendering with valid data (4 tests)
+    - Status badge rendering (9 tests - all 4 statuses + color class verification)
+    - Skeleton loading state (3 tests)
+    - Avatar fallback to initials (6 tests - various name formats)
+    - Optional specialty field (3 tests - null/undefined/provided)
+    - Size variants (4 tests - sm/md/lg + default)
+    - Custom className (2 tests)
+    - Component structure (2 tests - semantic HTML verification)
+    - TypeScript type exports (2 tests)
+  * All data-testid selectors implemented for e2e testing:
+    - [data-testid='medical-staff-header'] for container
+    - [data-testid='staff-avatar'] for avatar element
+    - [data-testid='staff-name'] for name heading
+    - [data-testid='staff-specialty'] for specialty paragraph
+    - [data-testid='staff-status'] for status badge
+- Component follows Atomic Design methodology:
+  * Minimal, single-purpose building block (atom level)
+  * No business logic or data fetching
+  * Accepts all data via props (pure presentation)
+  * Highly reusable across different contexts
+  * Composable with other atoms/molecules/organisms
+- Component follows existing project patterns:
+  * 'use client' directive for client-side rendering
+  * React.memo() for performance optimization
+  * cn() utility for className merging with Tailwind
+  * Comprehensive JSDoc documentation with 3 usage examples
+  * Full TypeScript type safety with exported interfaces
+  * Proper semantic HTML structure (h3 for name, p for specialty)
+- TypeScript compilation successful: zero errors in new component and tests
+- Next.js production build successful: all 23 routes compiled without errors
+- All 35 unit tests passing in 89ms
+- All 5 acceptance criteria met:
+  ✅ MedicalStaffHeader component created in src/components/atoms/MedicalStaffHeader.tsx
+  ✅ Component displays avatar, name, specialty, and status badge with proper styling
+  ✅ Skeleton loader variant implemented and tested (3 test cases)
+  ✅ Component properly typed with MedicalStaffHeaderProps and MedicalStaffStatus TypeScript interfaces
+  ✅ Component follows existing atomic design patterns (minimal props, no logic, reusable, composable)
+- All test criteria scenarios verified:
+  ✅ Component renders with valid data (tested with all props provided)
+  ✅ Component shows skeleton when in loading state (tested with loading={true})
+  ✅ Component handles missing avatar gracefully by showing initials (6 tests for various name formats)
+- All test criteria selectors implemented and tested:
+  ✅ [data-testid='medical-staff-header'] - tested in all 35 test cases
+  ✅ [data-testid='staff-avatar'] - tested for image rendering and initials fallback
+  ✅ [data-testid='staff-name'] - tested for text content rendering
+  ✅ [data-testid='staff-specialty'] - tested for optional rendering
+- All test criteria assertions verified:
+  ✅ Avatar displays image when URL provided (tested with AvatarImage rendering)
+  ✅ Name and specialty text are visible (tested with toHaveTextContent matcher)
+  ✅ Status badge shows correct color based on status (tested for all 4 statuses with color class assertions)
+- Impact metrics:
+  * 1 component file created: MedicalStaffHeader.tsx (200 lines with JSDoc)
+  * 1 test file created: MedicalStaffHeader.test.tsx (350+ lines, 35 test cases)
+  * Total code: 550+ lines (component + comprehensive tests + documentation)
+  * Zero breaking changes to existing code
+  * Component immediately reusable across application:
+    - Team member lists in /dashboard/equipe
+    - User profiles and detail views
+    - Chat interface for showing participants
+    - Shift calendar events showing assigned staff
+    - Reports showing staff activity
+  * Foundation ready for F040 (MedicalStaffInfoCard molecule that will compose this atom)
+  * Foundation ready for F041 (ContactInfo molecule that may use this atom)
+  * Follows established patterns from NotificationBadge and other existing atoms
+
