@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { format, parseISO, isToday, isYesterday, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { MessageCircle, Loader2 } from 'lucide-react';
+import { MessageCircle, Loader2, Trash2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { UserAvatar } from '@/components/atoms';
 import { cn } from '@/lib/utils';
@@ -13,7 +13,9 @@ import { useChat } from '@/providers/ChatProvider';
 import { useOrganization } from '@/providers/OrganizationProvider';
 import { DocumentAttachmentCard } from '@/components/molecules/DocumentAttachmentCard';
 import { AttachmentReviewDialog } from '@/components/organisms/AttachmentReviewDialog';
+import { ConfirmationDialog, useConfirmationDialog } from '@/components/organisms/ConfirmationDialog';
 import { useAttachmentReview } from '@/hooks/useAttachmentReview';
+import { useDeleteMessage } from '@/hooks/useDeleteMessage';
 import { useAttachmentRealtime } from '@medsync/shared/hooks';
 import { toast } from 'sonner';
 import type { MessageWithSender, SupportConversationWithDetails, ChatAttachment } from '@medsync/shared';
@@ -41,6 +43,15 @@ export function ChatMessages({ conversationId }: ChatMessagesProps) {
 
   // Hook for attachment review operations
   const { acceptAttachment, rejectAttachment, isLoading: isReviewing } = useAttachmentReview();
+
+  // Hook for deleting messages
+  const { deleteMessage, isDeleting } = useDeleteMessage();
+  const {
+    isOpen: isDeleteDialogOpen,
+    data: messageToDelete,
+    openConfirmation: openDeleteDialog,
+    closeConfirmation: closeDeleteDialog,
+  } = useConfirmationDialog<MessageWithSender>();
 
   // Get staff ID for current user (if they are also a medical_staff)
   useEffect(() => {
@@ -262,6 +273,22 @@ export function ChatMessages({ conversationId }: ChatMessagesProps) {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          // Remove deleted message from local state
+          const deletedId = payload.old?.id;
+          if (deletedId) {
+            setMessages((prev) => prev.filter((m) => m.id !== deletedId));
+          }
+        }
+      )
       .subscribe();
 
     return () => {
@@ -400,6 +427,28 @@ export function ChatMessages({ conversationId }: ChatMessagesProps) {
     }
   };
 
+  // Handle message deletion
+  const handleDeleteMessage = (msg: MessageWithSender) => {
+    openDeleteDialog(msg);
+  };
+
+  const confirmDeleteMessage = async () => {
+    if (!messageToDelete) return;
+
+    deleteMessage(
+      { messageId: messageToDelete.id },
+      {
+        onSuccess: (response) => {
+          if (response.success) {
+            closeDeleteDialog();
+            // Remove message from local state
+            setMessages((prev) => prev.filter((m) => m.id !== messageToDelete.id));
+          }
+        },
+      }
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -459,10 +508,20 @@ export function ChatMessages({ conversationId }: ChatMessagesProps) {
                   )}
                   <div
                     className={cn(
-                      'flex gap-2 max-w-[80%]',
+                      'flex gap-2 max-w-[80%] group',
                       isOwn ? 'ml-auto flex-row-reverse' : 'mr-auto'
                     )}
                   >
+                    {/* Delete button - visible on hover for own messages */}
+                    {isOwn && (
+                      <button
+                        onClick={() => handleDeleteMessage(msg)}
+                        className="self-center opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                        title="Excluir mensagem"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                     {!isOwn && (
                       <UserAvatar
                         name={msg.sender?.name || '?'}
@@ -533,6 +592,22 @@ export function ChatMessages({ conversationId }: ChatMessagesProps) {
         action={reviewAction}
         onConfirm={handleReviewConfirm}
         isLoading={isReviewing}
+      />
+
+      {/* Delete Message Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={closeDeleteDialog}
+        onConfirm={confirmDeleteMessage}
+        title="Excluir mensagem"
+        description={
+          messageToDelete?.attachments && messageToDelete.attachments.length > 0
+            ? 'Tem certeza que deseja excluir esta mensagem? Os arquivos anexados tambem serao excluidos. Esta acao nao pode ser desfeita.'
+            : 'Tem certeza que deseja excluir esta mensagem? Esta acao nao pode ser desfeita.'
+        }
+        variant="danger"
+        confirmLabel="Excluir"
+        isLoading={isDeleting}
       />
     </div>
   );
