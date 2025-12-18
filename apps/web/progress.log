@@ -1012,3 +1012,53 @@
 - Minimal code changes: Modified 1 file (ShiftsCalendar.tsx), added 1 import (CalendarX icon)
 - Zero breaking changes: All existing functionality preserved, only empty state rendering improved
 
+[2025-12-17T21:53:09] [F029] Create SMTP configuration database schema and migration - COMPLETED
+- Created migration file: migrations/20251217_create_email_smtp_settings_table.sql
+- Created email_smtp_settings table with comprehensive schema:
+  * id (UUID primary key with gen_random_uuid() default)
+  * organization_id (UUID, foreign key to organizations with CASCADE delete, UNIQUE constraint)
+  * smtp_host (TEXT, required)
+  * smtp_port (INTEGER, required, CHECK constraint for 1-65535 range)
+  * smtp_user (TEXT, required)
+  * smtp_password (TEXT, required, encrypted at rest by Supabase)
+  * smtp_from_email (TEXT, required, validated with regex for email format)
+  * smtp_from_name (TEXT, required)
+  * use_tls (BOOLEAN, default true)
+  * is_enabled (BOOLEAN, default false)
+  * created_at (TIMESTAMPTZ, default now())
+  * updated_at (TIMESTAMPTZ, default now())
+- Enforced unique constraint on organization_id (one SMTP config per organization)
+- Established foreign key relationship to organizations table with ON DELETE CASCADE
+- Implemented comprehensive CHECK constraints:
+  * smtp_port range validation (1-65535)
+  * smtp_from_email format validation using regex pattern
+- Created indexes for performance:
+  * idx_email_smtp_settings_organization_id (btree on organization_id)
+  * idx_email_smtp_settings_is_enabled (partial index WHERE is_enabled = true)
+- Enabled Row Level Security (RLS) on email_smtp_settings table
+- Created 4 RLS policies using user_has_org_admin_access(organization_id) function:
+  * "Admins can view SMTP settings" (SELECT policy)
+  * "Admins can insert SMTP settings" (INSERT policy with WITH CHECK)
+  * "Admins can update SMTP settings" (UPDATE policy with USING and WITH CHECK)
+  * "Admins can delete SMTP settings" (DELETE policy)
+- All RLS policies restrict access to admin and owner roles only (not members)
+- Created trigger function update_email_smtp_settings_updated_at() to auto-update updated_at timestamp
+- Created BEFORE UPDATE trigger: trigger_update_email_smtp_settings_updated_at
+- Granted appropriate permissions to authenticated role (SELECT, INSERT, UPDATE, DELETE)
+- Added comprehensive table and column comments documenting all fields
+- Applied migration via Supabase MCP successfully
+- Verified table creation with all 12 columns present and correctly typed
+- Verified all 4 RLS policies created and enforcing admin-only access
+- Verified trigger exists and fires on UPDATE operations
+- Verified all indexes created (primary key, unique constraint, performance indexes)
+- Verified all constraints created (foreign key, unique, CHECK constraints)
+- All acceptance criteria verified and met:
+  ✅ Migration file created in migrations/ directory
+  ✅ email_smtp_settings table created with all required columns
+  ✅ RLS policies implemented for admin-only access (4 policies: SELECT, INSERT, UPDATE, DELETE)
+  ✅ Foreign key relationship to organizations table established with CASCADE delete
+  ✅ Unique constraint on organization_id enforced (prevents duplicate configs)
+- Foundation ready for F030-F036 (Zod schema, API endpoints, form component, configuration page integration)
+- Zero breaking changes to existing code
+- Password encryption handled at rest by Supabase (note: not application-level encryption)
+
