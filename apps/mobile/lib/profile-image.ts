@@ -119,7 +119,6 @@ export interface UpdateUserAvatarResult {
     avatar_url: string | null;
     email: string | null;
     phone: string | null;
-    role: string;
     updated_at: string | null;
   };
 
@@ -224,10 +223,12 @@ async function imageUriToArrayBuffer(imageUri: string): Promise<ArrayBuffer> {
   try {
     console.log('[profile-image] Converting image URI to ArrayBuffer:', imageUri);
 
-    // Step 1: Read file as base64 using expo-file-system (new API)
-    // This works reliably with file:// URIs from expo-image-manipulator
-    const file = new FileSystem.File(imageUri);
-    const base64 = await file.base64();
+    // Step 1: Read file as base64 using expo-file-system legacy API
+    // The legacy readAsStringAsync is more stable and reliable than the new File API
+    // for reading local files from expo-image-picker/manipulator
+    const base64 = await FileSystem.readAsStringAsync(imageUri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
 
     if (!base64 || base64.length === 0) {
       throw new ProfileImageError(
@@ -610,7 +611,7 @@ export async function updateUserAvatar(
         updated_at: new Date().toISOString(),
       })
       .eq('user_id', userId)
-      .select('id, name, avatar_url, email, phone, role, updated_at')
+      .select('id, name, avatar_url, email, phone, updated_at')
       .single();
 
     if (updateError) {

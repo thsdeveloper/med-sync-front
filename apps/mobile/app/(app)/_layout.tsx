@@ -55,6 +55,15 @@ export default function AppLayout() {
           headerBackTitle: 'Voltar',
         }}
       />
+      <Stack.Screen
+        name="profile-edit"
+        options={{
+          presentation: 'modal',
+          headerShown: true,
+          title: 'Editar Perfil',
+          headerBackTitle: 'Cancelar',
+        }}
+      />
     </Stack>
   );
 }

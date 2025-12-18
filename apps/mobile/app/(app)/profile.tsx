@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,13 +11,28 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Avatar, Card, Button } from '@/components/ui';
+import { Card, Button } from '@/components/ui';
 import { ProfileAvatarUpload } from '@/components/molecules';
 import { useAuth } from '@/providers/auth-provider';
+import { formatCpf } from '@medsync/shared';
 
 export default function ProfileScreen() {
   const { staff, signOut, refreshStaff, isLoading } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // Format CPF for display
+  const formattedCpf = useMemo(() => {
+    if (!staff?.cpf) return null;
+    return formatCpf(staff.cpf);
+  }, [staff?.cpf]);
+
+  // Format registration number with conselho sigla
+  const formattedRegistro = useMemo(() => {
+    if (!staff?.registro_numero || !staff?.registro_uf) return null;
+    const conselho = staff.profissao?.conselho?.sigla || 'REG';
+    const categoria = staff.registro_categoria ? `/${staff.registro_categoria}` : '';
+    return `${conselho} ${staff.registro_numero}${categoria} - ${staff.registro_uf}`;
+  }, [staff?.registro_numero, staff?.registro_uf, staff?.registro_categoria, staff?.profissao?.conselho?.sigla]);
 
   const handleLogout = () => {
     Alert.alert(
@@ -103,38 +118,82 @@ export default function ProfileScreen() {
 
         {/* Info Card */}
         <Card variant="outlined" style={styles.infoCard}>
-          <Text style={styles.sectionTitle}>Informações</Text>
+          <Text style={styles.sectionTitle}>Suas Informacoes</Text>
 
+          {/* Registro Profissional */}
+          <View style={styles.infoRow}>
+            <View style={styles.infoIcon}>
+              <Ionicons name="ribbon" size={20} color="#6B7280" />
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>Registro Profissional</Text>
+              <Text style={styles.infoValue}>{formattedRegistro || 'Nao informado'}</Text>
+            </View>
+          </View>
+
+          {/* Profissao */}
+          <View style={styles.infoRow}>
+            <View style={styles.infoIcon}>
+              <Ionicons name="briefcase" size={20} color="#6B7280" />
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>Profissao</Text>
+              <Text style={styles.infoValue}>{staff?.profissao?.nome || 'Nao informado'}</Text>
+            </View>
+          </View>
+
+          {/* Especialidade */}
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
               <Ionicons name="medical" size={20} color="#6B7280" />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>CRM</Text>
-              <Text style={styles.infoValue}>{staff?.crm || 'Não informado'}</Text>
+              <Text style={styles.infoLabel}>Especialidade</Text>
+              <Text style={styles.infoValue}>{staff?.especialidade?.nome || 'Nao informado'}</Text>
             </View>
           </View>
 
+          {/* CPF */}
+          <View style={styles.infoRow}>
+            <View style={styles.infoIcon}>
+              <Ionicons name="card" size={20} color="#6B7280" />
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>CPF</Text>
+              <Text style={styles.infoValue}>{formattedCpf || 'Nao informado'}</Text>
+            </View>
+          </View>
+
+          {/* Email */}
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
               <Ionicons name="mail" size={20} color="#6B7280" />
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Email</Text>
-              <Text style={styles.infoValue}>{staff?.email || 'Não informado'}</Text>
+              <Text style={styles.infoValue}>{staff?.email || 'Nao informado'}</Text>
             </View>
           </View>
 
-          <View style={styles.infoRow}>
+          {/* Telefone */}
+          <View style={[styles.infoRow, styles.infoRowLast]}>
             <View style={styles.infoIcon}>
               <Ionicons name="call" size={20} color="#6B7280" />
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Telefone</Text>
-              <Text style={styles.infoValue}>{staff?.phone || 'Não informado'}</Text>
+              <Text style={styles.infoValue}>{staff?.phone || 'Nao informado'}</Text>
             </View>
           </View>
         </Card>
+
+        {/* Edit Profile Button */}
+        <Button
+          title="Editar Perfil"
+          onPress={() => router.push('/profile-edit')}
+          variant="outline"
+          style={styles.editProfileButton}
+        />
 
         {/* Settings */}
         <Card variant="outlined" style={styles.settingsCard}>
@@ -260,6 +319,9 @@ const styles = StyleSheet.create({
   infoCard: {
     marginBottom: 16,
   },
+  editProfileButton: {
+    marginBottom: 16,
+  },
   sectionTitle: {
     fontSize: 14,
     fontWeight: '600',
@@ -274,6 +336,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
+  },
+  infoRowLast: {
+    borderBottomWidth: 0,
   },
   infoIcon: {
     width: 40,

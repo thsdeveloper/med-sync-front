@@ -19,3 +19,4 @@ export { ProfileAvatarUpload, type ProfileAvatarUploadProps } from './ProfileAva
 // Form components
 export { EspecialidadePicker } from './EspecialidadePicker';
 export { ProfissaoPicker } from './ProfissaoPicker';
+export { ProfileEditSheet } from './ProfileEditSheet';

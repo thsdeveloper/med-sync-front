@@ -10,8 +10,10 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Keyboard,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO, isToday, isYesterday, isSameDay } from 'date-fns';
@@ -33,6 +35,8 @@ import type { MessageWithSender, ConversationWithDetails, ChatAttachment } from 
 export default function ChatConversationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { staff } = useAuth();
+  const insets = useSafeAreaInsets();
+  const headerHeight = useHeaderHeight();
   const [conversation, setConversation] = useState<ConversationWithDetails | null>(null);
   const [messages, setMessages] = useState<MessageWithSender[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -42,6 +46,24 @@ export default function ChatConversationScreen() {
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<{ uri: string; attachment: ChatAttachment } | null>(null);
   const flatListRef = useRef<FlatList>(null);
+  const inputRef = useRef<TextInput>(null);
+
+  // Handle keyboard visibility for scroll behavior
+  useEffect(() => {
+    const keyboardWillShow = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => {
+        // Scroll to end when keyboard opens
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
+    );
+
+    return () => {
+      keyboardWillShow.remove();
+    };
+  }, []);
 
   const { isUploading, uploadProgress, uploadFiles, reset: resetUpload } = useAttachmentUpload();
   const { downloadAttachment } = useAttachmentDownload();
@@ -480,21 +502,29 @@ export default function ChatConversationScreen() {
         />
       )}
 
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
         <KeyboardAvoidingView
           style={styles.keyboardView}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={90}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={headerHeight}
         >
           <FlatList
             ref={flatListRef}
             data={messages}
             renderItem={renderMessage}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.messagesContent}
+            contentContainerStyle={[
+              styles.messagesContent,
+              { paddingBottom: insets.bottom > 0 ? 8 : 16 },
+            ]}
             onContentSizeChange={() =>
               flatListRef.current?.scrollToEnd({ animated: true })
             }
+            onLayout={() =>
+              flatListRef.current?.scrollToEnd({ animated: false })
+            }
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Ionicons name="chatbubble-outline" size={48} color="#D1D5DB" />
@@ -523,7 +553,10 @@ export default function ChatConversationScreen() {
             </View>
           )}
 
-          <View style={styles.inputContainer}>
+          <View style={[
+            styles.inputContainer,
+            { paddingBottom: Math.max(insets.bottom, 12) },
+          ]}>
             {/* Attachment Picker Button */}
             <AttachmentPicker
               currentFileCount={selectedFiles.length}
@@ -532,6 +565,7 @@ export default function ChatConversationScreen() {
             />
 
             <TextInput
+              ref={inputRef}
               style={styles.input}
               placeholder="Digite uma mensagem..."
               placeholderTextColor="#9CA3AF"
@@ -540,6 +574,8 @@ export default function ChatConversationScreen() {
               multiline
               maxLength={2000}
               editable={!isSending && !isUploading}
+              returnKeyType="default"
+              blurOnSubmit={false}
             />
             <TouchableOpacity
               style={[
@@ -548,6 +584,7 @@ export default function ChatConversationScreen() {
               ]}
               onPress={sendMessage}
               disabled={!canSend}
+              activeOpacity={0.7}
             >
               {isSending || isUploading ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
@@ -665,7 +702,8 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    padding: 12,
+    paddingTop: 12,
+    paddingHorizontal: 12,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',

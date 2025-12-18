@@ -6,7 +6,6 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar, setStatusBarStyle } from 'expo-status-bar';
@@ -21,15 +20,12 @@ import { useRealtimeShifts, useRealtimeSwapRequests } from '@/hooks';
 import { supabase } from '@/lib/supabase';
 import type { ShiftWithRelations } from '@/lib/realtime-types';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
 export default function HomeScreen() {
-  const { staff, signOut } = useAuth();
-  const { isConnected } = useRealtime();
+  const { staff } = useAuth();
+  useRealtime(); // Mantém a conexão realtime ativa
 
   // Initial fetched data state
   const [fetchedShifts, setFetchedShifts] = useState<ShiftWithRelations[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   // Realtime hooks - will auto-update when changes occur
@@ -69,8 +65,6 @@ export default function HomeScreen() {
       setFetchedShifts((shifts || []) as ShiftWithRelations[]);
     } catch (error) {
       console.error('Error loading data:', error);
-    } finally {
-      setIsLoading(false);
     }
   }, [staff?.id]);
 
@@ -256,51 +250,6 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Quick Actions */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ações Rápidas</Text>
-          <View style={styles.quickActions}>
-            <TouchableOpacity
-              style={styles.quickAction}
-              onPress={() => router.push('/(app)/(tabs)/schedule')}
-            >
-              <View style={[styles.quickActionIcon, { backgroundColor: '#EBF5FF' }]}>
-                <Ionicons name="calendar" size={24} color="#0066CC" />
-              </View>
-              <Text style={styles.quickActionText}>Escalas</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.quickAction}
-              onPress={() => router.push('/(app)/(tabs)/requests')}
-            >
-              <View style={[styles.quickActionIcon, { backgroundColor: '#FEF3C7' }]}>
-                <Ionicons name="swap-horizontal" size={24} color="#D97706" />
-              </View>
-              <Text style={styles.quickActionText}>Trocas</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.quickAction}
-              onPress={() => router.push('/(app)/(tabs)/chat')}
-            >
-              <View style={[styles.quickActionIcon, { backgroundColor: '#D1FAE5' }]}>
-                <Ionicons name="chatbubbles" size={24} color="#059669" />
-              </View>
-              <Text style={styles.quickActionText}>Chat</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.quickAction}
-              onPress={() => router.push('/(app)/profile')}
-            >
-              <View style={[styles.quickActionIcon, { backgroundColor: '#F3E8FF' }]}>
-                <Ionicons name="person" size={24} color="#7C3AED" />
-              </View>
-              <Text style={styles.quickActionText}>Perfil</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
       </ScrollView>
     </View>
   );
@@ -467,36 +416,6 @@ const styles = StyleSheet.create({
   sectionLink: {
     fontSize: 14,
     color: '#0066CC',
-    fontWeight: '500',
-  },
-  emptyCard: {
-    alignItems: 'center',
-    paddingVertical: 32,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    marginTop: 8,
-  },
-  quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  quickAction: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  quickActionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  quickActionText: {
-    fontSize: 12,
-    color: '#6B7280',
     fontWeight: '500',
   },
   // Request Schedule Card Styles

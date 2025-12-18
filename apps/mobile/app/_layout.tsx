@@ -7,6 +7,7 @@ import { View } from 'react-native';
 import 'react-native-reanimated';
 
 import { AnimatedSplash } from '@/components/AnimatedSplash';
+import { AuthLoadingWrapper } from '@/components/AuthLoadingWrapper';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider } from '@/providers/auth-provider';
 import { NotificationProvider } from '@/providers/notification-provider';
@@ -57,21 +58,23 @@ export default function RootLayout() {
       <QueryProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <AuthProvider>
-            <NotificationProvider>
-              <RealtimeProvider>
-                <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen
-                    name="(auth)"
-                    options={{ gestureEnabled: false }}
-                  />
-                  <Stack.Screen
-                    name="(app)"
-                    options={{ gestureEnabled: false }}
-                  />
-                </Stack>
-                <StatusBar style="auto" />
-              </RealtimeProvider>
-            </NotificationProvider>
+            <AuthLoadingWrapper>
+              <NotificationProvider>
+                <RealtimeProvider>
+                  <Stack screenOptions={{ headerShown: false }}>
+                    <Stack.Screen
+                      name="(auth)"
+                      options={{ gestureEnabled: false }}
+                    />
+                    <Stack.Screen
+                      name="(app)"
+                      options={{ gestureEnabled: false }}
+                    />
+                  </Stack>
+                  <StatusBar style="auto" />
+                </RealtimeProvider>
+              </NotificationProvider>
+            </AuthLoadingWrapper>
           </AuthProvider>
         </ThemeProvider>
       </QueryProvider>

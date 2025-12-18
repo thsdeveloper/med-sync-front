@@ -7,11 +7,22 @@ import { generateAuthEmail, normalizeCpf } from '@medsync/shared';
 
 type StaffData = MedicalStaff | null;
 
+// Loading state for better UX feedback
+export type AuthLoadingState =
+  | 'initializing'    // Verificando sessão local
+  | 'connecting'      // Conectando ao Supabase
+  | 'ready'           // Pronto para usar
+  | 'error';          // Erro (com opção de retry)
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   staff: StaffData;
   isLoading: boolean;
+  loadingState: AuthLoadingState;
+  loadingMessage: string;
+  authError: Error | null;
+  retryAuth: () => Promise<void>;
   isAuthenticated: boolean;
   // Legacy CRM methods (deprecated - kept for backward compatibility)
   /** @deprecated Use lookupCpf instead */
@@ -93,84 +104,163 @@ interface SetupPasswordWithCpfData {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Session timeout - increased to account for storage retries
+const SESSION_TIMEOUT_MS = 25000; // 25s to allow storage retries
+const MAX_AUTH_RETRIES = 2;
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   console.log('[AuthProvider] Component rendering...');
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [staff, setStaff] = useState<StaffData>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingState, setLoadingState] = useState<AuthLoadingState>('initializing');
+  const [loadingMessage, setLoadingMessage] = useState('Verificando sessão...');
+  const [authError, setAuthError] = useState<Error | null>(null);
+
+  // Track if initialization is in progress to prevent race conditions with listener
+  const isInitializingRef = React.useRef(true);
+  const subscriptionRef = React.useRef<{ unsubscribe: () => void } | null>(null);
 
   const refreshStaff = useCallback(async () => {
     const staffData = await getCurrentStaff();
     setStaff(staffData);
   }, []);
 
-  useEffect(() => {
-    const initializeAuth = async () => {
+  // Retry function for getSession with exponential backoff
+  const getSessionWithRetry = useCallback(async (retries: number = MAX_AUTH_RETRIES): Promise<{
+    session: Session | null;
+    error: Error | null;
+  }> => {
+    for (let attempt = 0; attempt <= retries; attempt++) {
       try {
-        console.log('[Auth] Starting initializeAuth...');
-        // Add timeout to prevent infinite loading if storage operations hang
-        const SESSION_TIMEOUT_MS = 10000;
+        console.log(`[Auth] getSession attempt ${attempt + 1}/${retries + 1}...`);
 
-        console.log('[Auth] Calling supabase.auth.getSession()...');
+        if (attempt > 0) {
+          setLoadingMessage(`Tentando novamente (${attempt + 1}/${retries + 1})...`);
+        }
+
         const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise<{ data: { session: null }; error: Error & { isTimeout?: boolean } }>((resolve) =>
+        const timeoutPromise = new Promise<never>((_, reject) =>
           setTimeout(() => {
-            console.warn('Session check timed out after', SESSION_TIMEOUT_MS, 'ms');
-            const timeoutError = new Error('Session check timeout') as Error & { isTimeout?: boolean };
-            timeoutError.isTimeout = true;
-            resolve({ data: { session: null }, error: timeoutError });
+            reject(new Error('Session check timeout'));
           }, SESSION_TIMEOUT_MS)
         );
 
-        const result = await Promise.race([sessionPromise, timeoutPromise]);
-        const { data: { session }, error } = result;
+        const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]);
 
         if (error) {
-          console.error('Error getting session:', error);
-
-          // If timeout, clear corrupted/stale session data and force clean state
-          if ((error as Error & { isTimeout?: boolean }).isTimeout) {
-            console.log('[Auth] Timeout detected, clearing stale session data...');
-            try {
-              // Clear storage directly instead of calling signOut (which might also hang)
-              await clearAuthStorage();
-              console.log('[Auth] Session storage cleared successfully');
-            } catch (clearError) {
-              console.warn('[Auth] Error clearing session storage:', clearError);
-            }
-          }
-
-          setSession(null);
-          setUser(null);
-          setStaff(null);
-          return;
+          throw error;
         }
 
-        setSession(session);
-        setUser(session?.user ?? null);
-
-        if (session?.user) {
-          await refreshStaff();
-        }
+        return { session, error: null };
       } catch (error) {
-        console.error('Auth initialization error:', error);
+        console.warn(`[Auth] getSession attempt ${attempt + 1} failed:`, error);
+
+        if (attempt < retries) {
+          // Wait before retrying with exponential backoff
+          const delay = 1000 * Math.pow(2, attempt);
+          console.log(`[Auth] Waiting ${delay}ms before retry...`);
+          await new Promise(r => setTimeout(r, delay));
+        } else {
+          // All retries exhausted
+          return { session: null, error: error as Error };
+        }
+      }
+    }
+
+    return { session: null, error: new Error('Max retries exceeded') };
+  }, []);
+
+  // Main initialization function
+  const initializeAuth = useCallback(async () => {
+    try {
+      console.log('[Auth] Starting initializeAuth...');
+      isInitializingRef.current = true;
+      setAuthError(null);
+      setLoadingState('initializing');
+      setLoadingMessage('Verificando sessão...');
+
+      // Get session with retry
+      setLoadingState('connecting');
+      setLoadingMessage('Conectando...');
+
+      const { session, error } = await getSessionWithRetry();
+
+      if (error) {
+        console.error('[Auth] Error getting session after retries:', error);
+
+        // Clear potentially corrupted session data
+        console.log('[Auth] Clearing stale session data...');
+        try {
+          await clearAuthStorage();
+          console.log('[Auth] Session storage cleared successfully');
+        } catch (clearError) {
+          console.warn('[Auth] Error clearing session storage:', clearError);
+        }
+
         setSession(null);
         setUser(null);
         setStaff(null);
-      } finally {
-        setIsLoading(false);
+        setAuthError(error);
+        setLoadingState('error');
+        setLoadingMessage('Erro ao verificar sessão');
+        return;
       }
-    };
 
+      console.log('[Auth] Session retrieved:', session ? 'active' : 'none');
+
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      if (session?.user) {
+        setLoadingMessage('Carregando dados...');
+        await refreshStaff();
+      }
+
+      setLoadingState('ready');
+      setLoadingMessage('');
+      setAuthError(null);
+    } catch (error) {
+      console.error('[Auth] Initialization error:', error);
+      setSession(null);
+      setUser(null);
+      setStaff(null);
+      setAuthError(error as Error);
+      setLoadingState('error');
+      setLoadingMessage('Erro inesperado');
+    } finally {
+      isInitializingRef.current = false;
+      setIsLoading(false);
+    }
+  }, [getSessionWithRetry, refreshStaff]);
+
+  // Retry auth function exposed to context
+  const retryAuth = useCallback(async () => {
+    setIsLoading(true);
+    await initializeAuth();
+  }, [initializeAuth]);
+
+  useEffect(() => {
+    // Start initialization
     initializeAuth();
 
-    // Listen for auth changes
+    // Set up auth state listener
+    // We register it immediately but ignore events during initialization
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
+      async (event, newSession) => {
+        console.log('[Auth] onAuthStateChange:', event, 'isInitializing:', isInitializingRef.current);
+
+        // Skip events during initialization to prevent race conditions
+        if (isInitializingRef.current) {
+          console.log('[Auth] Ignoring auth event during initialization');
+          return;
+        }
+
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+
+        if (newSession?.user) {
           await refreshStaff();
         } else {
           setStaff(null);
@@ -178,8 +268,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    return () => subscription.unsubscribe();
-  }, []);
+    subscriptionRef.current = subscription;
+
+    return () => {
+      subscription.unsubscribe();
+      subscriptionRef.current = null;
+    };
+  }, [initializeAuth, refreshStaff]);
 
   const lookupCrm = useCallback(async (crm: string): Promise<CrmLookupResult> => {
     return lookupStaffByCrm(crm);
@@ -634,6 +729,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     staff,
     isLoading,
+    loadingState,
+    loadingMessage,
+    authError,
+    retryAuth,
     isAuthenticated: !!session && !!user,
     // Legacy CRM methods (deprecated)
     lookupCrm,
