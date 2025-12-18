@@ -392,16 +392,17 @@ describe('ColumnHeader', () => {
 
     it('handles special characters in title', () => {
       const column = createMockColumn();
-      render(<ColumnHeader column={column} title="<>&\"'`" />);
+      const specialTitle = '<>&"\'`';
+      render(<ColumnHeader column={column} title={specialTitle} />);
 
-      expect(screen.getByText('<>&"\'`')).toBeInTheDocument();
+      expect(screen.getByText(specialTitle)).toBeInTheDocument();
     });
 
     it('handles emoji in title', () => {
       const column = createMockColumn();
-      render(<ColumnHeader column={column} title="=Ê Data" />);
+      render(<ColumnHeader column={column} title="=ï¿½ Data" />);
 
-      expect(screen.getByText('=Ê Data')).toBeInTheDocument();
+      expect(screen.getByText('=ï¿½ Data')).toBeInTheDocument();
     });
 
     it('handles empty title', () => {

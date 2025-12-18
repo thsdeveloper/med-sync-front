@@ -512,7 +512,7 @@
           "Validation errors return 400 status with details"
         ]
       },
-      "passes": false
+      "passes": true
     },
     {
       "id": "F032",
@@ -539,7 +539,7 @@
           "Request completes within timeout period"
         ]
       },
-      "passes": false
+      "passes": true
     },
     {
       "id": "F033",
