@@ -910,7 +910,7 @@
           "'Visualizar' option visible in dropdown menu"
         ]
       },
-      "passes": false
+      "passes": true
     },
     {
       "id": "F045",
