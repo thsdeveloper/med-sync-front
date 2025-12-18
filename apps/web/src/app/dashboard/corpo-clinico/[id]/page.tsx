@@ -19,9 +19,9 @@ import { Skeleton } from '@/components/ui/skeleton';
  * Page component props with dynamic route parameter
  */
 interface MedicalStaffDetailPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 /**
@@ -41,9 +41,9 @@ interface MedicalStaffDetailPageProps {
  * // Automatically rendered by Next.js for route /dashboard/corpo-clinico/123e4567-e89b-12d3-a456-426614174000
  */
 export default function MedicalStaffDetailPage({ params }: MedicalStaffDetailPageProps) {
+  const { id: medicalStaffId } = React.use(params);
   const router = useRouter();
   const { activeOrganization, loading: orgLoading } = useOrganization();
-  const { id: medicalStaffId } = params;
 
   // Extract organization ID from active organization
   const organizationId = activeOrganization?.id || null;

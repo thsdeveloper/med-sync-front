@@ -95,7 +95,7 @@ export const MedicalStaffInfoCard = React.memo<MedicalStaffInfoCardProps>(
   ({ sections, loading = false, className, title }) => {
     if (loading) {
       return (
-        <Card className={cn('w-full', className)} data-testid="info-card">
+        <Card className={cn('w-full', className)} data-testid="medical-staff-info-card">
           {title && (
             <CardHeader>
               <CardTitle>
@@ -129,7 +129,7 @@ export const MedicalStaffInfoCard = React.memo<MedicalStaffInfoCardProps>(
     }
 
     return (
-      <Card className={cn('w-full', className)} data-testid="info-card">
+      <Card className={cn('w-full', className)} data-testid="medical-staff-info-card">
         {title && (
           <CardHeader>
             <CardTitle>{title}</CardTitle>

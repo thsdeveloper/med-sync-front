@@ -39,10 +39,18 @@ import { CalendarX } from 'lucide-react';
 import { CalendarWrapper, CalendarWrapperEvent } from './CalendarWrapper';
 import { CalendarLoadingSkeleton } from './CalendarLoadingSkeleton';
 import { CalendarEmptyState } from '../molecules/CalendarEmptyState';
-import { CalendarToolbar } from '../molecules/CalendarToolbar';
+import { CalendarToolbar, ExtendedToolbarProps } from '../molecules/CalendarToolbar';
 import { ShiftDetailModal } from './ShiftDetailModal';
 import { useShiftsCalendar } from '@/hooks/useShiftsCalendar';
 import type { CalendarEvent } from '@/types/calendar';
+
+/**
+ * Slot selection info from the calendar
+ */
+export interface SlotInfo {
+  start: Date;
+  end: Date;
+}
 
 /**
  * Props for the ShiftsCalendar component
@@ -68,6 +76,12 @@ export interface ShiftsCalendarProps {
   onDateChange?: (date: Date) => void;
   /** Optional callback when calendar view changes */
   onViewChange?: (view: View) => void;
+  /** Enable slot selection for creating shifts (default: false) */
+  allowCreation?: boolean;
+  /** Callback when a slot is selected (for creating new shifts) */
+  onSlotSelect?: (slotInfo: SlotInfo) => void;
+  /** Optional slot for filter controls to be rendered in the toolbar area */
+  filterSlot?: React.ReactNode;
 }
 
 /**
@@ -140,6 +154,9 @@ export function ShiftsCalendar({
   className = '',
   onDateChange,
   onViewChange,
+  allowCreation = false,
+  onSlotSelect,
+  filterSlot,
 }: ShiftsCalendarProps) {
   // State for calendar view and date (supports controlled or uncontrolled mode)
   const [internalView, setInternalView] = useState<View>(view ?? defaultView);
@@ -242,12 +259,29 @@ export function ShiftsCalendar({
     [onDateChange]
   );
 
+  // Handle slot selection (for creating new shifts)
+  const handleSlotSelect = useCallback(
+    (slotInfo: { start: Date; end: Date }) => {
+      if (allowCreation && onSlotSelect) {
+        onSlotSelect({ start: slotInfo.start, end: slotInfo.end });
+      }
+    },
+    [allowCreation, onSlotSelect]
+  );
+
   // Handle modal close
   const handleModalClose = useCallback((open: boolean) => {
     if (!open) {
       setSelectedShift(null);
     }
   }, []);
+
+  // Create a toolbar component wrapper that includes the filterSlot
+  const ToolbarWithFilters = useMemo(() => {
+    return function ToolbarWrapper(props: ExtendedToolbarProps) {
+      return <CalendarToolbar {...props} filterSlot={filterSlot} />;
+    };
+  }, [filterSlot]);
 
   // Show loading skeleton while fetching
   if (isLoading) {
@@ -286,9 +320,10 @@ export function ShiftsCalendar({
           views={['month', 'week', 'day', 'agenda']} // Enable all 4 view modes
           height={height}
           className={className}
-          selectable={false} // Disable slot selection for read-only view
+          selectable={allowCreation}
+          onSelectSlot={handleSlotSelect}
           components={{
-            toolbar: CalendarToolbar, // Use custom toolbar with month/year selectors
+            toolbar: ToolbarWithFilters, // Use custom toolbar with month/year selectors and filter slot
           }}
         />
 

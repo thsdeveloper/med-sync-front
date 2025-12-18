@@ -77,6 +77,13 @@ const VIEW_LABELS: Record<View, string> = {
 };
 
 /**
+ * Extended toolbar props that include an optional filter slot
+ */
+export interface ExtendedToolbarProps extends ToolbarProps<CalendarWrapperEvent, object> {
+  filterSlot?: React.ReactNode;
+}
+
+/**
  * CalendarToolbar - Custom toolbar with interactive month/year selectors
  *
  * This molecule component replaces react-big-calendar's default toolbar with
@@ -93,7 +100,8 @@ export function CalendarToolbar({
   onView,
   onNavigate,
   label,
-}: ToolbarProps<CalendarWrapperEvent, object>) {
+  filterSlot,
+}: ExtendedToolbarProps) {
   /**
    * Generate year options (current year ± 5 years)
    */
@@ -180,86 +188,90 @@ export function CalendarToolbar({
 
   return (
     <div className="flex flex-col gap-4 mb-4">
-      {/* Top row: Navigation controls and month/year selectors */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Navigation buttons */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={navigateToToday}
-            className="h-9"
-          >
-            <CalendarIcon className="h-4 w-4 mr-2" />
-            Hoje
-          </Button>
-
-          <div className="flex items-center">
+      {/* Top row: Navigation controls, month/year selectors, and filter slot */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Navigation buttons */}
+          <div className="flex items-center gap-2">
             <Button
-              variant="ghost"
-              size="icon"
-              onClick={navigateToPrevious}
-              className="h-9 w-9"
-              aria-label="Anterior"
+              variant="outline"
+              size="sm"
+              onClick={navigateToToday}
+              className="h-9"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <CalendarIcon className="h-4 w-4 mr-2" />
+              Hoje
             </Button>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={navigateToNext}
-              className="h-9 w-9"
-              aria-label="Próximo"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={navigateToPrevious}
+                className="h-9 w-9"
+                aria-label="Anterior"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={navigateToNext}
+                className="h-9 w-9"
+                aria-label="Próximo"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
+
+          {/* Month selector */}
+          <Select
+            value={currentMonth.toString()}
+            onValueChange={handleMonthChange}
+          >
+            <SelectTrigger className="w-[140px] h-9">
+              <SelectValue placeholder="Selecione o mes" />
+            </SelectTrigger>
+            <SelectContent>
+              {MONTH_NAMES.map((monthName, index) => (
+                <SelectItem key={index} value={index.toString()}>
+                  {monthName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Year selector */}
+          <Select
+            value={currentYear.toString()}
+            onValueChange={handleYearChange}
+          >
+            <SelectTrigger className="w-[100px] h-9">
+              <SelectValue placeholder="Ano" />
+            </SelectTrigger>
+            <SelectContent>
+              {yearOptions.map((year) => (
+                <SelectItem key={year} value={year.toString()}>
+                  {year}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Month selector */}
-        <Select
-          value={currentMonth.toString()}
-          onValueChange={handleMonthChange}
-        >
-          <SelectTrigger className="w-[140px] h-9">
-            <SelectValue placeholder="Selecione o mês" />
-          </SelectTrigger>
-          <SelectContent>
-            {MONTH_NAMES.map((monthName, index) => (
-              <SelectItem key={index} value={index.toString()}>
-                {monthName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Year selector */}
-        <Select
-          value={currentYear.toString()}
-          onValueChange={handleYearChange}
-        >
-          <SelectTrigger className="w-[100px] h-9">
-            <SelectValue placeholder="Ano" />
-          </SelectTrigger>
-          <SelectContent>
-            {yearOptions.map((year) => (
-              <SelectItem key={year} value={year.toString()}>
-                {year}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Current date label (for context) */}
-        <div className="text-sm font-medium text-muted-foreground ml-2">
-          {format(date, "MMMM 'de' yyyy", { locale: ptBR })}
-        </div>
+        {/* Filter slot - rendered on the right side */}
+        {filterSlot && (
+          <div className="flex items-center">
+            {filterSlot}
+          </div>
+        )}
       </div>
 
       {/* Bottom row: View switcher buttons */}
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground mr-2">Visualização:</span>
+        <span className="text-sm text-muted-foreground mr-2">Visualizacao:</span>
         {views &&
           (views as View[]).map((viewName) => (
             <Button

@@ -20,13 +20,26 @@ test.describe('Medical Staff Detail View - F045', () => {
   let staffId: string | null = null;
 
   test.beforeEach(async ({ page }) => {
+    // Skip if we already have a staffId from previous test
+    if (staffId) {
+      await page.goto('/dashboard/equipe');
+      await page.waitForLoadState('networkidle');
+      return;
+    }
+
     // Navigate to Equipe (Medical Staff) listing page first
     await page.goto('/dashboard/equipe');
-    await page.waitForSelector('[data-testid="data-table"]', { timeout: 10000 });
+    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('[data-testid="data-table"]', { timeout: 15000 });
+
+    // Wait extra time for data to populate
+    await page.waitForTimeout(2000);
 
     // Get the first staff member ID from the table
     const firstStaffLink = page.locator('[data-testid="staff-name-link"]').first();
-    if (await firstStaffLink.isVisible()) {
+    try {
+      await firstStaffLink.waitFor({ state: 'visible', timeout: 10000 });
+
       // Click the name to navigate to detail page
       await firstStaffLink.click();
 
@@ -38,6 +51,9 @@ test.describe('Medical Staff Detail View - F045', () => {
       // Go back to listing for consistent test state
       await page.goBack();
       await page.waitForSelector('[data-testid="data-table"]', { timeout: 10000 });
+    } catch {
+      // No staff data available
+      staffId = null;
     }
   });
 

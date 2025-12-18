@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
+interface CalendarShift {
+  id: string
+  title: string
+  start: string
+  end: string
+  doctor_name: string
+  doctor_id: string
+  facility_name: string
+  facility_id: string
+  facility_address: string | null
+  specialty: string
+  status: string
+  notes: string
+  date: string
+  sector_id?: string
+  fixed_schedule_id?: string | null
+}
+
 /**
  * GET /api/calendar/shifts
  *
@@ -12,6 +30,12 @@ import { supabase } from '@/lib/supabase'
  * - end_date (required): ISO 8601 timestamp for end of date range
  * - facility_id (optional): UUID of facility to filter by (or 'todas' for all)
  * - specialty (optional): Specialty to filter by (or 'todas' for all)
+ * - sector_id (optional): UUID of sector to filter by
+ * - staff_id (optional): UUID of staff member to filter by
+ * - status (optional): Comma-separated list of statuses to filter by
+ * - shift_type (optional): morning, afternoon, or night
+ * - assignment_status (optional): assigned, unassigned, or all
+ * - schedule_type (optional): manual, fixed, or all
  *
  * Returns:
  * {
@@ -38,7 +62,6 @@ import { supabase } from '@/lib/supabase'
  */
 export async function GET(request: NextRequest) {
   try {
-
     // Extract query parameters
     const searchParams = request.nextUrl.searchParams
     const organizationId = searchParams.get('organization_id')
@@ -46,6 +69,14 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('end_date')
     const facilityId = searchParams.get('facility_id') || 'todas'
     const specialty = searchParams.get('specialty') || 'todas'
+
+    // New filter parameters
+    const sectorId = searchParams.get('sector_id')
+    const staffId = searchParams.get('staff_id')
+    const statusFilter = searchParams.get('status')
+    const shiftType = searchParams.get('shift_type')
+    const assignmentStatus = searchParams.get('assignment_status')
+    const scheduleType = searchParams.get('schedule_type')
 
     // Validate required parameters
     if (!organizationId) {
@@ -111,10 +142,77 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Return the data
+    // Get shifts from response
+    let shifts: CalendarShift[] = data?.shifts || []
+
+    // Apply client-side filters for fields not supported by RPC
+
+    // Filter by sector_id
+    if (sectorId) {
+      shifts = shifts.filter((shift) => shift.sector_id === sectorId)
+    }
+
+    // Filter by staff_id (doctor_id)
+    if (staffId) {
+      shifts = shifts.filter((shift) => shift.doctor_id === staffId)
+    }
+
+    // Filter by status (comma-separated list)
+    if (statusFilter) {
+      const statuses = statusFilter.split(',').map((s) => s.trim().toLowerCase())
+      shifts = shifts.filter((shift) =>
+        statuses.includes(shift.status.toLowerCase())
+      )
+    }
+
+    // Filter by shift_type (based on start time hour)
+    if (shiftType && shiftType !== 'todos') {
+      shifts = shifts.filter((shift) => {
+        const startHour = new Date(shift.start).getHours()
+        switch (shiftType) {
+          case 'morning':
+            return startHour >= 6 && startHour < 12
+          case 'afternoon':
+            return startHour >= 12 && startHour < 18
+          case 'night':
+            return startHour >= 18 || startHour < 6
+          default:
+            return true
+        }
+      })
+    }
+
+    // Filter by assignment_status
+    if (assignmentStatus && assignmentStatus !== 'all') {
+      shifts = shifts.filter((shift) => {
+        // RPC returns 'N/A' for doctor_name when no doctor is assigned
+        const hasDoctor = shift.doctor_id && shift.doctor_name && shift.doctor_name !== 'N/A'
+        if (assignmentStatus === 'assigned') {
+          return hasDoctor
+        } else if (assignmentStatus === 'unassigned') {
+          return !hasDoctor
+        }
+        return true
+      })
+    }
+
+    // Filter by schedule_type (based on fixed_schedule_id)
+    if (scheduleType && scheduleType !== 'all') {
+      shifts = shifts.filter((shift) => {
+        const isFromFixedSchedule = shift.fixed_schedule_id !== null && shift.fixed_schedule_id !== undefined
+        if (scheduleType === 'fixed') {
+          return isFromFixedSchedule
+        } else if (scheduleType === 'manual') {
+          return !isFromFixedSchedule
+        }
+        return true
+      })
+    }
+
+    // Return the filtered data
     return NextResponse.json({
       ok: true,
-      data: data || { shifts: [] },
+      data: { shifts },
     })
   } catch (error) {
     console.error('Unexpected error in calendar shifts API:', error)

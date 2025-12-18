@@ -4,11 +4,13 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import type {
   CalendarFilters,
+  ExtendedCalendarFilters,
   CalendarShiftsResponse,
   CalendarShift,
   CalendarEvent,
   GroupedCalendarData,
   UseShiftsCalendarResult,
+  ShiftStatus,
 } from '@/types/calendar';
 
 /**
@@ -18,7 +20,7 @@ import type {
  * @returns Promise resolving to calendar shifts data
  */
 async function fetchCalendarShifts(
-  filters: CalendarFilters
+  filters: ExtendedCalendarFilters
 ): Promise<CalendarShift[]> {
   const params = new URLSearchParams({
     organization_id: filters.organizationId,
@@ -37,6 +39,31 @@ async function fetchCalendarShifts(
     params.append('specialty', filters.specialty);
   } else {
     params.append('specialty', 'todas');
+  }
+
+  // Add new filter parameters
+  if (filters.sectorId && filters.sectorId !== 'todos') {
+    params.append('sector_id', filters.sectorId);
+  }
+
+  if (filters.staffId && filters.staffId !== 'todos') {
+    params.append('staff_id', filters.staffId);
+  }
+
+  if (filters.status && filters.status.length > 0) {
+    params.append('status', filters.status.join(','));
+  }
+
+  if (filters.shiftType && filters.shiftType !== 'todos') {
+    params.append('shift_type', filters.shiftType);
+  }
+
+  if (filters.assignmentStatus && filters.assignmentStatus !== 'all') {
+    params.append('assignment_status', filters.assignmentStatus);
+  }
+
+  if (filters.scheduleType && filters.scheduleType !== 'all') {
+    params.append('schedule_type', filters.scheduleType);
   }
 
   const response = await fetch(`/api/calendar/shifts?${params.toString()}`);
@@ -101,7 +128,7 @@ function groupEventsByDate(events: CalendarEvent[]): GroupedCalendarData {
  * - Grouping by date for easier calendar rendering
  * - Comprehensive error handling
  *
- * @param filters - Calendar filter parameters (organizationId, dateRange, facilityId, specialty)
+ * @param filters - Calendar filter parameters (organizationId, dateRange, facilityId, specialty, etc.)
  * @param options - Optional configuration for the query
  * @returns Hook result with shifts data, loading states, and refetch function
  *
@@ -113,25 +140,40 @@ function groupEventsByDate(events: CalendarEvent[]): GroupedCalendarData {
  *   endDate: '2024-01-31T23:59:59Z',
  *   facilityId: 'facility-uuid', // optional
  *   specialty: 'cardio', // optional
+ *   sectorId: 'sector-uuid', // optional
+ *   staffId: 'staff-uuid', // optional
+ *   status: ['pending', 'accepted'], // optional
+ *   shiftType: 'morning', // optional
+ *   assignmentStatus: 'assigned', // optional
+ *   scheduleType: 'fixed', // optional
  * });
  * ```
  */
 export function useShiftsCalendar(
-  filters: CalendarFilters,
+  filters: CalendarFilters | ExtendedCalendarFilters,
   options?: {
     enabled?: boolean;
     refetchOnWindowFocus?: boolean;
     staleTime?: number;
   }
 ): UseShiftsCalendarResult {
-  // Build query key for React Query caching
+  // Cast to extended filters (backward compatible)
+  const extendedFilters = filters as ExtendedCalendarFilters;
+
+  // Build query key for React Query caching (includes all filter dimensions)
   const queryKey = [
     'calendar-shifts',
-    filters.organizationId,
-    filters.startDate,
-    filters.endDate,
-    filters.facilityId || 'todas',
-    filters.specialty || 'todas',
+    extendedFilters.organizationId,
+    extendedFilters.startDate,
+    extendedFilters.endDate,
+    extendedFilters.facilityId || 'todas',
+    extendedFilters.specialty || 'todas',
+    extendedFilters.sectorId || 'todos',
+    extendedFilters.staffId || 'todos',
+    extendedFilters.status?.join(',') || '',
+    extendedFilters.shiftType || 'todos',
+    extendedFilters.assignmentStatus || 'all',
+    extendedFilters.scheduleType || 'all',
   ];
 
   // Use React Query to fetch and cache data
@@ -144,7 +186,7 @@ export function useShiftsCalendar(
     refetch,
   } = useQuery({
     queryKey,
-    queryFn: () => fetchCalendarShifts(filters),
+    queryFn: () => fetchCalendarShifts(extendedFilters),
     enabled: options?.enabled ?? true,
     refetchOnWindowFocus: options?.refetchOnWindowFocus ?? true,
     staleTime: options?.staleTime ?? 5 * 60 * 1000, // 5 minutes

@@ -141,7 +141,7 @@ export function DataTable<TData>({
   });
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn("space-y-4", className)} data-testid="data-table">
       {/* Toolbar with search and actions */}
       {showToolbar && (
         <TableToolbar

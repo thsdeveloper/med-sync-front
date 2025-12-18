@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { Facility } from './facility.schema';
 
 export const sectorSchema = z.object({
     name: z
@@ -14,12 +15,14 @@ export type SectorFormData = z.infer<typeof sectorSchema>;
 
 export type Sector = SectorFormData & {
     id: string;
-    organization_id: string;
+    organization_id: string | null; // null para setores globais
+    description?: string | null;
     created_at: string;
 };
 
 export const shiftSchema = z.object({
     sectorId: z.string().min(1, 'Setor é obrigatório'),
+    facilityId: z.string().min(1, 'Unidade é obrigatória'),
     staffId: z.string().optional(),
     date: z.date(),
     startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Horário inválido'),
@@ -36,6 +39,7 @@ export type Shift = {
     id: string;
     organization_id: string;
     sector_id: string;
+    facility_id: string | null;
     staff_id: string | null;
     start_time: string;
     end_time: string;
@@ -44,6 +48,7 @@ export type Shift = {
     status: ShiftStatus;
     created_at: string;
     sectors?: Sector;
+    facilities?: Facility;
     medical_staff?: {
         name: string;
         role: string;

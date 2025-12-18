@@ -37,9 +37,9 @@ test.describe('Página de Login', () => {
     await page.fill('input[type="password"], input[name="password"], #password', 'qualquer-senha');
     await page.click('button[type="submit"]');
 
-    // Verificar validação
-    const emailInput = page.locator('input[type="email"], input[name="email"], #email');
-    await expect(emailInput).toHaveAttribute('required', '');
+    // Verificar mensagem de validação (Zod validation message)
+    const errorMessage = page.locator('text=Informe seu e-mail');
+    await expect(errorMessage).toBeVisible({ timeout: 5000 });
   });
 
   test('screenshot da página de login', async ({ page }) => {

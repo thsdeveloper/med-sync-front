@@ -12,6 +12,8 @@ import { MedicalStaffSheet } from '@/components/organisms/medical-staff/MedicalS
 
 import { BaseSheet } from '@/components/molecules/BaseSheet';
 import { WeekdaySelector } from '@/components/molecules/WeekdaySelector';
+import { SectorSelect } from '@/components/molecules/SectorSelect';
+import { FacilitySelect } from '@/components/molecules/FacilitySelect';
 import {
     Form,
     FormControl,
@@ -307,15 +309,12 @@ export function FixedScheduleDialog({
                                 <FormItem>
                                     <FormLabel>Unidade</FormLabel>
                                     <FormControl>
-                                        <Select
+                                        <FacilitySelect
+                                            facilities={facilities}
                                             value={field.value}
-                                            onValueChange={field.onChange}
+                                            onChange={field.onChange}
                                             disabled={facilities.length === 0}
-                                            placeholder="Selecione"
-                                            options={facilities.map((f) => ({
-                                                value: f.id,
-                                                label: f.name,
-                                            }))}
+                                            placeholder="Selecione a unidade"
                                         />
                                     </FormControl>
                                     <FormMessage />
@@ -363,17 +362,11 @@ export function FixedScheduleDialog({
                             <FormItem>
                                 <FormLabel>Setor (opcional)</FormLabel>
                                 <FormControl>
-                                    <Select
-                                        value={field.value || 'none'}
-                                        onValueChange={(value) => field.onChange(value === 'none' ? '' : value)}
-                                        placeholder="Nenhum setor específico"
-                                        options={[
-                                            { value: 'none', label: 'Nenhum setor específico' },
-                                            ...sectors.map((s) => ({
-                                                value: s.id,
-                                                label: s.name,
-                                            })),
-                                        ]}
+                                    <SectorSelect
+                                        sectors={sectors}
+                                        value={field.value || ''}
+                                        onChange={field.onChange}
+                                        placeholder="Selecione um setor..."
                                     />
                                 </FormControl>
                                 <FormMessage />

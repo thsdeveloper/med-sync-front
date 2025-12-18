@@ -266,7 +266,6 @@ export const MedicalStaffShiftHistory = React.memo<MedicalStaffShiftHistoryProps
         ref={parentRef}
         className="overflow-auto"
         style={{ maxHeight }}
-        data-testid="shift-history"
       >
         <div
           style={{
@@ -312,7 +311,7 @@ export const MedicalStaffShiftHistory = React.memo<MedicalStaffShiftHistoryProps
     }
 
     return (
-      <Card className={cn('w-full', className)} data-testid="shift-history-card">
+      <Card className={cn('w-full', className)} data-testid="shift-history">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-primary" />

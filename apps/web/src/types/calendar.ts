@@ -36,6 +36,10 @@ export interface CalendarShift {
   notes: string;
   /** Date in YYYY-MM-DD format */
   date: string;
+  /** Sector UUID (optional) */
+  sector_id?: string | null;
+  /** Fixed schedule UUID - null if manual shift */
+  fixed_schedule_id?: string | null;
 }
 
 /**
@@ -48,6 +52,26 @@ export interface CalendarShiftsResponse {
   };
   error?: string;
 }
+
+/**
+ * Shift status values
+ */
+export type ShiftStatus = 'pending' | 'accepted' | 'declined' | 'swap_requested';
+
+/**
+ * Shift type (time of day)
+ */
+export type ShiftType = 'morning' | 'afternoon' | 'night';
+
+/**
+ * Assignment status for filtering
+ */
+export type AssignmentStatus = 'all' | 'assigned' | 'unassigned';
+
+/**
+ * Schedule type for filtering
+ */
+export type ScheduleType = 'all' | 'manual' | 'fixed';
 
 /**
  * Filter parameters for calendar shifts query
@@ -63,6 +87,24 @@ export interface CalendarFilters {
   facilityId?: string;
   /** Optional specialty filter (lowercase string or 'todas' for all) */
   specialty?: string;
+}
+
+/**
+ * Extended filter parameters with all possible filters
+ */
+export interface ExtendedCalendarFilters extends CalendarFilters {
+  /** Sector filter (UUID or 'todos' for all) */
+  sectorId?: string;
+  /** Staff filter (UUID or 'todos' for all) */
+  staffId?: string;
+  /** Status filter (array of statuses, empty = all) */
+  status?: ShiftStatus[];
+  /** Shift type filter (morning/afternoon/night or 'todos' for all) */
+  shiftType?: string;
+  /** Assignment status filter */
+  assignmentStatus?: AssignmentStatus;
+  /** Schedule type filter (manual/fixed or 'all') */
+  scheduleType?: ScheduleType;
 }
 
 /**

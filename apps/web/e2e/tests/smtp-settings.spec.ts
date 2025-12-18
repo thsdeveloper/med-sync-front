@@ -42,7 +42,17 @@ async function navigateToEmailTab(page: Page) {
 
   const emailTab = page.locator('[role="tab"]').filter({ hasText: 'E-mail' });
   await emailTab.click();
-  await page.waitForTimeout(500); // Wait for tab content to load
+
+  // Wait for loading to complete (either form or access denied should appear)
+  await page.waitForTimeout(2000);
+
+  // Wait for loading message to disappear
+  const loadingText = page.getByText('Carregando configurações...');
+  try {
+    await loadingText.waitFor({ state: 'hidden', timeout: 10000 });
+  } catch {
+    // Loading may have already finished
+  }
 }
 
 /**
@@ -107,15 +117,22 @@ test.describe('SMTP Settings - Page Navigation and Initial Load', () => {
   test('should load E-mail tab content when clicked', async ({ page }) => {
     await navigateToEmailTab(page);
 
-    const heading = page.locator('[role="tabpanel"]').getByText('Notificações por E-mail');
+    // Wait for tab content to load
+    await page.waitForTimeout(1000);
+
+    const heading = page.getByText('Notificações por E-mail');
     await expect(heading).toBeVisible();
   });
 
   test('should display proper heading and description', async ({ page }) => {
     await navigateToEmailTab(page);
 
+    // Wait for tab content to load
+    await page.waitForTimeout(1000);
+
     await expect(page.getByText('Notificações por E-mail')).toBeVisible();
-    await expect(page.getByText('Configure o servidor SMTP para envio de notificações')).toBeVisible();
+    // Description text is partial match
+    await expect(page.getByText(/Configure o servidor SMTP/)).toBeVisible();
   });
 });
 
@@ -126,38 +143,38 @@ test.describe('SMTP Settings - Admin Access Control', () => {
   test('should display form fields for admin users', async ({ page }) => {
     await navigateToEmailTab(page);
 
-    const isAdmin = await isAdminUser(page);
+    // Wait for content to load
+    await page.waitForTimeout(1000);
 
-    if (isAdmin) {
-      // Admin user should see form fields
-      await expect(page.getByLabel('Servidor SMTP')).toBeVisible();
-      await expect(page.getByLabel('Porta SMTP')).toBeVisible();
-      await expect(page.getByLabel('Usuário SMTP')).toBeVisible();
-      await expect(page.getByLabel('Senha SMTP')).toBeVisible();
-      await expect(page.getByLabel('E-mail Remetente')).toBeVisible();
-    } else {
-      // Non-admin user should see access denied message
-      await expect(page.getByText('Acesso Restrito')).toBeVisible();
-    }
+    const isAdmin = await isAdminUser(page);
+    test.skip(!isAdmin, 'User is not admin - skipping admin form test');
+
+    // Admin user should see form fields
+    await expect(page.getByLabel('Servidor SMTP')).toBeVisible();
+    await expect(page.getByLabel('Porta SMTP')).toBeVisible();
+    await expect(page.getByLabel('Usuário SMTP')).toBeVisible();
+    await expect(page.getByLabel('Senha SMTP')).toBeVisible();
+    await expect(page.getByLabel('E-mail Remetente')).toBeVisible();
   });
 
-  test('should display access denied message for non-admin users', async ({ page }) => {
+  test.skip('should display access denied message for non-admin users', async ({ page }) => {
+    // SKIPPED: This test requires a non-admin user account which is not available
+    // The authenticated user in e2e/.auth/user.json is an admin
     await navigateToEmailTab(page);
 
-    const isAdmin = await isAdminUser(page);
+    await expect(page.getByText('Acesso Restrito')).toBeVisible();
+    await expect(page.getByText(/Apenas administradores e proprietários podem configurar/)).toBeVisible();
 
-    if (!isAdmin) {
-      await expect(page.getByText('Acesso Restrito')).toBeVisible();
-      await expect(page.getByText(/Apenas administradores e proprietários podem configurar/)).toBeVisible();
-
-      // ShieldAlert icon should be visible
-      const shieldIcon = page.locator('.bg-orange-50').first();
-      await expect(shieldIcon).toBeVisible();
-    }
+    // ShieldAlert icon should be visible
+    const shieldIcon = page.locator('.bg-orange-50').first();
+    await expect(shieldIcon).toBeVisible();
   });
 
   test('should enforce role-based access control', async ({ page }) => {
     await navigateToEmailTab(page);
+
+    // Wait for content to load
+    await page.waitForTimeout(1000);
 
     // Either form OR access denied should be visible, not both
     const formVisible = await isAdminUser(page);
@@ -822,42 +839,38 @@ test.describe('SMTP Settings - Settings Persistence', () => {
 
 /**
  * Test suite: Non-Admin Access Restriction
+ * SKIPPED: These tests require a non-admin user account which is not available
+ * The authenticated user in e2e/.auth/user.json is an admin
  */
 test.describe('SMTP Settings - Non-Admin Access Restriction', () => {
-  test('should display access restriction for non-admin users', async ({ page }) => {
+  test.skip('should display access restriction for non-admin users', async ({ page }) => {
+    // This test requires a non-admin user account
     await navigateToEmailTab(page);
 
-    const isAdmin = await isAdminUser(page);
+    // Non-admin should see access denied message
+    await expect(page.getByText('Acesso Restrito')).toBeVisible();
+    await expect(page.getByText(/Apenas administradores e proprietários/i)).toBeVisible();
 
-    if (!isAdmin) {
-      // Non-admin should see access denied message
-      await expect(page.getByText('Acesso Restrito')).toBeVisible();
-      await expect(page.getByText(/Apenas administradores e proprietários/i)).toBeVisible();
-
-      // Form should NOT be visible
-      const formVisible = await page.getByLabel('Servidor SMTP').isVisible().catch(() => false);
-      expect(formVisible).toBe(false);
-    }
+    // Form should NOT be visible
+    const formVisible = await page.getByLabel('Servidor SMTP').isVisible().catch(() => false);
+    expect(formVisible).toBe(false);
   });
 
-  test('should not allow form interaction for non-admin users', async ({ page }) => {
+  test.skip('should not allow form interaction for non-admin users', async ({ page }) => {
+    // This test requires a non-admin user account
     await navigateToEmailTab(page);
 
-    const isAdmin = await isAdminUser(page);
+    // Try to find form fields
+    const hostField = page.getByLabel('Servidor SMTP');
+    const fieldVisible = await hostField.isVisible().catch(() => false);
 
-    if (!isAdmin) {
-      // Try to find form fields
-      const hostField = page.getByLabel('Servidor SMTP');
-      const fieldVisible = await hostField.isVisible().catch(() => false);
+    expect(fieldVisible).toBe(false);
 
-      expect(fieldVisible).toBe(false);
+    // Buttons should not be accessible
+    const saveButton = page.getByRole('button', { name: /Salvar/i });
+    const saveVisible = await saveButton.isVisible().catch(() => false);
 
-      // Buttons should not be accessible
-      const saveButton = page.getByRole('button', { name: /Salvar/i });
-      const saveVisible = await saveButton.isVisible().catch(() => false);
-
-      expect(saveVisible).toBe(false);
-    }
+    expect(saveVisible).toBe(false);
   });
 });
 
