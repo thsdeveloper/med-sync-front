@@ -36,6 +36,7 @@ import {
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -48,6 +49,7 @@ import {
   SidebarMenuSubItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import packageJson from "../../../../package.json";
 import { useOrganization, type Organization } from "@/providers/OrganizationProvider";
 import { useNotifications } from "@/providers/NotificationProvider";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -391,6 +393,11 @@ export function AppSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
+        <SidebarFooter>
+          <div className="px-2 py-2 text-xs text-muted-foreground text-center group-data-[collapsible=icon]:hidden">
+            MedSync v{packageJson.version}
+          </div>
+        </SidebarFooter>
         <SidebarRail />
       </Sidebar>
 
