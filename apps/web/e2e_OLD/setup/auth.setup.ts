@@ -17,7 +17,7 @@ import path from 'path';
 const authFile = path.join(__dirname, '../../.auth/user.json');
 
 /**
- * Test credentials for e2e testing
+ * Test credentials for e2e_OLD testing
  * These credentials are provided in the feature requirements
  */
 const TEST_USER = {

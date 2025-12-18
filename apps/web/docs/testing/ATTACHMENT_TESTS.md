@@ -234,13 +234,13 @@ pnpm test
 cd apps/web
 
 # Headless mode (CI)
-pnpm test:e2e
+pnpm test:e2e_OLD
 
 # UI mode (interactive)
-pnpm test:e2e:ui
+pnpm test:e2e_OLD:ui
 
 # Specific test file
-pnpm test:e2e chat-attachments.spec.ts
+pnpm test:e2e_OLD chat-attachments.spec.ts
 ```
 
 ### E2E Tests (Mobile - Detox)

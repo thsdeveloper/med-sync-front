@@ -131,27 +131,27 @@ cd apps/web
 
 #### Run all tests (headless mode)
 ```bash
-pnpm test:e2e
+pnpm test:e2e_OLD
 ```
 
 #### Run tests with UI mode (recommended for development)
 ```bash
-pnpm test:e2e:ui
+pnpm test:e2e_OLD:ui
 ```
 
 #### Run tests in headed mode (see browser)
 ```bash
-pnpm test:e2e:headed
+pnpm test:e2e_OLD:headed
 ```
 
 #### Run tests in debug mode (step-through)
 ```bash
-pnpm test:e2e:debug
+pnpm test:e2e_OLD:debug
 ```
 
 #### View test report (after running tests)
 ```bash
-pnpm test:e2e:report
+pnpm test:e2e_OLD:report
 ```
 
 #### Run specific test file
@@ -169,14 +169,14 @@ pnpm exec playwright test --grep "Hoje button"
 You can also run tests from the monorepo root using pnpm filters:
 
 ```bash
-# Run all e2e tests
-pnpm --filter @medsync/web test:e2e
+# Run all e2e_OLD tests
+pnpm --filter @medsync/web test:e2e_OLD
 
 # Run tests with UI
-pnpm --filter @medsync/web test:e2e:ui
+pnpm --filter @medsync/web test:e2e_OLD:ui
 
 # View report
-pnpm --filter @medsync/web test:e2e:report
+pnpm --filter @medsync/web test:e2e_OLD:report
 ```
 
 ### Test Execution Options
@@ -351,7 +351,7 @@ export default defineConfig({
 All tests use the **Page Object Model (POM)** pattern for maintainability:
 
 ```typescript
-// apps/web/e2e/pages/CalendarPage.ts
+// apps/web/e2e_OLD/pages/CalendarPage.ts
 export class CalendarPage {
   constructor(public readonly page: Page) {}
 
@@ -433,7 +433,7 @@ test.describe('Feature Area - Specific Functionality', () => {
 Run tests in debug mode to step through tests line-by-line:
 
 ```bash
-pnpm test:e2e:debug
+pnpm test:e2e_OLD:debug
 ```
 
 This opens the **Playwright Inspector** where you can:
@@ -448,7 +448,7 @@ This opens the **Playwright Inspector** where you can:
 Run tests in UI mode for visual debugging:
 
 ```bash
-pnpm test:e2e:ui
+pnpm test:e2e_OLD:ui
 ```
 
 UI mode provides:
@@ -463,7 +463,7 @@ UI mode provides:
 Run tests with visible browser windows:
 
 ```bash
-pnpm test:e2e:headed
+pnpm test:e2e_OLD:headed
 ```
 
 ### Playwright Trace Viewer

@@ -83,20 +83,20 @@ pnpm dev:mobile       # Inicia com tunnel (ngrok)
 The web application includes comprehensive e2e tests using Playwright:
 
 ```bash
-# Run all e2e tests (headless mode)
-pnpm --filter @medsync/web test:e2e
+# Run all e2e_OLD tests (headless mode)
+pnpm --filter @medsync/web test:e2e_OLD
 
 # Run tests with UI mode (recommended for development)
-pnpm --filter @medsync/web test:e2e:ui
+pnpm --filter @medsync/web test:e2e_OLD:ui
 
 # Run tests in headed mode (visible browser)
-pnpm --filter @medsync/web test:e2e:headed
+pnpm --filter @medsync/web test:e2e_OLD:headed
 
 # Debug tests step-by-step
-pnpm --filter @medsync/web test:e2e:debug
+pnpm --filter @medsync/web test:e2e_OLD:debug
 
 # View test report
-pnpm --filter @medsync/web test:e2e:report
+pnpm --filter @medsync/web test:e2e_OLD:report
 ```
 
 **Test Coverage**: 140+ comprehensive tests for calendar functionality including:
@@ -107,7 +107,7 @@ pnpm --filter @medsync/web test:e2e:report
 - URL state persistence and browser history
 - Edge cases (leap years, month boundaries, rapid interactions)
 
-For detailed testing documentation, setup instructions, and CI/CD configuration, see [`apps/web/e2e/README.md`](./apps/web/e2e/README.md).
+For detailed testing documentation, setup instructions, and CI/CD configuration, see [`apps/web/e2e/README.md`](apps/web/e2e_OLD/README.md).
 
 ### Pacotes compartilhados
 

@@ -15,8 +15,9 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
-    "test:e2e:report": "playwright show-report",
-    "playwright:codegen": "playwright codegen http://localhost:3000"
+    "test:e2e:report": "playwright show-report e2e/reports/html",
+    "playwright:codegen": "playwright codegen http://localhost:3000",
+    "test:health": "playwright test health-check.spec.ts"
   },
   "dependencies": {
     "@deemlol/next-icons": "^0.1.9",

@@ -361,7 +361,7 @@ beforeEach(async () => {
 ```json
 {
   "testRunner": "jest",
-  "runnerConfig": "e2e/config.json",
+  "runnerConfig": "e2e_OLD/config.json",
   "apps": {
     "ios": {
       "type": "ios.app",
@@ -401,7 +401,7 @@ detox build --configuration android.debug
 detox test --configuration android.debug
 
 # Specific test file
-detox test e2e/attachment-upload.spec.ts --configuration ios.debug
+detox test e2e_OLD/attachment-upload.spec.ts --configuration ios.debug
 ```
 
 ## Test Coverage Summary

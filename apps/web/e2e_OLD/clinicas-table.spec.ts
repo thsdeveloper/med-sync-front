@@ -13,7 +13,7 @@
  * - Accessibility
  * - Data persistence
  *
- * @see F025 - Write e2e tests for Clínicas table using Playwright
+ * @see F025 - Write e2e_OLD tests for Clínicas table using Playwright
  */
 
 import { test, expect } from './fixtures/clinicas.fixtures';

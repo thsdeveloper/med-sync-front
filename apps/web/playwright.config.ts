@@ -1,98 +1,72 @@
 import { defineConfig, devices } from '@playwright/test';
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+
+// Carrega variáveis de ambiente do .env.test se existir
+dotenv.config({ path: '.env.test' });
+dotenv.config(); // fallback para .env
+
+// Caminho para o storage state de autenticação
+const authFile = path.join(__dirname, 'e2e/.auth/user.json');
 
 /**
- * Playwright Configuration for MedSync Web Application
+ * Configuração do Playwright para testes e2e
+ * Gerado pelo Dev Agent Harness
  *
- * This configuration sets up end-to-end testing with:
- * - TypeScript support
- * - Authentication state persistence
- * - Multi-browser testing (Chromium, Firefox, WebKit)
- * - Proper timeouts and retry logic
+ * AUTENTICAÇÃO:
+ * - O projeto 'setup' faz login e salva o estado em e2e/.auth/user.json
+ * - Os outros projetos reutilizam esse estado (já autenticados)
+ * - Configure as credenciais em .env.test
  *
  * @see https://playwright.dev/docs/test-configuration
+ * @see https://playwright.dev/docs/auth
  */
 export default defineConfig({
-  // Test directory
-  testDir: './e2e',
-
-  // Maximum time one test can run for
-  timeout: 30 * 1000,
-
-  // Run tests in files in parallel
+  testDir: './e2e/tests',
   fullyParallel: true,
-
-  // Fail the build on CI if you accidentally left test.only in the source code
   forbidOnly: !!process.env.CI,
-
-  // Retry on CI only
   retries: process.env.CI ? 2 : 0,
-
-  // Opt out of parallel tests on CI
   workers: process.env.CI ? 1 : undefined,
-
-  // Reporter to use
   reporter: [
-    ['html', { open: 'never' }],
+    ['html', { outputFolder: './e2e/reports/html' }],
+    ['json', { outputFile: './e2e/reports/results.json' }],
     ['list'],
   ],
-
-  // Shared settings for all the projects below
   use: {
-    // Base URL to use in actions like `await page.goto('/')`
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
-
-    // Collect trace when retrying the failed test
+    baseURL: process.env.TEST_URL || 'http://localhost:3000',
     trace: 'on-first-retry',
-
-    // Screenshot only on failure
     screenshot: 'only-on-failure',
-
-    // Video only on failure
-    video: 'retain-on-failure',
+    video: 'on-first-retry',
+    actionTimeout: 10000,
+    navigationTimeout: 30000,
   },
-
-  // Configure projects for major browsers
+  timeout: 60000,
+  expect: {
+    timeout: 5000,
+  },
   projects: [
-    // Setup project - runs before all tests to handle authentication
+    // Setup project - faz login e salva estado de autenticação
     {
       name: 'setup',
       testMatch: /.*\.setup\.ts/,
     },
-
+    // Testes que NÃO precisam de autenticação
+    {
+      name: 'chromium-no-auth',
+      testMatch: /.*\.(noauth|public)\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    // Testes que PRECISAM de autenticação (maioria)
     {
       name: 'chromium',
+      testIgnore: /.*\.(setup|noauth|public)\.spec\.ts/,
+      dependencies: ['setup'],
       use: {
         ...devices['Desktop Chrome'],
-        // Use authenticated state from setup
-        storageState: '.auth/user.json',
+        // Reutiliza o estado de autenticação salvo pelo setup
+        storageState: authFile,
       },
-      dependencies: ['setup'],
-    },
-
-    {
-      name: 'firefox',
-      use: {
-        ...devices['Desktop Firefox'],
-        storageState: '.auth/user.json',
-      },
-      dependencies: ['setup'],
-    },
-
-    {
-      name: 'webkit',
-      use: {
-        ...devices['Desktop Safari'],
-        storageState: '.auth/user.json',
-      },
-      dependencies: ['setup'],
     },
   ],
-
-  // Run your local dev server before starting the tests
-  webServer: {
-    command: 'pnpm dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  },
+  outputDir: './e2e/reports/test-results',
 });

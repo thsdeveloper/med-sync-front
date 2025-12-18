@@ -41,3 +41,17 @@ Thumbs.db
 
 # Turbo
 .turbo/
+
+# E2E Test Reports
+e2e/reports/html/
+e2e/reports/screenshots/*.png
+e2e/reports/test-results/
+e2e/reports/results.json
+playwright-report/
+test-results/
+
+# E2E Authentication Storage State
+e2e/.auth/*.json
+
+# E2E Test Environment
+.env.test

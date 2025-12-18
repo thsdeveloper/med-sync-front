@@ -431,6 +431,241 @@
         "All e2e tests in e2e/calendar/ pass including navigation, view modes, and combined filters tests"
       ],
       "passes": true
+    },
+    {
+      "id": "F029",
+      "title": "Create SMTP configuration database schema and migration",
+      "type": "feature",
+      "description": "Create Supabase migration to add email_smtp_settings table with columns: organization_id (FK), smtp_host, smtp_port, smtp_user, smtp_password (encrypted), smtp_from_email, smtp_from_name, use_tls, is_enabled, created_at, updated_at. Add RLS policies to restrict access to admin users only. Include unique constraint on organization_id.",
+      "acceptance_criteria": [
+        "Migration file created in migrations/ directory",
+        "email_smtp_settings table created with all required columns",
+        "RLS policies implemented for admin-only access",
+        "Foreign key relationship to organizations table established",
+        "Unique constraint on organization_id enforced"
+      ],
+      "test_criteria": {
+        "scenarios": [
+          "Admin user can insert SMTP settings for their organization",
+          "Non-admin user cannot access email_smtp_settings table",
+          "Cannot create duplicate SMTP settings for same organization"
+        ],
+        "selectors": [],
+        "assertions": [
+          "Table exists in database schema",
+          "RLS policies prevent unauthorized access",
+          "Unique constraint prevents duplicate entries"
+        ]
+      },
+      "passes": false
+    },
+    {
+      "id": "F030",
+      "title": "Create SMTP settings Zod validation schema",
+      "type": "feature",
+      "description": "Create Zod schema in src/schemas/smtp-settings.schema.ts for SMTP configuration validation. Include validation for smtp_host (required domain/IP), smtp_port (number 1-65535), smtp_user (required email), smtp_password (min 8 chars), smtp_from_email (valid email), smtp_from_name (optional string), use_tls (boolean), is_enabled (boolean). Export type SmtpSettingsFormData.",
+      "acceptance_criteria": [
+        "Zod schema created in src/schemas/smtp-settings.schema.ts",
+        "All SMTP fields have appropriate validation rules",
+        "Email fields validated with proper email format",
+        "Port number validated within valid range (1-65535)",
+        "TypeScript type exported from schema"
+      ],
+      "test_criteria": {
+        "scenarios": [
+          "Valid SMTP configuration passes schema validation",
+          "Invalid email format triggers validation error",
+          "Invalid port number triggers validation error"
+        ],
+        "selectors": [],
+        "assertions": [
+          "Schema exports SmtpSettingsFormData type",
+          "Validation errors contain helpful messages",
+          "All required fields are enforced"
+        ]
+      },
+      "passes": false
+    },
+    {
+      "id": "F031",
+      "title": "Implement SMTP settings API endpoints (GET, POST, PATCH)",
+      "type": "feature",
+      "description": "Create API routes in src/app/api/smtp-settings/route.ts for GET (fetch current settings), POST (create settings), and PATCH (update settings). Implement server-side validation using Zod schema. Add admin authorization check. Encrypt smtp_password before storage using Supabase Vault or environment-based encryption key. Return sanitized data (no password in response).",
+      "acceptance_criteria": [
+        "GET /api/smtp-settings returns current organization SMTP settings",
+        "POST /api/smtp-settings creates new SMTP configuration",
+        "PATCH /api/smtp-settings updates existing configuration",
+        "Admin authorization enforced on all endpoints",
+        "smtp_password encrypted before database storage"
+      ],
+      "test_criteria": {
+        "scenarios": [
+          "GET request returns SMTP settings without password field",
+          "POST request creates new settings with encrypted password",
+          "PATCH request updates settings successfully",
+          "Non-admin user receives 403 Forbidden response"
+        ],
+        "selectors": [],
+        "assertions": [
+          "API returns 200 status for valid requests",
+          "Password never appears in API responses",
+          "Validation errors return 400 status with details"
+        ]
+      },
+      "passes": false
+    },
+    {
+      "id": "F032",
+      "title": "Create SMTP test connection endpoint",
+      "type": "feature",
+      "description": "Create API route POST /api/smtp-settings/test-connection to validate SMTP credentials by sending test email. Use nodemailer package to establish SMTP connection with provided credentials. Send test email to configured smtp_from_email. Return connection success/failure status with detailed error messages. Implement timeout handling (10s max).",
+      "acceptance_criteria": [
+        "POST /api/smtp-settings/test-connection endpoint created",
+        "nodemailer package installed and configured",
+        "Test email sent successfully with valid credentials",
+        "Detailed error messages returned for connection failures",
+        "Connection timeout enforced at 10 seconds"
+      ],
+      "test_criteria": {
+        "scenarios": [
+          "Valid SMTP credentials result in successful test email",
+          "Invalid credentials return connection error",
+          "Connection timeout triggers appropriate error message"
+        ],
+        "selectors": [],
+        "assertions": [
+          "API returns success status when email sent",
+          "API returns error details when connection fails",
+          "Request completes within timeout period"
+        ]
+      },
+      "passes": false
+    },
+    {
+      "id": "F033",
+      "title": "Create SmtpSettingsForm component with all configuration fields",
+      "type": "feature",
+      "description": "Create SmtpSettingsForm component in src/components/organisms/ using React Hook Form and Zod schema. Include form fields: smtp_host (Input), smtp_port (Input type number), smtp_user (Input email), smtp_password (Input password with show/hide toggle), smtp_from_email (Input email), smtp_from_name (Input), use_tls (Switch), is_enabled (Switch). Add 'Test Connection' button. Implement loading states and error handling.",
+      "acceptance_criteria": [
+        "SmtpSettingsForm component created with all SMTP fields",
+        "React Hook Form integrated with Zod validation",
+        "Password field has show/hide toggle functionality",
+        "Test Connection button triggers connection test",
+        "Loading states displayed during form submission and testing"
+      ],
+      "test_criteria": {
+        "scenarios": [
+          "User can fill all SMTP configuration fields",
+          "Form validation displays errors for invalid inputs",
+          "Test Connection button sends test request",
+          "Password visibility can be toggled on/off"
+        ],
+        "selectors": [
+          "input[name='smtp_host']",
+          "input[name='smtp_port']",
+          "input[name='smtp_password']",
+          "button:has-text('Test Connection')"
+        ],
+        "assertions": [
+          "Form renders all input fields",
+          "Validation errors appear below invalid fields",
+          "Test Connection button is clickable when form valid"
+        ]
+      },
+      "passes": false
+    },
+    {
+      "id": "F034",
+      "title": "Create useSmtpSettings hook for SMTP data management",
+      "type": "feature",
+      "description": "Create useSmtpSettings custom hook in src/hooks/useSmtpSettings.ts to manage SMTP settings state. Implement methods: fetchSettings (GET), saveSettings (POST/PATCH), testConnection. Use React Query for caching and loading states. Add toast notifications for success/error feedback. Handle organization context to fetch settings for current organization.",
+      "acceptance_criteria": [
+        "useSmtpSettings hook created in src/hooks/",
+        "React Query integrated for data fetching and caching",
+        "Methods implemented: fetchSettings, saveSettings, testConnection",
+        "Toast notifications shown for all operations",
+        "Organization context properly handled"
+      ],
+      "test_criteria": {
+        "scenarios": [
+          "Hook fetches SMTP settings on mount",
+          "saveSettings triggers API call and updates cache",
+          "testConnection displays success/error toast",
+          "Loading states properly managed during operations"
+        ],
+        "selectors": [],
+        "assertions": [
+          "Hook exports all required methods",
+          "React Query cache updates after mutations",
+          "Toast notifications appear for user feedback"
+        ]
+      },
+      "passes": false
+    },
+    {
+      "id": "F035",
+      "title": "Add Email Notifications section to /dashboard/configuracoes page",
+      "type": "feature",
+      "description": "Update existing /dashboard/configuracoes page to include new 'Notificações por E-mail' section. Add TabsList item for 'E-mail' tab. Create TabsContent with heading, description, and SmtpSettingsForm component. Add admin-only visibility check - show access denied message for non-admin users. Style section consistently with existing configuration tabs.",
+      "acceptance_criteria": [
+        "E-mail tab added to configuration page TabsList",
+        "TabsContent displays Email Notifications section",
+        "SmtpSettingsForm component rendered in tab content",
+        "Admin-only access enforced with appropriate messaging",
+        "Section styling consistent with other configuration tabs"
+      ],
+      "test_criteria": {
+        "scenarios": [
+          "Admin user navigates to /dashboard/configuracoes and sees E-mail tab",
+          "Clicking E-mail tab displays SMTP configuration form",
+          "Non-admin user sees access denied message instead of form",
+          "Form saves and displays success notification"
+        ],
+        "selectors": [
+          "[role='tab']:has-text('E-mail')",
+          "[role='tabpanel'] >> text='Notificações por E-mail'",
+          "form >> text='Configurações SMTP'"
+        ],
+        "assertions": [
+          "E-mail tab is visible in navigation",
+          "SMTP form appears when tab selected",
+          "Admin check prevents unauthorized access"
+        ]
+      },
+      "passes": false
+    },
+    {
+      "id": "F036",
+      "title": "Add SMTP settings e2e tests for configuration page",
+      "type": "feature",
+      "description": "Create e2e test file e2e/smtp-settings.spec.ts with comprehensive test coverage. Test scenarios: admin can view SMTP form, admin can save SMTP settings, test connection success/failure, non-admin cannot access form, validation errors display correctly, password encryption verified (password not in response). Use existing test patterns from e2e/clinicas-table.spec.ts.",
+      "acceptance_criteria": [
+        "e2e test file created at e2e/smtp-settings.spec.ts",
+        "Test scenarios cover admin access, form submission, validation",
+        "Test connection feature validated in e2e tests",
+        "Non-admin access restriction tested",
+        "Password encryption verified (no plain password in responses)"
+      ],
+      "test_criteria": {
+        "scenarios": [
+          "Admin user can access and submit SMTP configuration form",
+          "Test connection button triggers connection validation",
+          "Form validation prevents invalid submissions",
+          "Non-admin user sees access denied message",
+          "Saved settings persist and reload correctly"
+        ],
+        "selectors": [
+          "[data-testid='smtp-settings-form']",
+          "button:has-text('Test Connection')",
+          "button:has-text('Salvar Configurações')"
+        ],
+        "assertions": [
+          "All test scenarios pass successfully",
+          "Form submission creates/updates database record",
+          "Password never exposed in network responses"
+        ]
+      },
+      "passes": false
     }
   ]
 }

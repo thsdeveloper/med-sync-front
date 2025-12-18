@@ -25,7 +25,7 @@ export default defineConfig({
         '**/*.config.*',
         '**/mockData',
         '**/*.type.ts',
-        'e2e/',
+        'e2e_OLD/',
         '.next/',
         'dist/',
         'build/',
@@ -36,7 +36,7 @@ export default defineConfig({
 
     // Test match patterns
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
-    exclude: ['node_modules', 'e2e', '.next', 'dist'],
+    exclude: ['node_modules', 'e2e_OLD', '.next', 'dist'],
 
     // Timeout for tests (in milliseconds)
     testTimeout: 10000,

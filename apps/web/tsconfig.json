@@ -31,7 +31,7 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts",
-    "e2e/**/*.ts"
+    "e2e_OLD/**/*.ts"
   ],
   "exclude": ["node_modules"]
 }
