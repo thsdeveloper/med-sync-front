@@ -35,13 +35,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { UserAvatar } from "@/components/atoms";
 
 /**
  * Props for the actions column
@@ -107,18 +107,6 @@ function MedicalStaffActions({
 }
 
 /**
- * Get initials from name for avatar
- */
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .substring(0, 2);
-}
-
-/**
  * Get active status from staff organization or global staff record
  */
 function isActiveInOrg(staff: MedicalStaffWithOrganization): boolean {
@@ -164,16 +152,13 @@ export function getMedicalStaffColumns({
           <TooltipProvider>
             <div className="flex items-center gap-3">
               <div className="relative">
-                <Avatar>
-                  <AvatarFallback
-                    style={{
-                      backgroundColor: staff.color + "20",
-                      color: staff.color,
-                    }}
-                  >
-                    {getInitials(staff.name)}
-                  </AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  name={staff.name}
+                  avatarUrl={staff.avatar_url}
+                  color={staff.color}
+                  size="sm"
+                  variant="soft"
+                />
                 {/* Multi-organization indicator */}
                 {(staff.organization_count ?? 1) > 1 && (
                   <Tooltip>

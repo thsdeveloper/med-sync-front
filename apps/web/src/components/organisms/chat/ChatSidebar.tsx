@@ -4,8 +4,8 @@ import { format, parseISO, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MessageCircle, Search } from 'lucide-react';
 import { useState } from 'react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { UserAvatar } from '@/components/atoms';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -20,15 +20,6 @@ interface ChatSidebarProps {
 export function ChatSidebar({ selectedId, onSelect }: ChatSidebarProps) {
   const { conversations, isLoading } = useChat();
   const [searchQuery, setSearchQuery] = useState('');
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase();
-  };
 
   const formatTime = (dateStr: string) => {
     const date = parseISO(dateStr);
@@ -49,6 +40,11 @@ export function ChatSidebar({ selectedId, onSelect }: ChatSidebarProps) {
   const getStaffColor = (conv: SupportConversationWithDetails) => {
     const staffParticipant = conv.participants?.[0];
     return staffParticipant?.staff?.color || '#0066CC';
+  };
+
+  const getStaffAvatarUrl = (conv: SupportConversationWithDetails) => {
+    const staffParticipant = conv.participants?.[0];
+    return staffParticipant?.staff?.avatar_url;
   };
 
   const filteredConversations = conversations.filter((conv) => {
@@ -122,14 +118,13 @@ export function ChatSidebar({ selectedId, onSelect }: ChatSidebarProps) {
                     isSelected && 'bg-accent'
                   )}
                 >
-                  <Avatar className="h-12 w-12 flex-shrink-0">
-                    <AvatarFallback
-                      style={{ backgroundColor: getStaffColor(conv) }}
-                      className="text-white"
-                    >
-                      {getInitials(getConversationName(conv))}
-                    </AvatarFallback>
-                  </Avatar>
+                  <UserAvatar
+                    name={getConversationName(conv)}
+                    avatarUrl={getStaffAvatarUrl(conv)}
+                    color={getStaffColor(conv)}
+                    size="lg"
+                    className="flex-shrink-0"
+                  />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <span

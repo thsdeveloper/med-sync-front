@@ -1,6 +1,11 @@
 export * from './ShiftDialog';
 export * from './FixedScheduleDialog';
 export * from './FixedScheduleList';
+export * from './FixedScheduleDetailSheet';
 export * from './SectorsDialog';
 export * from './ShiftsList';
+export * from './ShiftExpansionContent';
 export { getShiftsListColumns } from './shifts-list-columns';
+export { getGroupedShiftsColumns } from './shifts-grouped-columns';
+export { getFixedScheduleColumns, type FixedScheduleWithRelations } from './fixed-schedule-columns';
+export { groupShiftsByStaff, type GroupedShiftsByStaff } from './shifts-grouped-types';

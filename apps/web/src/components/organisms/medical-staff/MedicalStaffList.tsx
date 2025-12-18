@@ -11,7 +11,6 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
     Tooltip,
@@ -19,6 +18,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { UserAvatar } from '@/components/atoms';
 
 interface MedicalStaffListProps {
     staff: MedicalStaffWithOrganization[];
@@ -41,15 +41,6 @@ export function MedicalStaffList({
         (member.especialidade?.nome && member.especialidade.nome.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (member.crm && member.crm.toLowerCase().includes(searchTerm.toLowerCase()))
     );
-
-    const getInitials = (name: string) => {
-        return name
-            .split(' ')
-            .map(n => n[0])
-            .join('')
-            .toUpperCase()
-            .substring(0, 2);
-    };
 
     // Obter status ativo do vínculo (staff_organization) ou do cadastro global
     const isActiveInOrg = (member: MedicalStaffWithOrganization) => {
@@ -114,11 +105,13 @@ export function MedicalStaffList({
                                     <td className="px-4 py-3">
                                         <div className="flex items-center gap-3">
                                             <div className="relative">
-                                                <Avatar>
-                                                    <AvatarFallback style={{ backgroundColor: member.color + '20', color: member.color }}>
-                                                        {getInitials(member.name)}
-                                                    </AvatarFallback>
-                                                </Avatar>
+                                                <UserAvatar
+                                                    name={member.name}
+                                                    avatarUrl={member.avatar_url}
+                                                    color={member.color}
+                                                    size="sm"
+                                                    variant="soft"
+                                                />
                                                 {/* Indicador de multi-organização */}
                                                 {(member.organization_count ?? 1) > 1 && (
                                                     <Tooltip>

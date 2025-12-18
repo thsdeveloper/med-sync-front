@@ -30,10 +30,12 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  getExpandedRowModel,
   useReactTable,
   type ColumnFiltersState,
   type SortingState,
   type VisibilityState,
+  type ExpandedState,
 } from "@tanstack/react-table";
 import { Loader2 } from "lucide-react";
 import {
@@ -99,6 +101,7 @@ export function DataTable<TData>({
   enablePagination = true,
   enableSorting = true,
   enableFiltering = true,
+  enableExpanding = false,
   pageSize = 10,
   pageSizeOptions = [10, 20, 30, 40, 50],
   showToolbar = true,
@@ -108,12 +111,16 @@ export function DataTable<TData>({
   emptyMessage = "Nenhum resultado encontrado.",
   className,
   onRowClick,
+  getSubRows,
+  renderExpandedRow,
+  expandOnRowClick = false,
 }: DataTableProps<TData>) {
   // State management
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
+  const [expanded, setExpanded] = React.useState<ExpandedState>({});
 
   // Initialize TanStack Table
   const table = useReactTable({
@@ -123,15 +130,19 @@ export function DataTable<TData>({
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
+    onExpandedChange: setExpanded,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: enableSorting ? getSortedRowModel() : undefined,
     getFilteredRowModel: enableFiltering ? getFilteredRowModel() : undefined,
     getPaginationRowModel: enablePagination ? getPaginationRowModel() : undefined,
+    getExpandedRowModel: enableExpanding ? getExpandedRowModel() : undefined,
+    getSubRows: enableExpanding ? getSubRows : undefined,
     state: {
       sorting,
       columnFilters,
       columnVisibility,
       rowSelection,
+      expanded,
     },
     initialState: {
       pagination: {
@@ -184,18 +195,33 @@ export function DataTable<TData>({
             ) : table.getRowModel().rows?.length ? (
               // Render rows
               table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  clickable={!!onRowClick}
-                  onClick={onRowClick ? () => onRowClick(row.original) : undefined}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
+                <React.Fragment key={row.id}>
+                  <TableRow
+                    data-state={row.getIsSelected() && "selected"}
+                    clickable={!!onRowClick || (enableExpanding && expandOnRowClick)}
+                    onClick={() => {
+                      if (enableExpanding && expandOnRowClick) {
+                        row.toggleExpanded();
+                      } else if (onRowClick) {
+                        onRowClick(row.original);
+                      }
+                    }}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  {/* Expanded row content */}
+                  {enableExpanding && row.getIsExpanded() && renderExpandedRow && (
+                    <ShadcnTableRow className="bg-muted/30 hover:bg-muted/30">
+                      <TableCell colSpan={columns.length} className="p-0">
+                        {renderExpandedRow(row)}
+                      </TableCell>
+                    </ShadcnTableRow>
+                  )}
+                </React.Fragment>
               ))
             ) : (
               // Empty state

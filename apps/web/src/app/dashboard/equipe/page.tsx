@@ -52,6 +52,7 @@ export default function TeamPage() {
                         especialidade_id,
                         profissao_id,
                         color,
+                        avatar_url,
                         active,
                         created_at,
                         updated_at,

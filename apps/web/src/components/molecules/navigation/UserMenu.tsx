@@ -11,21 +11,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { UserAvatar } from "@/components/atoms";
 
 type UserMenuProps = {
   user: User;
   onSignOut: () => Promise<void>;
-};
-
-const getInitials = (displayName: string) => {
-  return displayName
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0]?.toUpperCase() ?? "")
-    .join("");
 };
 
 export const UserMenu = ({ user, onSignOut }: UserMenuProps) => {
@@ -33,8 +24,6 @@ export const UserMenu = ({ user, onSignOut }: UserMenuProps) => {
     (user.user_metadata?.full_name as string | undefined) ||
     user.email?.split("@")[0] ||
     "Usuário";
-
-  const initials = getInitials(displayName || "U");
 
   const handleSignOut = async () => {
     await onSignOut();
@@ -47,11 +36,12 @@ export const UserMenu = ({ user, onSignOut }: UserMenuProps) => {
           className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-2 py-1 shadow-sm transition hover:shadow-md"
           aria-label="Menu do usuário"
         >
-          <Avatar className="size-10 border border-slate-200 bg-gradient-to-br from-blue-500 to-cyan-500 text-white font-semibold">
-            <AvatarFallback className="bg-transparent text-white">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
+          <UserAvatar
+            name={displayName}
+            size="md"
+            variant="gradient"
+            className="border border-slate-200 bg-gradient-to-br from-blue-500 to-cyan-500"
+          />
           <div className="hidden text-left sm:block">
             <p className="text-sm font-semibold leading-tight text-slate-900">
               {displayName}

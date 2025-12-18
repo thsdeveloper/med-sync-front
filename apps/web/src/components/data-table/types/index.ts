@@ -5,7 +5,7 @@
  * These types extend TanStack Table's core types with application-specific features.
  */
 
-import type { ColumnDef, SortingState, ColumnFiltersState, PaginationState } from "@tanstack/react-table";
+import type { ColumnDef, SortingState, ColumnFiltersState, PaginationState, ExpandedState, Row } from "@tanstack/react-table";
 
 /**
  * Generic table data type parameter
@@ -144,6 +144,26 @@ export interface DataTableProps<TData> {
    * Callback when row is clicked (optional)
    */
   onRowClick?: (row: TData) => void;
+
+  /**
+   * Enable row expansion (default: false)
+   */
+  enableExpanding?: boolean;
+
+  /**
+   * Function to get sub-rows for expansion (required if enableExpanding is true)
+   */
+  getSubRows?: (originalRow: TData, index: number) => TData[] | undefined;
+
+  /**
+   * Render function for expanded row content
+   */
+  renderExpandedRow?: (row: Row<TData>) => React.ReactNode;
+
+  /**
+   * Whether rows should expand on click (default: false, uses expand button instead)
+   */
+  expandOnRowClick?: boolean;
 }
 
 /**

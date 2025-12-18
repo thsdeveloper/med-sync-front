@@ -69,6 +69,7 @@ export type ConversationWithDetails = ChatConversation & {
             id: string;
             name: string;
             color: string;
+            avatar_url?: string | null;
         };
     }>;
     last_message?: {
@@ -89,6 +90,7 @@ export type MessageWithSender = ChatMessage & {
         id: string;
         name: string;
         color: string;
+        avatar_url?: string | null;
     };
     is_own?: boolean;
     attachments?: ChatAttachment[];
@@ -118,6 +120,7 @@ export type SupportConversationWithDetails = ChatConversation & {
             id: string;
             name: string;
             color: string;
+            avatar_url?: string | null;
         };
     }>;
     admin_participants?: Array<{
@@ -147,6 +150,7 @@ export type AdminMessageWithSender = ChatMessage & {
         id: string;
         name: string;
         color: string;
+        avatar_url?: string | null;
         type: 'staff' | 'admin';
     };
     is_own?: boolean;
@@ -280,5 +284,6 @@ export type AttachmentWithSender = ChatAttachment & {
         id: string;
         name: string;
         color: string;
+        avatar_url?: string | null;
     };
 };

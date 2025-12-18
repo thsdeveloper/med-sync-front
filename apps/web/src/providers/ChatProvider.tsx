@@ -58,7 +58,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
           participants:chat_participants (
             staff_id,
             last_read_at,
-            staff:medical_staff (id, name, color)
+            staff:medical_staff (id, name, color, avatar_url)
           ),
           organization:organizations (id, name, logo_url)
         `)
@@ -80,7 +80,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
               .from('chat_messages')
               .select(`
                 id, content, created_at,
-                sender:medical_staff (id, name)
+                sender:medical_staff (id, name, color, avatar_url)
               `)
               .eq('conversation_id', conv.id)
               .order('created_at', { ascending: false })

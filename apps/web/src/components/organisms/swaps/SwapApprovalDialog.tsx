@@ -15,8 +15,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { UserAvatar } from '@/components/atoms';
 import type { ShiftSwapRequestWithDetails, AdminSwapStatus } from '@medsync/shared';
 
 type SwapRequestWithAdminDetails = ShiftSwapRequestWithDetails & {
@@ -41,15 +41,6 @@ export function SwapApprovalDialog({
 }: SwapApprovalDialogProps) {
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase();
-  };
 
   const formatShiftDate = (dateStr: string) => {
     return format(parseISO(dateStr), "EEEE, dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
@@ -106,14 +97,11 @@ export function SwapApprovalDialog({
           {/* Médicos envolvidos */}
           <div className="flex items-center justify-center gap-4 p-4 bg-muted rounded-lg">
             <div className="flex flex-col items-center gap-2">
-              <Avatar className="h-12 w-12">
-                <AvatarFallback
-                  style={{ backgroundColor: swap.requester?.color || '#0066CC' }}
-                  className="text-white"
-                >
-                  {getInitials(swap.requester?.name || 'N/A')}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                name={swap.requester?.name || 'N/A'}
+                color={swap.requester?.color}
+                size="lg"
+              />
               <div className="text-center">
                 <p className="font-medium text-sm">{swap.requester?.name}</p>
                 <p className="text-xs text-muted-foreground">{swap.requester?.especialidade?.nome}</p>
@@ -123,14 +111,11 @@ export function SwapApprovalDialog({
             <ArrowLeftRight className="h-6 w-6 text-muted-foreground" />
 
             <div className="flex flex-col items-center gap-2">
-              <Avatar className="h-12 w-12">
-                <AvatarFallback
-                  style={{ backgroundColor: swap.target_staff?.color || '#0066CC' }}
-                  className="text-white"
-                >
-                  {getInitials(swap.target_staff?.name || 'N/A')}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                name={swap.target_staff?.name || 'N/A'}
+                color={swap.target_staff?.color}
+                size="lg"
+              />
               <div className="text-center">
                 <p className="font-medium text-sm">{swap.target_staff?.name}</p>
                 <p className="text-xs text-muted-foreground">{swap.target_staff?.especialidade?.nome}</p>

@@ -13,8 +13,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { UserAvatar } from '@/components/atoms';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useChat } from '@/providers/ChatProvider';
 import type { SupportConversationWithDetails } from '@medsync/shared';
@@ -23,15 +23,6 @@ export function ChatNotificationIcon() {
   const router = useRouter();
   const { conversations, unreadCount, isLoading, markAsRead } = useChat();
   const [open, setOpen] = useState(false);
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase();
-  };
 
   const formatTime = (dateStr: string) => {
     const date = parseISO(dateStr);
@@ -53,6 +44,11 @@ export function ChatNotificationIcon() {
   const getStaffColor = (conv: SupportConversationWithDetails) => {
     const staffParticipant = conv.participants?.[0];
     return staffParticipant?.staff?.color || '#0066CC';
+  };
+
+  const getStaffAvatarUrl = (conv: SupportConversationWithDetails) => {
+    const staffParticipant = conv.participants?.[0];
+    return staffParticipant?.staff?.avatar_url;
   };
 
   const handleConversationClick = (conv: SupportConversationWithDetails) => {
@@ -116,14 +112,13 @@ export function ChatNotificationIcon() {
                 className="flex items-start gap-3 p-3 cursor-pointer focus:bg-accent"
                 onClick={() => handleConversationClick(conv)}
               >
-                <Avatar className="h-10 w-10 flex-shrink-0">
-                  <AvatarFallback
-                    style={{ backgroundColor: getStaffColor(conv) }}
-                    className="text-white text-sm"
-                  >
-                    {getInitials(getConversationName(conv))}
-                  </AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  name={getConversationName(conv)}
+                  avatarUrl={getStaffAvatarUrl(conv)}
+                  color={getStaffColor(conv)}
+                  size="md"
+                  className="flex-shrink-0"
+                />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <span

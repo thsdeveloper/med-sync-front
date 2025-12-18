@@ -4,8 +4,8 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { format, parseISO, isToday, isYesterday, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MessageCircle, Loader2 } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { UserAvatar } from '@/components/atoms';
 import { cn } from '@/lib/utils';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
@@ -110,7 +110,7 @@ export function ChatMessages({ conversationId }: ChatMessagesProps) {
         .from('chat_messages')
         .select(`
           *,
-          sender:medical_staff (id, name, color)
+          sender:medical_staff (id, name, color, avatar_url)
         `)
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
@@ -207,7 +207,7 @@ export function ChatMessages({ conversationId }: ChatMessagesProps) {
             .from('chat_messages')
             .select(`
               *,
-              sender:medical_staff (id, name, color)
+              sender:medical_staff (id, name, color, avatar_url)
             `)
             .eq('id', payload.new.id)
             .maybeSingle();
@@ -318,15 +318,6 @@ export function ChatMessages({ conversationId }: ChatMessagesProps) {
     }
   }, [messages]);
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase();
-  };
-
   const formatMessageDate = (dateStr: string) => {
     const date = parseISO(dateStr);
     if (isToday(date)) return 'Hoje';
@@ -423,17 +414,12 @@ export function ChatMessages({ conversationId }: ChatMessagesProps) {
       <div className="p-4 border-b flex items-center gap-3">
         {conversation && (
           <>
-            <Avatar className="h-10 w-10">
-              <AvatarFallback
-                style={{
-                  backgroundColor:
-                    conversation.participants?.[0]?.staff?.color || '#0066CC',
-                }}
-                className="text-white"
-              >
-                {getInitials(getConversationTitle())}
-              </AvatarFallback>
-            </Avatar>
+            <UserAvatar
+              name={getConversationTitle()}
+              avatarUrl={conversation.participants?.[0]?.staff?.avatar_url}
+              color={conversation.participants?.[0]?.staff?.color}
+              size="md"
+            />
             <div>
               <h2 className="font-semibold">{getConversationTitle()}</h2>
               <p className="text-sm text-muted-foreground">
@@ -478,16 +464,13 @@ export function ChatMessages({ conversationId }: ChatMessagesProps) {
                     )}
                   >
                     {!isOwn && (
-                      <Avatar className="h-8 w-8 flex-shrink-0">
-                        <AvatarFallback
-                          style={{
-                            backgroundColor: msg.sender?.color || '#6B7280',
-                          }}
-                          className="text-white text-xs"
-                        >
-                          {getInitials(msg.sender?.name || '?')}
-                        </AvatarFallback>
-                      </Avatar>
+                      <UserAvatar
+                        name={msg.sender?.name || '?'}
+                        avatarUrl={msg.sender?.avatar_url}
+                        color={msg.sender?.color}
+                        size="sm"
+                        className="flex-shrink-0"
+                      />
                     )}
                     <div className="flex flex-col gap-2">
                       <div

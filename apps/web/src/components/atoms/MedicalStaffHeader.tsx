@@ -2,9 +2,9 @@
 
 import { memo } from 'react';
 import { cn } from '@/lib/utils';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { UserAvatar } from './UserAvatar';
 
 /**
  * Status type for medical staff availability
@@ -65,30 +65,13 @@ const statusVariants: Record<MedicalStaffStatus, { variant: 'default' | 'seconda
 };
 
 /**
- * Avatar size mapping
+ * Avatar size mapping for skeleton loader
  */
-const avatarSizes = {
+const skeletonSizes = {
   sm: 'size-8',
   md: 'size-10',
   lg: 'size-12',
 };
-
-/**
- * Extract initials from name
- * Takes first letter of first name and first letter of last name
- */
-function getInitials(name: string): string {
-  const trimmedName = name.trim();
-  if (!trimmedName) return '?';
-
-  const parts = trimmedName.split(/\s+/);
-  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-
-  const firstInitial = parts[0].charAt(0).toUpperCase();
-  const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
-
-  return `${firstInitial}${lastInitial}`;
-}
 
 /**
  * MedicalStaffHeader - Atom component for displaying medical staff header information
@@ -135,7 +118,6 @@ export const MedicalStaffHeader = memo(function MedicalStaffHeader({
   className,
 }: MedicalStaffHeaderProps) {
   const statusConfig = statusVariants[status];
-  const initials = getInitials(name);
 
   // Skeleton loading state
   if (loading) {
@@ -144,7 +126,7 @@ export const MedicalStaffHeader = memo(function MedicalStaffHeader({
         data-testid="medical-staff-header"
         className={cn('flex items-center gap-3', className)}
       >
-        <Skeleton className={cn('rounded-full', avatarSizes[size])} data-testid="staff-avatar" />
+        <Skeleton className={cn('rounded-full', skeletonSizes[size])} data-testid="staff-avatar" />
         <div className="flex-1 space-y-2">
           <Skeleton className="h-5 w-32" data-testid="staff-name" />
           <Skeleton className="h-4 w-24" data-testid="staff-specialty" />
@@ -159,12 +141,12 @@ export const MedicalStaffHeader = memo(function MedicalStaffHeader({
       className={cn('flex items-center gap-3', className)}
     >
       {/* Avatar with fallback to initials */}
-      <Avatar className={avatarSizes[size]} data-testid="staff-avatar">
-        {avatarUrl && <AvatarImage src={avatarUrl} alt={name} />}
-        <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-          {initials}
-        </AvatarFallback>
-      </Avatar>
+      <UserAvatar
+        name={name}
+        avatarUrl={avatarUrl}
+        size={size}
+        testId="staff-avatar"
+      />
 
       {/* Name, specialty, and status */}
       <div className="flex-1 min-w-0">

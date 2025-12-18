@@ -45,7 +45,12 @@ import {
 import { ShiftDialog } from '@/components/organisms/shifts/ShiftDialog';
 import { FixedScheduleDialog } from '@/components/organisms/shifts/FixedScheduleDialog';
 import { FixedScheduleList } from '@/components/organisms/shifts/FixedScheduleList';
+import { FixedScheduleDetailSheet } from '@/components/organisms/shifts/FixedScheduleDetailSheet';
 import { ShiftsList } from '@/components/organisms/shifts/ShiftsList';
+import { ConfirmationDialog, useConfirmationDialog } from '@/components/organisms/ConfirmationDialog';
+import { generateShiftsFromFixedSchedule, deleteFutureShiftsFromFixedSchedule } from '@/lib/shift-generation';
+import { toast } from 'sonner';
+import type { FixedScheduleWithRelations } from '@/components/organisms/shifts/fixed-schedule-columns';
 
 /**
  * Type alias for page filters (using the sheet state)
@@ -152,8 +157,20 @@ function EscalasPageContent() {
   const [selectedSlotDate, setSelectedSlotDate] = useState<Date | null>(null);
   const [scheduleToEdit, setScheduleToEdit] = useState<any>(null);
 
+  // Confirmation dialog states for delete operations
+  const deleteShiftConfirmation = useConfirmationDialog<string>();
+  const deleteAllShiftsConfirmation = useConfirmationDialog<{ shiftIds: string[]; staffName: string }>();
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Fixed schedule states
+  const [selectedFixedSchedule, setSelectedFixedSchedule] = useState<FixedScheduleWithRelations | null>(null);
+  const [isDetailSheetOpen, setIsDetailSheetOpen] = useState(false);
+  const generateShiftsConfirmation = useConfirmationDialog<FixedScheduleWithRelations>();
+  const deleteFixedScheduleConfirmation = useConfirmationDialog<FixedScheduleWithRelations>();
+  const [isProcessingFixedSchedule, setIsProcessingFixedSchedule] = useState(false);
+
   // State for active tab
-  const [activeTab, setActiveTab] = useState('calendario');
+  const [activeTab, setActiveTab] = useState('lista');
 
   // Fetch fixed schedules for the Fixed Schedules tab
   const {
@@ -250,18 +267,89 @@ function EscalasPageContent() {
   /**
    * Handle fixed schedule edit
    */
-  const handleEditFixedSchedule = useCallback((schedule: any) => {
+  const handleEditFixedSchedule = useCallback((schedule: FixedScheduleWithRelations) => {
     setScheduleToEdit(schedule);
     setIsFixedScheduleDialogOpen(true);
   }, []);
 
   /**
-   * Handle fixed schedule delete
+   * Handle view fixed schedule details
    */
-  const handleDeleteFixedSchedule = useCallback(() => {
-    refetchFixedSchedules();
-    refetchCalendar();
-  }, [refetchFixedSchedules, refetchCalendar]);
+  const handleViewFixedScheduleDetails = useCallback((schedule: FixedScheduleWithRelations) => {
+    setSelectedFixedSchedule(schedule);
+    setIsDetailSheetOpen(true);
+  }, []);
+
+  /**
+   * Handle generate shifts for fixed schedule - opens confirmation
+   */
+  const handleGenerateShifts = useCallback((schedule: FixedScheduleWithRelations) => {
+    generateShiftsConfirmation.openConfirmation(schedule);
+  }, [generateShiftsConfirmation]);
+
+  /**
+   * Confirm generate shifts - called when confirmation dialog is confirmed
+   */
+  const confirmGenerateShifts = useCallback(async () => {
+    const schedule = generateShiftsConfirmation.data;
+    if (!schedule) return;
+
+    setIsProcessingFixedSchedule(true);
+    try {
+      const result = await generateShiftsFromFixedSchedule(schedule.id);
+      if (result.success) {
+        toast.success(`${result.count} escala(s) gerada(s) com sucesso!`);
+        refetchCalendar();
+      } else {
+        throw new Error(result.error || 'Erro ao gerar escalas');
+      }
+    } catch (error) {
+      console.error('Error generating shifts:', error);
+      toast.error('Erro ao gerar escalas. Tente novamente.');
+      throw error;
+    } finally {
+      setIsProcessingFixedSchedule(false);
+    }
+  }, [generateShiftsConfirmation.data, refetchCalendar]);
+
+  /**
+   * Handle delete fixed schedule - opens confirmation
+   */
+  const handleDeleteFixedSchedule = useCallback((schedule: FixedScheduleWithRelations) => {
+    deleteFixedScheduleConfirmation.openConfirmation(schedule);
+  }, [deleteFixedScheduleConfirmation]);
+
+  /**
+   * Confirm delete fixed schedule - called when confirmation dialog is confirmed
+   */
+  const confirmDeleteFixedSchedule = useCallback(async () => {
+    const schedule = deleteFixedScheduleConfirmation.data;
+    if (!schedule) return;
+
+    setIsProcessingFixedSchedule(true);
+    try {
+      // 1. Delete future shifts (keep past ones for history)
+      const deleteResult = await deleteFutureShiftsFromFixedSchedule(schedule.id);
+
+      // 2. Delete the fixed schedule itself
+      const { error } = await supabase
+        .from('fixed_schedules')
+        .delete()
+        .eq('id', schedule.id);
+
+      if (error) throw error;
+
+      toast.success(`Escala fixa excluída. ${deleteResult.count} plantão(s) futuro(s) removido(s).`);
+      refetchFixedSchedules();
+      refetchCalendar();
+    } catch (error) {
+      console.error('Error deleting fixed schedule:', error);
+      toast.error('Erro ao excluir escala fixa. Tente novamente.');
+      throw error;
+    } finally {
+      setIsProcessingFixedSchedule(false);
+    }
+  }, [deleteFixedScheduleConfirmation.data, refetchFixedSchedules, refetchCalendar]);
 
   /**
    * Handle view shift details from list
@@ -281,11 +369,20 @@ function EscalasPageContent() {
   }, []);
 
   /**
-   * Handle delete shift from list
+   * Handle delete shift from list - opens confirmation dialog
    */
-  const handleDeleteShift = useCallback(async (shiftId: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta escala?')) return;
+  const handleDeleteShift = useCallback((shiftId: string) => {
+    deleteShiftConfirmation.openConfirmation(shiftId);
+  }, [deleteShiftConfirmation]);
 
+  /**
+   * Confirm delete single shift - called when confirmation dialog is confirmed
+   */
+  const confirmDeleteShift = useCallback(async () => {
+    const shiftId = deleteShiftConfirmation.data;
+    if (!shiftId) return;
+
+    setIsDeleting(true);
     try {
       const { error } = await supabase
         .from('shifts')
@@ -297,9 +394,43 @@ function EscalasPageContent() {
       refetchCalendar();
     } catch (error) {
       console.error('Error deleting shift:', error);
-      alert('Erro ao excluir escala. Tente novamente.');
+      throw error; // Re-throw to let dialog handle the error
+    } finally {
+      setIsDeleting(false);
     }
-  }, [refetchCalendar]);
+  }, [deleteShiftConfirmation.data, refetchCalendar]);
+
+  /**
+   * Handle delete all shifts for a staff member - opens confirmation dialog
+   */
+  const handleDeleteAllShifts = useCallback((shiftIds: string[], staffName: string) => {
+    deleteAllShiftsConfirmation.openConfirmation({ shiftIds, staffName });
+  }, [deleteAllShiftsConfirmation]);
+
+  /**
+   * Confirm delete all shifts - called when confirmation dialog is confirmed
+   */
+  const confirmDeleteAllShifts = useCallback(async () => {
+    const data = deleteAllShiftsConfirmation.data;
+    if (!data) return;
+
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('shifts')
+        .delete()
+        .in('id', data.shiftIds);
+
+      if (error) throw error;
+
+      refetchCalendar();
+    } catch (error) {
+      console.error('Error deleting shifts:', error);
+      throw error; // Re-throw to let dialog handle the error
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [deleteAllShiftsConfirmation.data, refetchCalendar]);
 
   /**
    * Update URL parameters when filters, date, or view change
@@ -519,13 +650,13 @@ function EscalasPageContent() {
       {organizationId ? (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList>
-            <TabsTrigger value="calendario">
-              <Calendar className="mr-2 h-4 w-4" />
-              Calendário
-            </TabsTrigger>
             <TabsTrigger value="lista">
               <List className="mr-2 h-4 w-4" />
               Lista
+            </TabsTrigger>
+            <TabsTrigger value="calendario">
+              <Calendar className="mr-2 h-4 w-4" />
+              Calendário
             </TabsTrigger>
             <TabsTrigger value="escalas-fixas">
               <CalendarClock className="mr-2 h-4 w-4" />
@@ -573,6 +704,7 @@ function EscalasPageContent() {
               onEdit={handleEditShift}
               onDelete={handleDeleteShift}
               onViewDetails={handleViewShiftDetails}
+              onDeleteAll={handleDeleteAllShifts}
               filterSlot={
                 <CalendarFiltersSheet
                   filters={filters}
@@ -591,10 +723,11 @@ function EscalasPageContent() {
           <TabsContent value="escalas-fixas" className="mt-6">
             <FixedScheduleList
               schedules={fixedSchedules}
-              facilities={facilities}
               isLoading={fixedSchedulesLoading}
               onEdit={handleEditFixedSchedule}
               onDelete={handleDeleteFixedSchedule}
+              onViewDetails={handleViewFixedScheduleDetails}
+              onGenerateShifts={handleGenerateShifts}
             />
           </TabsContent>
         </Tabs>
@@ -642,6 +775,80 @@ function EscalasPageContent() {
           onStaffRefresh={refetchFormData}
         />
       )}
+
+      {/* Delete Single Shift Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={deleteShiftConfirmation.isOpen}
+        onClose={deleteShiftConfirmation.closeConfirmation}
+        onConfirm={confirmDeleteShift}
+        title="Excluir Escala"
+        description="Tem certeza que deseja excluir esta escala? Esta ação não pode ser desfeita."
+        variant="danger"
+        confirmLabel="Excluir"
+        isLoading={isDeleting}
+      />
+
+      {/* Delete All Shifts Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={deleteAllShiftsConfirmation.isOpen}
+        onClose={deleteAllShiftsConfirmation.closeConfirmation}
+        onConfirm={confirmDeleteAllShifts}
+        title="Excluir Todas as Escalas"
+        description={
+          deleteAllShiftsConfirmation.data
+            ? `Tem certeza que deseja excluir ${deleteAllShiftsConfirmation.data.shiftIds.length} escala(s) de ${deleteAllShiftsConfirmation.data.staffName}? Esta ação não pode ser desfeita.`
+            : 'Tem certeza que deseja excluir estas escalas? Esta ação não pode ser desfeita.'
+        }
+        variant="danger"
+        confirmLabel="Excluir Todas"
+        isLoading={isDeleting}
+      />
+
+      {/* Fixed Schedule Detail Sheet */}
+      <FixedScheduleDetailSheet
+        isOpen={isDetailSheetOpen}
+        onClose={() => {
+          setIsDetailSheetOpen(false);
+          setSelectedFixedSchedule(null);
+        }}
+        schedule={selectedFixedSchedule}
+        onEdit={(schedule) => {
+          setIsDetailSheetOpen(false);
+          handleEditFixedSchedule(schedule);
+        }}
+      />
+
+      {/* Generate Shifts Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={generateShiftsConfirmation.isOpen}
+        onClose={generateShiftsConfirmation.closeConfirmation}
+        onConfirm={confirmGenerateShifts}
+        title="Gerar Escalas"
+        description={
+          generateShiftsConfirmation.data
+            ? `Gerar escalas para ${generateShiftsConfirmation.data.medical_staff?.name || 'este profissional'}? As escalas serão geradas para o mês atual e o próximo mês.`
+            : 'Gerar escalas para este profissional?'
+        }
+        variant="info"
+        confirmLabel="Gerar Escalas"
+        isLoading={isProcessingFixedSchedule}
+      />
+
+      {/* Delete Fixed Schedule Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={deleteFixedScheduleConfirmation.isOpen}
+        onClose={deleteFixedScheduleConfirmation.closeConfirmation}
+        onConfirm={confirmDeleteFixedSchedule}
+        title="Excluir Escala Fixa"
+        description={
+          deleteFixedScheduleConfirmation.data
+            ? `Excluir a escala fixa de ${deleteFixedScheduleConfirmation.data.medical_staff?.name || 'este profissional'}? Os plantões futuros gerados serão removidos. Os plantões já realizados serão mantidos no histórico.`
+            : 'Excluir esta escala fixa? Os plantões futuros serão removidos.'
+        }
+        variant="danger"
+        confirmLabel="Excluir"
+        isLoading={isProcessingFixedSchedule}
+      />
     </div>
   );
 }

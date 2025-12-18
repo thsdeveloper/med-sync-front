@@ -9,8 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import { UserAvatar } from '@/components/atoms';
 import { useOrganization } from '@/providers/OrganizationProvider';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { SwapApprovalDialog } from '@/components/organisms/swaps/SwapApprovalDialog';
@@ -248,15 +248,6 @@ export default function TrocasPage() {
     return <Badge variant="secondary">{status}</Badge>;
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase();
-  };
-
   const formatShiftDate = (dateStr: string) => {
     return format(parseISO(dateStr), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
   };
@@ -280,11 +271,11 @@ export default function TrocasPage() {
             {/* Médicos envolvidos */}
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback style={{ backgroundColor: swap.requester?.color || '#0066CC' }} className="text-white text-sm">
-                    {getInitials(swap.requester?.name || 'N/A')}
-                  </AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  name={swap.requester?.name || 'N/A'}
+                  color={swap.requester?.color}
+                  size="md"
+                />
                 <div>
                   <p className="font-medium">{swap.requester?.name}</p>
                   <p className="text-xs text-muted-foreground">{swap.requester?.especialidade?.nome}</p>
@@ -294,11 +285,11 @@ export default function TrocasPage() {
               <ArrowLeftRight className="h-5 w-5 text-muted-foreground" />
 
               <div className="flex items-center gap-2">
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback style={{ backgroundColor: swap.target_staff?.color || '#0066CC' }} className="text-white text-sm">
-                    {getInitials(swap.target_staff?.name || 'N/A')}
-                  </AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  name={swap.target_staff?.name || 'N/A'}
+                  color={swap.target_staff?.color}
+                  size="md"
+                />
                 <div>
                   <p className="font-medium">{swap.target_staff?.name}</p>
                   <p className="text-xs text-muted-foreground">{swap.target_staff?.especialidade?.nome}</p>
