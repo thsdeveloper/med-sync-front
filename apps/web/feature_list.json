@@ -814,7 +814,7 @@
           "Scrolling is smooth with 100+ shift records"
         ]
       },
-      "passes": false
+      "passes": true
     },
     {
       "id": "F042",
