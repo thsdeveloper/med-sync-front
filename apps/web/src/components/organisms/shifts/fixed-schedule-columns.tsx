@@ -18,7 +18,6 @@
 
 import React from "react";
 import {
-  User,
   Building2,
   Clock,
   Calendar,
@@ -51,6 +50,7 @@ import {
   formatDuration,
   type DurationType,
 } from "@medsync/shared";
+import { UserAvatar } from "@/components/atoms";
 
 /**
  * Type for fixed schedule with relations (matches the query in page.tsx)
@@ -78,6 +78,7 @@ export interface FixedScheduleWithRelations {
     id: string;
     name: string;
     color: string | null;
+    avatar_url?: string | null;
     profissao?: {
       id: string;
       nome: string;
@@ -147,10 +148,12 @@ export function getFixedScheduleColumns(
 
         return (
           <div className="flex items-center gap-3">
-            {/* Color indicator */}
-            <div
-              className="w-2 h-10 rounded-full flex-shrink-0"
-              style={{ backgroundColor: staff?.color || "#64748b" }}
+            <UserAvatar
+              name={staff?.name || "?"}
+              avatarUrl={staff?.avatar_url}
+              color={staff?.color}
+              size="sm"
+              variant="soft"
             />
             <div className="min-w-0">
               <div className="font-medium text-slate-900 truncate">

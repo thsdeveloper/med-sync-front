@@ -191,6 +191,7 @@ function EscalasPageContent() {
             id,
             name,
             color,
+            avatar_url,
             profissao:profissoes (
               id,
               nome
