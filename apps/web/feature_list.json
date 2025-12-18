@@ -783,7 +783,7 @@
           "Card is responsive and adjusts to viewport size"
         ]
       },
-      "passes": false
+      "passes": true
     },
     {
       "id": "F041",
