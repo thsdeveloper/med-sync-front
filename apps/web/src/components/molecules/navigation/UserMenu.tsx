@@ -38,6 +38,7 @@ export const UserMenu = ({ user, onSignOut }: UserMenuProps) => {
         >
           <UserAvatar
             name={displayName}
+            avatarUrl={user.user_metadata?.avatar_url as string | undefined}
             size="md"
             variant="gradient"
             className="border border-slate-200 bg-gradient-to-br from-blue-500 to-cyan-500"

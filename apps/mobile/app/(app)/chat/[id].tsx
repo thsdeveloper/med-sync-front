@@ -27,7 +27,7 @@ import AttachmentDisplay from '@/components/molecules/AttachmentDisplay';
 import ImageViewer from '@/components/organisms/ImageViewer';
 import { useAttachmentUpload, linkAttachmentsToMessage } from '@/hooks/useAttachmentUpload';
 import { useAttachmentDownload } from '@/hooks/useAttachmentDownload';
-import { useAttachmentRealtime } from '@medsync/shared/hooks';
+import { useChatMessages } from '@/hooks/useChatMessages';
 import * as Sharing from 'expo-sharing';
 import type { SelectedFile } from '@/lib/attachment-utils';
 import type { MessageWithSender, ConversationWithDetails, ChatAttachment } from '@medsync/shared';
@@ -38,15 +38,27 @@ export default function ChatConversationScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const [conversation, setConversation] = useState<ConversationWithDetails | null>(null);
-  const [messages, setMessages] = useState<MessageWithSender[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSending, setIsSending] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<{ uri: string; attachment: ChatAttachment } | null>(null);
+  const [conversationLoading, setConversationLoading] = useState(true);
   const flatListRef = useRef<FlatList>(null);
   const inputRef = useRef<TextInput>(null);
+
+  // Use shared chat messages hook
+  const {
+    messages,
+    isLoading: messagesLoading,
+    isSending,
+    sendMessage: sendMessageMutation,
+    refetch: refetchMessages,
+  } = useChatMessages({
+    conversationId: id || '',
+    enabled: !!id,
+  });
+
+  const isLoading = conversationLoading || messagesLoading;
 
   // Handle keyboard visibility for scroll behavior
   useEffect(() => {
@@ -68,6 +80,7 @@ export default function ChatConversationScreen() {
   const { isUploading, uploadProgress, uploadFiles, reset: resetUpload } = useAttachmentUpload();
   const { downloadAttachment } = useAttachmentDownload();
 
+  // Load conversation details only (messages handled by hook)
   const loadConversation = useCallback(async () => {
     if (!id) return;
 
@@ -89,160 +102,18 @@ export default function ChatConversationScreen() {
       if (convData) {
         setConversation(convData);
       }
-
-      // Load messages with attachments
-      const { data: messagesData } = await supabase
-        .from('chat_messages')
-        .select(`
-          *,
-          sender:medical_staff (id, name, color, avatar_url),
-          attachments:chat_attachments (
-            id,
-            file_name,
-            file_type,
-            file_path,
-            file_size,
-            status,
-            rejected_reason,
-            created_at
-          )
-        `)
-        .eq('conversation_id', id)
-        .order('created_at', { ascending: true });
-
-      if (messagesData) {
-        const enrichedMessages = messagesData.map((msg) => ({
-          ...msg,
-          is_own: msg.sender_id === staff?.id,
-        }));
-        setMessages(enrichedMessages);
-      }
-
-      // Update last_read_at
-      if (staff?.id) {
-        await supabase
-          .from('chat_participants')
-          .update({ last_read_at: new Date().toISOString() })
-          .eq('conversation_id', id)
-          .eq('staff_id', staff.id);
-      }
     } catch (error) {
       console.error('Error loading conversation:', error);
     } finally {
-      setIsLoading(false);
+      setConversationLoading(false);
     }
-  }, [id, staff?.id]);
+  }, [id]);
 
   useEffect(() => {
     loadConversation();
   }, [loadConversation]);
 
-  // Subscribe to new messages
-  useEffect(() => {
-    if (!id) return;
-
-    const channel = supabase
-      .channel(`chat_messages:${id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'chat_messages',
-          filter: `conversation_id=eq.${id}`,
-        },
-        async (payload) => {
-          // Fetch the full message with sender info and attachments
-          const { data: newMsg } = await supabase
-            .from('chat_messages')
-            .select(`
-              *,
-              sender:medical_staff (id, name, color, avatar_url),
-              attachments:chat_attachments (
-                id,
-                file_name,
-                file_type,
-                file_path,
-                file_size,
-                status,
-                rejected_reason,
-                created_at
-              )
-            `)
-            .eq('id', payload.new.id)
-            .single();
-
-          if (newMsg) {
-            setMessages((prev) => [
-              ...prev,
-              { ...newMsg, is_own: newMsg.sender_id === staff?.id },
-            ]);
-
-            // Update last_read_at
-            if (staff?.id) {
-              await supabase
-                .from('chat_participants')
-                .update({ last_read_at: new Date().toISOString() })
-                .eq('conversation_id', id)
-                .eq('staff_id', staff.id);
-            }
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [id, staff?.id]);
-
-  // Handle real-time attachment status changes
-  const handleAttachmentStatusChange = useCallback(
-    (updatedAttachment: ChatAttachment) => {
-      // Update messages with the new attachment status
-      setMessages((prevMessages) =>
-        prevMessages.map((msg) => {
-          if (!msg.attachments || msg.attachments.length === 0) return msg;
-
-          // Check if this message contains the updated attachment
-          const hasAttachment = msg.attachments.some(
-            (att) => att.id === updatedAttachment.id
-          );
-
-          if (!hasAttachment) return msg;
-
-          // Update the specific attachment in this message
-          return {
-            ...msg,
-            attachments: msg.attachments.map((att) =>
-              att.id === updatedAttachment.id ? updatedAttachment : att
-            ),
-          };
-        })
-      );
-
-      // Show alert notification if this attachment was uploaded by current user
-      if (updatedAttachment.sender_id === staff?.id) {
-        if (updatedAttachment.status === 'accepted') {
-          Alert.alert(
-            'Documento Aprovado',
-            `${updatedAttachment.file_name} foi aprovado`,
-            [{ text: 'OK' }]
-          );
-        } else if (updatedAttachment.status === 'rejected') {
-          Alert.alert(
-            'Documento Rejeitado',
-            updatedAttachment.rejected_reason || `${updatedAttachment.file_name} foi rejeitado`,
-            [{ text: 'OK' }]
-          );
-        }
-      }
-    },
-    [staff?.id]
-  );
-
-  // Subscribe to real-time attachment status changes
-  useAttachmentRealtime(supabase, id || null, handleAttachmentStatusChange);
+  // NOTE: Real-time message and attachment status subscriptions are now handled by useChatMessages hook
 
   const handleFilesSelected = useCallback((files: SelectedFile[]) => {
     setSelectedFiles((prev) => [...prev, ...files]);
@@ -295,11 +166,10 @@ export default function ChatConversationScreen() {
   }, []);
 
   const sendMessage = async () => {
-    if ((!newMessage.trim() && selectedFiles.length === 0) || !id || !staff?.id || isSending) {
+    if ((!newMessage.trim() && selectedFiles.length === 0) || !id || !staff?.id || isSending || isUploading) {
       return;
     }
 
-    setIsSending(true);
     const messageContent = newMessage.trim();
     const filesToUpload = [...selectedFiles];
     setNewMessage('');
@@ -341,30 +211,28 @@ export default function ChatConversationScreen() {
           .map((r) => r.attachmentId!);
       }
 
-      // Insert message (even if content is empty but has attachments)
+      // Send message using shared hook mutation
       const messageToSend = messageContent || '📎 Anexo enviado';
-      const { data: messageData, error: messageError } = await supabase
-        .from('chat_messages')
-        .insert({
-          conversation_id: id,
-          sender_id: staff.id,
-          content: messageToSend,
-        })
-        .select('id')
-        .single();
+      await sendMessageMutation(messageToSend);
 
-      if (messageError) throw messageError;
+      // Link attachments to message after it's created
+      // Note: The message ID is handled internally by realtime - attachments will be linked
+      // when the message appears via realtime subscription
+      if (attachmentIds.length > 0) {
+        // Get the latest message ID to link attachments
+        const { data: latestMsg } = await supabase
+          .from('chat_messages')
+          .select('id')
+          .eq('conversation_id', id)
+          .eq('sender_id', staff.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
 
-      // Link attachments to message
-      if (attachmentIds.length > 0 && messageData?.id) {
-        await linkAttachmentsToMessage(attachmentIds, messageData.id);
+        if (latestMsg?.id) {
+          await linkAttachmentsToMessage(attachmentIds, latestMsg.id);
+        }
       }
-
-      // Update conversation updated_at
-      await supabase
-        .from('chat_conversations')
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', id);
 
       // Reset upload state
       resetUpload();
@@ -378,8 +246,6 @@ export default function ChatConversationScreen() {
       // Restore message and files on error
       setNewMessage(messageContent);
       setSelectedFiles(filesToUpload);
-    } finally {
-      setIsSending(false);
     }
   };
 

@@ -10,5 +10,14 @@ export * from './utils';
 // Constants
 export * from './constants';
 
-// Hooks
+// Hooks (React Query + existing)
 export * from './hooks';
+
+// Query infrastructure (React Query keys, config)
+export * from './query';
+
+// Zustand stores (client state management)
+export * from './stores';
+
+// API functions (Supabase operations)
+export * from './api';

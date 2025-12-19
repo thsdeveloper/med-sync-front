@@ -5,7 +5,14 @@
  * They accept Supabase client as a parameter to maintain platform independence.
  */
 
+// Reference data hooks (existing)
 export * from './useEspecialidades';
 export * from './useProfissoes';
 export * from './useConselhos';
 export * from './useAttachmentRealtime';
+
+// Query hooks (new)
+export * from './queries';
+
+// Mutation hooks (new)
+export * from './mutations';

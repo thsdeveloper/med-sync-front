@@ -4,12 +4,17 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { parseISO, isSameDay, differenceInMinutes } from 'date-fns';
 import { MessageCircle, Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useChat } from '@/providers/ChatProvider';
 import { useOrganization } from '@/providers/OrganizationProvider';
-import { useReadReceipts, useMessageSearch, useTypingIndicator } from '@/hooks';
+import {
+  useReadReceipts,
+  useMessageSearch,
+  useTypingIndicator,
+  useChatMessages,
+  type EnrichedMessage,
+} from '@/hooks';
 import { ChatHeader } from './ChatHeader';
 import { MessageGroup } from '@/components/molecules/chat/MessageGroup';
 import { DateSeparator } from '@/components/molecules/chat/DateSeparator';
@@ -29,11 +34,6 @@ interface ChatMessagesProps {
   onBack?: () => void;
 }
 
-// Extended message type that includes admin_sender_id from database
-interface EnrichedMessage extends MessageWithSender {
-  admin_sender_id?: string | null;
-}
-
 interface MessageGroupData {
   senderId: string;
   senderName: string;
@@ -49,7 +49,11 @@ const MESSAGE_GROUPING_WINDOW_MINUTES = 5;
 /**
  * Groups messages by sender and time window
  */
-function groupMessages(messages: EnrichedMessage[], currentUserId: string | null, staffId: string | null): MessageGroupData[] {
+function groupMessages(
+  messages: EnrichedMessage[],
+  currentUserId: string | null,
+  staffId: string | null
+): MessageGroupData[] {
   const groups: MessageGroupData[] = [];
   let currentGroup: MessageGroupData | null = null;
 
@@ -97,9 +101,7 @@ export function ChatMessages({ conversationId, onBack }: ChatMessagesProps) {
   const { user } = useSupabaseAuth();
   const { markAsRead, conversations } = useChat();
   const { activeRole } = useOrganization();
-  const [messages, setMessages] = useState<EnrichedMessage[]>([]);
   const [conversation, setConversation] = useState<SupportConversationWithDetails | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [staffId, setStaffId] = useState<string | null>(null);
 
   // Admin can be owner or admin role
@@ -112,6 +114,20 @@ export function ChatMessages({ conversationId, onBack }: ChatMessagesProps) {
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  // Use the new cached hook for messages
+  const {
+    messages,
+    isLoading,
+    refetch: loadMessages,
+    addMessage,
+    removeMessage,
+    updateMessageAttachment,
+  } = useChatMessages(conversationId, {
+    enabled: !!conversationId && staffId !== null,
+    userId: user?.id,
+    staffId,
+  });
 
   // Hooks
   const { acceptAttachment, rejectAttachment, isLoading: isReviewing } = useAttachmentReview();
@@ -139,7 +155,7 @@ export function ChatMessages({ conversationId, onBack }: ChatMessagesProps) {
   } = useMessageSearch({ messages });
 
   // Typing indicator hook
-  const { typingUsers, startTyping, stopTyping } = useTypingIndicator({
+  const { typingUsers } = useTypingIndicator({
     conversationId,
     userId: user?.id || '',
     userName: 'Administrador',
@@ -172,85 +188,13 @@ export function ChatMessages({ conversationId, onBack }: ChatMessagesProps) {
         .maybeSingle();
       if (data) {
         setStaffId(data.id);
+      } else {
+        // Set to empty string to indicate lookup is done but no staff record
+        setStaffId('');
       }
     };
     getStaffInfo();
   }, [user?.id, supabase]);
-
-  // Associate attachments to messages
-  const associateAttachmentsToMessages = useCallback(
-    (messagesData: any[], attachmentsData: ChatAttachment[]) => {
-      const assignedAttachmentIds = new Set<string>();
-
-      return messagesData.map((msg) => {
-        let msgAttachments = attachmentsData.filter(
-          (a) => a.message_id === msg.id && !assignedAttachmentIds.has(a.id)
-        );
-
-        if (msgAttachments.length === 0 && msg.content?.includes('Anexo enviado')) {
-          const msgTime = new Date(msg.created_at).getTime();
-          msgAttachments = attachmentsData.filter((a) => {
-            if (assignedAttachmentIds.has(a.id)) return false;
-            if (a.message_id !== null) return false;
-            const attTime = new Date(a.created_at).getTime();
-            const timeDiff = Math.abs(attTime - msgTime);
-            const senderMatch = a.sender_id === msg.sender_id;
-            return senderMatch && timeDiff < 10000;
-          });
-        }
-
-        msgAttachments.forEach((a) => assignedAttachmentIds.add(a.id));
-        return { ...msg, attachments: msgAttachments };
-      });
-    },
-    []
-  );
-
-  // Load messages
-  const loadMessages = useCallback(async () => {
-    if (!conversationId) return;
-
-    setIsLoading(true);
-    try {
-      const { data: messagesData } = await supabase
-        .from('chat_messages')
-        .select(`*, sender:medical_staff (id, name, color, avatar_url)`)
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true });
-
-      const { data: attachmentsData } = await supabase
-        .from('chat_attachments')
-        .select(`
-          id, conversation_id, message_id, sender_id, file_name, file_type,
-          file_path, file_size, status, rejected_reason, reviewed_by, reviewed_at, created_at
-        `)
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true });
-
-      if (messagesData) {
-        const messagesWithAttachments = associateAttachmentsToMessages(
-          messagesData,
-          attachmentsData || []
-        );
-
-        const enrichedMessages = messagesWithAttachments.map((msg) => {
-          if (msg.admin_sender_id && !msg.sender_id) {
-            return {
-              ...msg,
-              sender: { id: msg.admin_sender_id, name: 'Administrador', color: '#6366F1' },
-              is_own: msg.admin_sender_id === user?.id,
-            };
-          }
-          return { ...msg, is_own: msg.sender_id === staffId };
-        });
-        setMessages(enrichedMessages);
-      }
-    } catch (error) {
-      console.error('Error loading messages:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [conversationId, staffId, supabase, user?.id, associateAttachmentsToMessages]);
 
   // Update conversation from context
   useEffect(() => {
@@ -258,17 +202,12 @@ export function ChatMessages({ conversationId, onBack }: ChatMessagesProps) {
     if (conv) setConversation(conv);
   }, [conversationId, conversations]);
 
-  // Load messages when conversationId changes
-  useEffect(() => {
-    loadMessages();
-  }, [loadMessages]);
-
   // Mark as read
   useEffect(() => {
     if (conversationId) markAsRead(conversationId);
-  }, [conversationId]);
+  }, [conversationId, markAsRead]);
 
-  // Subscribe to new messages
+  // Subscribe to new messages (realtime incremental updates)
   useEffect(() => {
     if (!conversationId) return;
 
@@ -276,7 +215,12 @@ export function ChatMessages({ conversationId, onBack }: ChatMessagesProps) {
       .channel(`chat_messages:${conversationId}`)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `conversation_id=eq.${conversationId}` },
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
         async (payload) => {
           const { data: newMsg } = await supabase
             .from('chat_messages')
@@ -285,7 +229,11 @@ export function ChatMessages({ conversationId, onBack }: ChatMessagesProps) {
             .maybeSingle();
 
           if (newMsg) {
-            let enrichedMsg: any = { ...newMsg, is_own: newMsg.sender_id === staffId, attachments: [] };
+            let enrichedMsg: EnrichedMessage = {
+              ...newMsg,
+              is_own: newMsg.sender_id === staffId,
+              attachments: [],
+            };
 
             if (newMsg.admin_sender_id && !newMsg.sender_id) {
               enrichedMsg = {
@@ -313,16 +261,21 @@ export function ChatMessages({ conversationId, onBack }: ChatMessagesProps) {
               if (attachmentsData?.length) enrichedMsg.attachments = attachmentsData;
             }
 
-            setMessages((prev) => [...prev, enrichedMsg]);
+            addMessage(enrichedMsg);
           }
         }
       )
       .on(
         'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'chat_messages', filter: `conversation_id=eq.${conversationId}` },
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
         (payload) => {
           const deletedId = payload.old?.id;
-          if (deletedId) setMessages((prev) => prev.filter((m) => m.id !== deletedId));
+          if (deletedId) removeMessage(deletedId);
         }
       )
       .subscribe();
@@ -330,32 +283,26 @@ export function ChatMessages({ conversationId, onBack }: ChatMessagesProps) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversationId, staffId, supabase, user?.id]);
+  }, [conversationId, staffId, supabase, user?.id, addMessage, removeMessage]);
 
   // Attachment status changes
-  const handleAttachmentStatusChange = useCallback((updatedAttachment: ChatAttachment) => {
-    setMessages((prevMessages) =>
-      prevMessages.map((msg) => {
-        if (!msg.attachments?.length) return msg;
-        const hasAttachment = msg.attachments.some((att) => att.id === updatedAttachment.id);
-        if (!hasAttachment) return msg;
-        return {
-          ...msg,
-          attachments: msg.attachments.map((att) =>
-            att.id === updatedAttachment.id ? updatedAttachment : att
-          ),
-        };
-      })
-    );
+  const handleAttachmentStatusChange = useCallback(
+    (updatedAttachment: ChatAttachment) => {
+      updateMessageAttachment(updatedAttachment.id, updatedAttachment);
 
-    if (updatedAttachment.status === 'accepted') {
-      toast.success('Documento Aprovado', { description: `${updatedAttachment.file_name} foi aprovado` });
-    } else if (updatedAttachment.status === 'rejected') {
-      toast.error('Documento Rejeitado', {
-        description: updatedAttachment.rejected_reason || `${updatedAttachment.file_name} foi rejeitado`,
-      });
-    }
-  }, []);
+      if (updatedAttachment.status === 'accepted') {
+        toast.success('Documento Aprovado', {
+          description: `${updatedAttachment.file_name} foi aprovado`,
+        });
+      } else if (updatedAttachment.status === 'rejected') {
+        toast.error('Documento Rejeitado', {
+          description:
+            updatedAttachment.rejected_reason || `${updatedAttachment.file_name} foi rejeitado`,
+        });
+      }
+    },
+    [updateMessageAttachment]
+  );
 
   useAttachmentRealtime(supabase, conversationId, handleAttachmentStatusChange);
 
@@ -466,12 +413,12 @@ export function ChatMessages({ conversationId, onBack }: ChatMessagesProps) {
   const confirmDeleteMessage = async () => {
     if (!messageToDelete) return;
     deleteMessage(
-      { messageId: messageToDelete.id },
+      { messageId: messageToDelete.id, conversationId },
       {
         onSuccess: (response) => {
           if (response.success) {
             closeDeleteDialog();
-            setMessages((prev) => prev.filter((m) => m.id !== messageToDelete.id));
+            removeMessage(messageToDelete.id);
           }
         },
       }
@@ -523,9 +470,7 @@ export function ChatMessages({ conversationId, onBack }: ChatMessagesProps) {
             <div className="space-y-4">
               {messageGroups.map((group, index) => (
                 <div key={`${group.senderId}-${group.date}-${index}`}>
-                  {shouldShowDateSeparator(group, index) && (
-                    <DateSeparator date={group.date} />
-                  )}
+                  {shouldShowDateSeparator(group, index) && <DateSeparator date={group.date} />}
                   <div data-message-id={group.messages[0]?.id}>
                     <MessageGroup
                       messages={group.messages}

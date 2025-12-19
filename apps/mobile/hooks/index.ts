@@ -10,6 +10,9 @@ export { useShiftAttendance } from './use-shift-attendance';
 export { useImagePicker } from './useImagePicker';
 export { useImageCropper } from './useImageCropper';
 
+// Chat hooks
+export { useChatMessages } from './useChatMessages';
+
 // Re-export types for convenience
 export type { ShiftWithRelations } from '@/lib/realtime-types';
 export type {

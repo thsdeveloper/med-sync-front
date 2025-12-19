@@ -9,10 +9,13 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { useOrganization } from './OrganizationProvider';
 import { useSupabaseAuth } from './SupabaseAuthProvider';
-import type { SupportConversationWithDetails, ChatMessage } from '@medsync/shared';
+import { useSupportConversations, useInvalidateChatQueries } from '@medsync/shared/hooks';
+import { queryKeys } from '@medsync/shared/query';
+import type { SupportConversationWithDetails } from '@medsync/shared';
 
 type ChatContextValue = {
   conversations: SupportConversationWithDetails[];
@@ -30,123 +33,42 @@ const ChatContext = createContext<ChatContextValue | undefined>(undefined);
 
 export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const supabase = getSupabaseBrowserClient();
+  const queryClient = useQueryClient();
   const { user } = useSupabaseAuth();
   const { activeOrganization } = useOrganization();
+  const { invalidateConversations } = useInvalidateChatQueries();
 
-  const [conversations, setConversations] = useState<SupportConversationWithDetails[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
 
-  // Load support conversations for the organization
+  // Use the optimized hook that calls the SQL function (single query instead of N+1)
+  const {
+    data: conversations = [],
+    isLoading,
+    refetch,
+  } = useSupportConversations(
+    supabase,
+    activeOrganization?.id || '',
+    user?.id || '',
+    {
+      enabled: !!activeOrganization?.id && !!user?.id,
+    }
+  );
+
+  // Calculate total unread count from conversations
+  const unreadCount = useMemo(
+    () => conversations.reduce((acc, conv) => acc + (conv.unread_count || 0), 0),
+    [conversations]
+  );
+
+  // Wrapper for refetch to maintain API compatibility
   const loadConversations = useCallback(async () => {
-    if (!activeOrganization?.id || !user?.id) {
-      setConversations([]);
-      setUnreadCount(0);
-      setIsLoading(false);
-      return;
-    }
+    await refetch();
+  }, [refetch]);
 
-    setIsLoading(true);
-    try {
-      // Get support conversations for this organization
-      const { data: convData, error } = await supabase
-        .from('chat_conversations')
-        .select(`
-          *,
-          participants:chat_participants (
-            staff_id,
-            last_read_at,
-            staff:medical_staff (id, name, color, avatar_url)
-          ),
-          organization:organizations (id, name, logo_url)
-        `)
-        .eq('organization_id', activeOrganization.id)
-        .eq('conversation_type', 'support')
-        .order('updated_at', { ascending: false });
-
-      if (error) {
-        console.error('Error loading conversations:', error);
-        return;
-      }
-
-      if (convData) {
-        // Get last message and unread count for each conversation
-        const conversationsWithDetails = await Promise.all(
-          convData.map(async (conv) => {
-            // Get last message
-            const { data: lastMessage } = await supabase
-              .from('chat_messages')
-              .select(`
-                id, content, created_at,
-                sender:medical_staff (id, name, color, avatar_url)
-              `)
-              .eq('conversation_id', conv.id)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
-
-            // Get admin participant to check last_read_at
-            const { data: adminParticipant } = await supabase
-              .from('chat_admin_participants')
-              .select('last_read_at')
-              .eq('conversation_id', conv.id)
-              .eq('user_id', user.id)
-              .maybeSingle();
-
-            // Count unread messages (after admin's last_read_at)
-            let unreadCount = 0;
-            if (adminParticipant?.last_read_at) {
-              const { count } = await supabase
-                .from('chat_messages')
-                .select('*', { count: 'exact', head: true })
-                .eq('conversation_id', conv.id)
-                .gt('created_at', adminParticipant.last_read_at);
-
-              unreadCount = count || 0;
-            } else {
-              // If no admin participant record, count all messages
-              const { count } = await supabase
-                .from('chat_messages')
-                .select('*', { count: 'exact', head: true })
-                .eq('conversation_id', conv.id);
-
-              unreadCount = count || 0;
-            }
-
-            return {
-              ...conv,
-              last_message: lastMessage,
-              unread_count: unreadCount,
-            } as SupportConversationWithDetails;
-          })
-        );
-
-        setConversations(conversationsWithDetails);
-
-        // Calculate total unread count
-        const totalUnread = conversationsWithDetails.reduce(
-          (acc, conv) => acc + (conv.unread_count || 0),
-          0
-        );
-        setUnreadCount(totalUnread);
-      }
-    } catch (error) {
-      console.error('Error loading conversations:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [activeOrganization?.id, user?.id, supabase]);
-
-  // Load conversations on mount and when organization changes
+  // Subscribe to realtime updates with incremental updates (not full reload)
   useEffect(() => {
-    loadConversations();
-  }, [loadConversations]);
-
-  // Subscribe to realtime updates
-  useEffect(() => {
-    if (!activeOrganization?.id) return;
+    if (!activeOrganization?.id || !user?.id) return;
 
     const channel = supabase
       .channel(`admin_chat:${activeOrganization.id}`)
@@ -169,8 +91,65 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
             conv?.organization_id === activeOrganization.id &&
             conv?.conversation_type === 'support'
           ) {
-            // Reload conversations to update last message and unread count
-            loadConversations();
+            // Get the new message with sender details
+            const { data: newMsg } = await supabase
+              .from('chat_messages')
+              .select(`
+                id, content, created_at,
+                sender:medical_staff (id, name, color, avatar_url)
+              `)
+              .eq('id', payload.new.id)
+              .maybeSingle();
+
+            // Incremental update: only update the affected conversation
+            queryClient.setQueryData(
+              queryKeys.chat.conversations.support(activeOrganization.id, user.id),
+              (oldData: SupportConversationWithDetails[] | undefined) => {
+                if (!oldData) return oldData;
+
+                const conversationIndex = oldData.findIndex(c => c.id === conv.id);
+
+                if (conversationIndex === -1) {
+                  // New conversation - refetch to get all details
+                  refetch();
+                  return oldData;
+                }
+
+                // Update existing conversation
+                const updatedConversations = [...oldData];
+                const existingConv = updatedConversations[conversationIndex];
+
+                // Check if this is NOT our own message (to increment unread)
+                const isOwnMessage =
+                  payload.new.admin_sender_id === user.id ||
+                  payload.new.sender_id === existingConv.participants?.[0]?.staff_id;
+
+                // Normalize sender (Supabase may return array for relations)
+                const senderData = newMsg?.sender;
+                const normalizedSender = Array.isArray(senderData)
+                  ? senderData[0]
+                  : senderData;
+
+                updatedConversations[conversationIndex] = {
+                  ...existingConv,
+                  last_message: newMsg ? {
+                    id: newMsg.id,
+                    content: newMsg.content,
+                    created_at: newMsg.created_at,
+                    sender: normalizedSender || undefined,
+                  } : existingConv.last_message,
+                  unread_count: isOwnMessage
+                    ? existingConv.unread_count
+                    : (existingConv.unread_count || 0) + 1,
+                  updated_at: new Date().toISOString(),
+                };
+
+                // Sort by updated_at descending
+                return updatedConversations.sort(
+                  (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+                );
+              }
+            );
           }
         }
       )
@@ -182,9 +161,11 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
           table: 'chat_conversations',
           filter: `organization_id=eq.${activeOrganization.id}`,
         },
-        () => {
-          // New conversation created
-          loadConversations();
+        (payload) => {
+          // New conversation created - only refetch if it's a support conversation
+          if (payload.new.conversation_type === 'support') {
+            refetch();
+          }
         }
       )
       .subscribe((status) => {
@@ -194,7 +175,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [activeOrganization?.id, supabase, loadConversations]);
+  }, [activeOrganization?.id, user?.id, supabase, queryClient, refetch]);
 
   // Select a conversation
   const selectConversation = useCallback((id: string | null) => {
@@ -221,10 +202,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
           user_id: user.id,
         });
       }
-
-      // We need to get the medical_staff id for this user to send messages
-      // For now, we'll create a system message or handle differently
-      // In this implementation, admins will have their messages sent with a special sender_id
 
       // Check if user has a medical_staff record (some admins might also be doctors)
       const { data: staffRecord } = await supabase
@@ -272,7 +249,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   // Mark conversation as read
   const markAsRead = useCallback(
     async (conversationId: string) => {
-      if (!user?.id) return;
+      if (!user?.id || !activeOrganization?.id) return;
 
       // Upsert admin participant with last_read_at
       await supabase
@@ -288,20 +265,18 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
           }
         );
 
-      // Update local state
-      setConversations((prev) =>
-        prev.map((conv) =>
-          conv.id === conversationId ? { ...conv, unread_count: 0 } : conv
-        )
+      // Optimistic update: set unread count to 0 for this conversation
+      queryClient.setQueryData(
+        queryKeys.chat.conversations.support(activeOrganization.id, user.id),
+        (oldData: SupportConversationWithDetails[] | undefined) => {
+          if (!oldData) return oldData;
+          return oldData.map((conv) =>
+            conv.id === conversationId ? { ...conv, unread_count: 0 } : conv
+          );
+        }
       );
-
-      // Update total unread count
-      setUnreadCount((prev) => {
-        const conv = conversations.find((c) => c.id === conversationId);
-        return Math.max(0, prev - (conv?.unread_count || 0));
-      });
     },
-    [user?.id, supabase, conversations]
+    [user?.id, activeOrganization?.id, supabase, queryClient]
   );
 
   const value = useMemo<ChatContextValue>(

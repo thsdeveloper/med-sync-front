@@ -23,6 +23,8 @@ type SupabaseAuthContextValue = {
   loading: boolean;
   signInWithPassword: (payload: SignInPayload) => Promise<void>;
   signOut: () => Promise<void>;
+  /** Refreshes the user data from Supabase (useful after metadata updates) */
+  refreshUser: () => Promise<void>;
 };
 
 const SupabaseAuthContext = createContext<SupabaseAuthContextValue | undefined>(
@@ -91,6 +93,21 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [supabase]);
 
+  const refreshUser = useCallback(async () => {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error) {
+      console.error("Erro ao atualizar dados do usuário", error);
+      return;
+    }
+    // Update the session with the new user data
+    if (user && session) {
+      setSession({
+        ...session,
+        user,
+      });
+    }
+  }, [supabase, session]);
+
   const value = useMemo<SupabaseAuthContextValue>(
     () => ({
       user: session?.user ?? null,
@@ -98,8 +115,9 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
       loading,
       signInWithPassword,
       signOut,
+      refreshUser,
     }),
-    [session, loading, signInWithPassword, signOut]
+    [session, loading, signInWithPassword, signOut, refreshUser]
   );
 
   return (

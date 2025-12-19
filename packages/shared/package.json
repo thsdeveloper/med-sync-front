@@ -10,14 +10,18 @@
     "./types": "./src/types/index.ts",
     "./utils": "./src/utils/index.ts",
     "./constants": "./src/constants/index.ts",
-    "./hooks": "./src/hooks/index.ts"
+    "./hooks": "./src/hooks/index.ts",
+    "./query": "./src/query/index.ts",
+    "./stores": "./src/stores/index.ts",
+    "./api": "./src/api/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/"
   },
   "dependencies": {
-    "zod": "^4.1.12"
+    "zod": "^4.1.12",
+    "zustand": "^5.0.9"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.84.0",
@@ -27,8 +31,8 @@
     "typescript": "^5"
   },
   "peerDependencies": {
-    "@tanstack/react-query": "^5.0.0",
     "@supabase/supabase-js": "^2.0.0",
+    "@tanstack/react-query": "^5.0.0",
     "react": "^18.0.0 || ^19.0.0"
   }
 }

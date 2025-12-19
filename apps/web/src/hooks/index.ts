@@ -14,3 +14,12 @@ export { useMediaQuery, useChatBreakpoints, BREAKPOINTS } from './useMediaQuery'
 export { useReadReceipts } from './useReadReceipts';
 export { useTypingIndicator } from './useTypingIndicator';
 export { useMessageSearch } from './useMessageSearch';
+export { useChatMessages, type EnrichedMessage, type UseChatMessagesResult } from './useChatMessages';
+export {
+  useProfileImageUpload,
+  type UseProfileImageUploadOptions,
+  type UseProfileImageUploadResult,
+  type ProfileImageUploadResult,
+  ProfileImageError,
+  ProfileImageErrorCode,
+} from './useProfileImageUpload';

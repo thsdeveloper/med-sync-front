@@ -16,14 +16,24 @@ import { useOrganization } from '@/providers/OrganizationProvider';
 import { supabase } from '@/lib/supabase';
 import { SmtpSettingsForm } from '@/components/organisms/SmtpSettingsForm';
 import { useSmtpSettings } from '@/hooks/useSmtpSettings';
+import { useProfileImageUpload } from '@/hooks/useProfileImageUpload';
+import { EditableAvatar } from '@/components/molecules/EditableAvatar';
 
 export default function SettingsPage() {
     const router = useRouter();
-    const { user, loading } = useSupabaseAuth();
+    const { user, loading, refreshUser } = useSupabaseAuth();
     const { activeRole, activeOrganization, loading: orgLoading } = useOrganization();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
 
     const organizationId = activeOrganization?.id || null;
+
+    // Profile image upload hook with refresh callback
+    const { uploadAvatar, isUploading: isUploadingAvatar } = useProfileImageUpload({
+        onSuccess: async () => {
+            // Refresh user data to update avatar in header
+            await refreshUser();
+        },
+    });
 
     // SMTP settings hook
     const {
@@ -61,6 +71,10 @@ export default function SettingsPage() {
 
     const handleSmtpTestConnection = async (data: any) => {
         await testConnection(data);
+    };
+
+    const handleAvatarFileSelect = async (file: File) => {
+        await uploadAvatar(file);
     };
 
     if (loading || !user) {
@@ -102,13 +116,17 @@ export default function SettingsPage() {
                     {/* Informações da Conta */}
                     <Card>
                         <CardHeader className="flex flex-row items-start gap-4">
-                            <div className="rounded-2xl bg-blue-50 p-3 text-blue-600">
-                                <User className="h-6 w-6" />
-                            </div>
+                            <EditableAvatar
+                                name={userDisplayName}
+                                avatarUrl={user.user_metadata?.avatar_url}
+                                size="xl"
+                                onFileSelect={handleAvatarFileSelect}
+                                isUploading={isUploadingAvatar}
+                            />
                             <div className="space-y-1">
                                 <CardTitle>Informações da Conta</CardTitle>
                                 <CardDescription>
-                                    Dados básicos da sua conta de acesso ao sistema.
+                                    Dados básicos da sua conta de acesso ao sistema. Clique na foto para alterar.
                                 </CardDescription>
                             </div>
                         </CardHeader>
