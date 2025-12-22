@@ -15,6 +15,8 @@ interface UnreadCountContextValue {
   totalUnreadCount: number;
   isLoading: boolean;
   refreshUnreadCount: () => Promise<void>;
+  /** Set the currently active conversation to prevent incrementing for messages in that conversation */
+  setActiveConversation: (conversationId: string | null) => void;
 }
 
 const UnreadCountContext = createContext<UnreadCountContextValue | undefined>(undefined);
@@ -28,6 +30,15 @@ export function UnreadCountProvider({ children }: { children: React.ReactNode })
   const messagesChannelRef = useRef<RealtimeChannel | null>(null);
   const participantsChannelRef = useRef<RealtimeChannel | null>(null);
   const isMountedRef = useRef(true);
+
+  // Active conversation ref - used to skip incrementing for messages in the current conversation
+  const activeConversationRef = useRef<string | null>(null);
+
+  // Function to set the active conversation (called by chat screens)
+  const setActiveConversation = useCallback((conversationId: string | null) => {
+    console.log('[UnreadCount] Active conversation set to:', conversationId);
+    activeConversationRef.current = conversationId;
+  }, []);
 
   // Fetch unread count from the database
   const fetchUnreadCount = useCallback(async () => {
@@ -141,14 +152,28 @@ export function UnreadCountProvider({ children }: { children: React.ReactNode })
         (payload) => {
           console.log('[UnreadCount] New message received:', payload);
 
-          // Only increment if the message sender is not the current user
-          const newRecord = payload.new as { sender_id?: string; admin_sender_id?: string };
-          if (newRecord.sender_id !== staffId) {
-            console.log('[UnreadCount] Message from another user, incrementing count...');
-            // Fase 3: Increment count locally instead of full refetch
-            if (isMountedRef.current) {
-              setTotalUnreadCount((prev) => prev + 1);
-            }
+          const newRecord = payload.new as {
+            sender_id?: string;
+            admin_sender_id?: string;
+            conversation_id?: string;
+          };
+
+          // Skip if the message sender is the current user
+          if (newRecord.sender_id === staffId) {
+            console.log('[UnreadCount] Message from current user, skipping');
+            return;
+          }
+
+          // Skip if the message is from the currently active conversation
+          if (newRecord.conversation_id === activeConversationRef.current) {
+            console.log('[UnreadCount] Message from active conversation, skipping increment');
+            return;
+          }
+
+          console.log('[UnreadCount] Message from another user in inactive conversation, incrementing count...');
+          // Increment count locally instead of full refetch
+          if (isMountedRef.current) {
+            setTotalUnreadCount((prev) => prev + 1);
           }
         }
       )
@@ -218,6 +243,7 @@ export function UnreadCountProvider({ children }: { children: React.ReactNode })
     totalUnreadCount,
     isLoading,
     refreshUnreadCount,
+    setActiveConversation,
   };
 
   return (

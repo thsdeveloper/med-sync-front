@@ -128,7 +128,7 @@ export function useChatMessages({
   enabled = true,
 }: UseChatMessagesOptions): UseChatMessagesReturn {
   const { staff } = useAuth();
-  const { refreshUnreadCount } = useUnreadCount();
+  const { refreshUnreadCount, setActiveConversation } = useUnreadCount();
   const { invalidateMessages } = useInvalidateChatQueries();
   const queryClient = useQueryClient();
   const adminCacheRef = useRef<Map<string, AdminInfo>>(new Map());
@@ -136,6 +136,16 @@ export function useChatMessages({
   // Transition state ref to prevent race conditions during conversation switches
   const isTransitioningRef = useRef(false);
   const currentConversationRef = useRef<string | null>(null);
+
+  // Notify UnreadCountProvider about active conversation to prevent badge flicker
+  useEffect(() => {
+    if (conversationId && enabled) {
+      setActiveConversation(conversationId);
+    }
+    return () => {
+      setActiveConversation(null);
+    };
+  }, [conversationId, enabled, setActiveConversation]);
 
   // Query key for this conversation's messages
   const queryKey = useMemo(
