@@ -13,6 +13,7 @@ import { AuthProvider } from '@/providers/auth-provider';
 import { NotificationProvider } from '@/providers/notification-provider';
 import { QueryProvider } from '@/providers/query-provider';
 import { RealtimeProvider } from '@/providers/realtime-provider';
+import { UnreadCountProvider } from '@/providers/unread-count-provider';
 
 // Prevenir auto-hide da splash screen
 SplashScreen.preventAutoHideAsync();
@@ -61,17 +62,19 @@ export default function RootLayout() {
             <AuthLoadingWrapper>
               <NotificationProvider>
                 <RealtimeProvider>
-                  <Stack screenOptions={{ headerShown: false }}>
-                    <Stack.Screen
-                      name="(auth)"
-                      options={{ gestureEnabled: false }}
-                    />
-                    <Stack.Screen
-                      name="(app)"
-                      options={{ gestureEnabled: false }}
-                    />
-                  </Stack>
-                  <StatusBar style="auto" />
+                  <UnreadCountProvider>
+                    <Stack screenOptions={{ headerShown: false }}>
+                      <Stack.Screen
+                        name="(auth)"
+                        options={{ gestureEnabled: false }}
+                      />
+                      <Stack.Screen
+                        name="(app)"
+                        options={{ gestureEnabled: false }}
+                      />
+                    </Stack>
+                    <StatusBar style="auto" />
+                  </UnreadCountProvider>
                 </RealtimeProvider>
               </NotificationProvider>
             </AuthLoadingWrapper>

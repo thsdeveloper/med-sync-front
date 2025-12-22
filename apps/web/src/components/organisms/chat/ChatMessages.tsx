@@ -123,6 +123,7 @@ export function ChatMessages({ conversationId, onBack }: ChatMessagesProps) {
     addMessage,
     removeMessage,
     updateMessageAttachment,
+    removeMessageAttachment,
   } = useChatMessages(conversationId, {
     enabled: !!conversationId && staffId !== null,
     userId: user?.id,
@@ -244,7 +245,14 @@ export function ChatMessages({ conversationId, onBack }: ChatMessagesProps) {
               };
             }
 
-            if (newMsg.content?.includes('Anexo enviado')) {
+            // Check if message might have attachments (empty or short content)
+            const msgContent = newMsg.content?.trim() || '';
+            const isLikelyAttachmentMessage =
+              msgContent === '' ||
+              msgContent.length < 30 ||
+              msgContent.includes('Anexo enviado');
+
+            if (isLikelyAttachmentMessage) {
               const msgTime = new Date(newMsg.created_at).getTime();
               const { data: attachmentsData } = await supabase
                 .from('chat_attachments')
@@ -304,7 +312,20 @@ export function ChatMessages({ conversationId, onBack }: ChatMessagesProps) {
     [updateMessageAttachment]
   );
 
-  useAttachmentRealtime(supabase, conversationId, handleAttachmentStatusChange);
+  // Attachment deletion handler (for realtime updates when mobile user deletes an attachment)
+  const handleAttachmentDelete = useCallback(
+    (attachmentId: string) => {
+      removeMessageAttachment(attachmentId);
+      toast.info('Anexo excluído', {
+        description: 'Um anexo foi removido da conversa',
+      });
+    },
+    [removeMessageAttachment]
+  );
+
+  useAttachmentRealtime(supabase, conversationId, handleAttachmentStatusChange, {
+    onDelete: handleAttachmentDelete,
+  });
 
   // Auto-scroll to bottom
   useEffect(() => {

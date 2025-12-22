@@ -296,22 +296,53 @@ export function useCreateConversation(supabase: SupabaseClient, userId: string) 
 // MARK AS READ
 // ============================================
 
+export interface MarkAsReadParams {
+  conversationId: string;
+  userId: string;
+}
+
 /**
  * Hook to mark a conversation as read
  *
  * @example
+ * const { mutate: markRead } = useMarkAsRead(supabase);
+ * markRead({ conversationId, userId });
+ *
+ * // Legacy usage (still supported for backwards compatibility):
  * const { mutate: markRead } = useMarkAsRead(supabase, userId);
  * markRead(conversationId);
  */
-export function useMarkAsRead(supabase: SupabaseClient, userId: string) {
+export function useMarkAsRead(supabase: SupabaseClient, defaultUserId?: string) {
   const queryClient = useQueryClient();
 
+  console.log('[useMarkAsRead] Hook initialized with defaultUserId:', defaultUserId);
+
   return useMutation({
-    mutationFn: async (conversationId: string): Promise<void> => {
+    mutationFn: async (params: string | MarkAsReadParams): Promise<void> => {
+      console.log('[useMarkAsRead] mutationFn called with params:', params, 'defaultUserId:', defaultUserId);
+
+      // Support both legacy (string) and new (object) parameter formats
+      const conversationId = typeof params === 'string' ? params : params.conversationId;
+      const userId = typeof params === 'string' ? defaultUserId : params.userId;
+
+      console.log('[useMarkAsRead] Resolved - conversationId:', conversationId, 'userId:', userId);
+
+      if (!userId) {
+        console.error('[useMarkAsRead] ERROR: userId is empty!');
+        throw new Error('userId is required for markAsRead');
+      }
+
+      console.log('[useMarkAsRead] Calling markConversationAsRead...');
       return markConversationAsRead(supabase, conversationId, userId);
     },
 
-    onSuccess: (_, conversationId) => {
+    onSuccess: (_, params) => {
+      console.log('[useMarkAsRead] onSuccess called');
+      const conversationId = typeof params === 'string' ? params : params.conversationId;
+      const userId = typeof params === 'string' ? defaultUserId : params.userId;
+
+      if (!userId) return;
+
       // Update unread count in cache
       queryClient.setQueryData(
         queryKeys.chat.conversations.list(userId, {}),
@@ -327,6 +358,10 @@ export function useMarkAsRead(supabase: SupabaseClient, userId: string) {
       queryClient.invalidateQueries({
         queryKey: [...queryKeys.chat.all, 'unread-count'],
       });
+    },
+
+    onError: (error) => {
+      console.error('[useMarkAsRead] onError:', error);
     },
 
     // Don't show errors for mark as read - it's not critical

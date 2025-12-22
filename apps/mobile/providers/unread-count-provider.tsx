@@ -1,0 +1,213 @@
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+} from 'react';
+import { AppState, AppStateStatus } from 'react-native';
+import { RealtimeChannel } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/providers/auth-provider';
+
+interface UnreadCountContextValue {
+  totalUnreadCount: number;
+  isLoading: boolean;
+  refreshUnreadCount: () => Promise<void>;
+}
+
+const UnreadCountContext = createContext<UnreadCountContextValue | undefined>(undefined);
+
+export function UnreadCountProvider({ children }: { children: React.ReactNode }) {
+  const { staff, isAuthenticated } = useAuth();
+  const [totalUnreadCount, setTotalUnreadCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Refs for managing subscriptions
+  const messagesChannelRef = useRef<RealtimeChannel | null>(null);
+  const participantsChannelRef = useRef<RealtimeChannel | null>(null);
+  const isMountedRef = useRef(true);
+
+  // Fetch unread count from the database
+  const fetchUnreadCount = useCallback(async () => {
+    if (!staff?.id) {
+      setTotalUnreadCount(0);
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      console.log('[UnreadCount] Fetching unread count for staff:', staff.id);
+
+      const { data, error } = await supabase.rpc('get_staff_total_unread_count', {
+        p_staff_id: staff.id,
+      });
+
+      if (error) {
+        console.error('[UnreadCount] Error fetching unread count:', error);
+        return;
+      }
+
+      if (isMountedRef.current) {
+        console.log('[UnreadCount] Total unread count:', data);
+        setTotalUnreadCount(data ?? 0);
+      }
+    } catch (error) {
+      console.error('[UnreadCount] Exception fetching unread count:', error);
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
+    }
+  }, [staff?.id]);
+
+  // Expose refresh function
+  const refreshUnreadCount = useCallback(async () => {
+    console.log('[UnreadCount] refreshUnreadCount() called - fetching new count...');
+    setIsLoading(true);
+    await fetchUnreadCount();
+    console.log('[UnreadCount] refreshUnreadCount() completed');
+  }, [fetchUnreadCount]);
+
+  // Cleanup subscriptions
+  const cleanup = useCallback(() => {
+    if (messagesChannelRef.current) {
+      try {
+        supabase.removeChannel(messagesChannelRef.current);
+      } catch (error) {
+        console.log('[UnreadCount] Error removing messages channel:', error);
+      }
+      messagesChannelRef.current = null;
+    }
+
+    if (participantsChannelRef.current) {
+      try {
+        supabase.removeChannel(participantsChannelRef.current);
+      } catch (error) {
+        console.log('[UnreadCount] Error removing participants channel:', error);
+      }
+      participantsChannelRef.current = null;
+    }
+  }, []);
+
+  // Setup realtime subscriptions
+  const setupSubscriptions = useCallback(() => {
+    if (!staff?.id) {
+      console.log('[UnreadCount] No staff ID, skipping subscriptions');
+      return;
+    }
+
+    // Cleanup any existing subscriptions
+    cleanup();
+
+    const staffId = staff.id;
+    console.log('[UnreadCount] Setting up subscriptions for staff:', staffId);
+
+    // Subscribe to new messages in chat_messages table
+    const messagesChannel = supabase
+      .channel(`unread-messages-${staffId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+        },
+        (payload) => {
+          console.log('[UnreadCount] New message received:', payload);
+
+          // Only refetch if the message sender is not the current user
+          const newRecord = payload.new as { sender_id?: string; admin_sender_id?: string };
+          if (newRecord.sender_id !== staffId) {
+            console.log('[UnreadCount] Message from another user, refreshing count...');
+            fetchUnreadCount();
+          }
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('[UnreadCount] Messages channel status:', status, err ?? '');
+      });
+
+    messagesChannelRef.current = messagesChannel;
+
+    // Subscribe to updates on chat_participants (for last_read_at changes)
+    const participantsChannel = supabase
+      .channel(`unread-participants-${staffId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_participants',
+          filter: `staff_id=eq.${staffId}`,
+        },
+        (payload) => {
+          console.log('[UnreadCount] Participant updated:', payload);
+          // Refetch when last_read_at changes (user marked messages as read)
+          fetchUnreadCount();
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('[UnreadCount] Participants channel status:', status, err ?? '');
+      });
+
+    participantsChannelRef.current = participantsChannel;
+  }, [staff?.id, cleanup, fetchUnreadCount]);
+
+  // Handle app state changes (foreground/background)
+  useEffect(() => {
+    const handleAppStateChange = (nextState: AppStateStatus) => {
+      if (nextState === 'active' && isAuthenticated && staff?.id) {
+        console.log('[UnreadCount] App became active, refreshing count...');
+        fetchUnreadCount();
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription.remove();
+  }, [isAuthenticated, staff?.id, fetchUnreadCount]);
+
+  // Main effect: setup when authenticated
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    if (isAuthenticated && staff?.id) {
+      fetchUnreadCount();
+      setupSubscriptions();
+    } else {
+      setTotalUnreadCount(0);
+      setIsLoading(false);
+      cleanup();
+    }
+
+    return () => {
+      isMountedRef.current = false;
+      cleanup();
+    };
+  }, [isAuthenticated, staff?.id, fetchUnreadCount, setupSubscriptions, cleanup]);
+
+  const value: UnreadCountContextValue = {
+    totalUnreadCount,
+    isLoading,
+    refreshUnreadCount,
+  };
+
+  return (
+    <UnreadCountContext.Provider value={value}>
+      {children}
+    </UnreadCountContext.Provider>
+  );
+}
+
+/**
+ * Hook to access unread count context
+ * @throws Error if used outside of UnreadCountProvider
+ */
+export function useUnreadCount() {
+  const context = useContext(UnreadCountContext);
+  if (context === undefined) {
+    throw new Error('useUnreadCount must be used within an UnreadCountProvider');
+  }
+  return context;
+}

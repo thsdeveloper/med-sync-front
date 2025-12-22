@@ -249,21 +249,32 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   // Mark conversation as read
   const markAsRead = useCallback(
     async (conversationId: string) => {
-      if (!user?.id || !activeOrganization?.id) return;
+      console.log('[ChatProvider.markAsRead] Called with conversationId:', conversationId, 'user.id:', user?.id, 'activeOrganization.id:', activeOrganization?.id);
+
+      if (!user?.id || !activeOrganization?.id) {
+        console.log('[ChatProvider.markAsRead] Skipping - missing user.id or activeOrganization.id');
+        return;
+      }
+
+      const timestamp = new Date().toISOString();
+      console.log('[ChatProvider.markAsRead] Upserting chat_admin_participants with timestamp:', timestamp);
 
       // Upsert admin participant with last_read_at
-      await supabase
+      const { data, error } = await supabase
         .from('chat_admin_participants')
         .upsert(
           {
             conversation_id: conversationId,
             user_id: user.id,
-            last_read_at: new Date().toISOString(),
+            last_read_at: timestamp,
           },
           {
             onConflict: 'conversation_id,user_id',
           }
-        );
+        )
+        .select();
+
+      console.log('[ChatProvider.markAsRead] Upsert result - data:', data, 'error:', error);
 
       // Optimistic update: set unread count to 0 for this conversation
       queryClient.setQueryData(

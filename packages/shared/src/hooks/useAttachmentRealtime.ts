@@ -38,6 +38,12 @@ export interface UseAttachmentRealtimeOptions {
   onStatusChange?: (attachment: ChatAttachment) => void;
 
   /**
+   * Callback fired when an attachment is deleted
+   * @param attachmentId The ID of the deleted attachment
+   */
+  onDelete?: (attachmentId: string) => void;
+
+  /**
    * Whether the subscription is enabled
    * @default true
    */
@@ -50,7 +56,7 @@ export interface UseAttachmentRealtimeOptions {
  * @param supabase - Supabase client instance (platform-agnostic)
  * @param conversationId - ID of the conversation to monitor attachments for
  * @param onStatusChange - Callback fired when attachment status changes
- * @param options - Additional configuration options
+ * @param options - Additional configuration options (includes onDelete callback)
  */
 export function useAttachmentRealtime(
   supabase: SupabaseClient,
@@ -58,23 +64,25 @@ export function useAttachmentRealtime(
   onStatusChange?: (attachment: ChatAttachment) => void,
   options: Omit<UseAttachmentRealtimeOptions, 'onStatusChange'> = {}
 ) {
-  const { enabled = true } = options;
+  const { enabled = true, onDelete } = options;
   const channelRef = useRef<RealtimeChannel | null>(null);
   const lastUpdateRef = useRef<{ id: string; status: string; timestamp: number } | null>(null);
 
   useEffect(() => {
-    // Don't subscribe if disabled, no conversation ID, or no callback
-    if (!enabled || !conversationId || !onStatusChange) {
+    // Don't subscribe if disabled, no conversation ID, or no callbacks
+    if (!enabled || !conversationId || (!onStatusChange && !onDelete)) {
       return;
     }
 
     // Create channel with unique name for this conversation
     const channelName = `chat_attachments:${conversationId}`;
 
-    // Subscribe to UPDATE events on chat_attachments table
-    const channel = supabase
-      .channel(channelName)
-      .on(
+    // Build channel with event subscriptions
+    let channel = supabase.channel(channelName);
+
+    // Subscribe to UPDATE events on chat_attachments table (for status changes)
+    if (onStatusChange) {
+      channel = channel.on(
         'postgres_changes',
         {
           event: 'UPDATE',
@@ -109,8 +117,31 @@ export function useAttachmentRealtime(
           // Call the status change callback
           onStatusChange(updatedAttachment);
         }
-      )
-      .subscribe((status) => {
+      );
+    }
+
+    // Subscribe to DELETE events on chat_attachments table
+    if (onDelete) {
+      channel = channel.on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'chat_attachments',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const deletedAttachmentId = payload.old?.id;
+          if (deletedAttachmentId) {
+            console.log(`[useAttachmentRealtime] Attachment deleted: ${deletedAttachmentId}`);
+            onDelete(deletedAttachmentId);
+          }
+        }
+      );
+    }
+
+    // Subscribe to the channel
+    channel.subscribe((status) => {
         // Log subscription status for debugging
         if (status === 'SUBSCRIBED') {
           console.log(`[useAttachmentRealtime] Subscribed to ${channelName}`);
@@ -134,7 +165,7 @@ export function useAttachmentRealtime(
         channelRef.current = null;
       }
     };
-  }, [supabase, conversationId, onStatusChange, enabled]);
+  }, [supabase, conversationId, onStatusChange, onDelete, enabled]);
 
   // Return nothing - this is a side-effect only hook
   return null;

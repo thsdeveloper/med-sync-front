@@ -60,6 +60,12 @@ export interface AttachmentDisplayProps {
    * Whether this is the user's own message (affects styling)
    */
   isOwnMessage?: boolean;
+
+  /**
+   * Callback when delete button is pressed for a pending attachment
+   * Only called for own messages with pending status
+   */
+  onDelete?: (attachment: ChatAttachment) => void;
 }
 
 /**
@@ -88,23 +94,35 @@ export default function AttachmentDisplay({
   onImagePress,
   onPdfPress,
   isOwnMessage = false,
+  onDelete,
 }: AttachmentDisplayProps) {
-  const { getCachedUri, isCached } = useAttachmentDownload();
+  const { getCachedUri, isCached, downloadAttachment } = useAttachmentDownload();
   const [imageUris, setImageUris] = useState<Record<string, string>>({});
   const [loadingImages, setLoadingImages] = useState<Set<string>>(new Set());
 
   /**
    * Load cached image URIs on mount
+   * For own messages, also load pending attachments
    */
   useEffect(() => {
     const loadCachedImages = async () => {
       const uris: Record<string, string> = {};
 
       for (const attachment of attachments) {
-        if (attachment.file_type === 'image' && attachment.status === 'accepted') {
+        // Load images that are accepted, or pending if it's own message
+        const shouldLoad = attachment.file_type === 'image' &&
+          (attachment.status === 'accepted' || (isOwnMessage && attachment.status === 'pending'));
+
+        if (shouldLoad) {
           const cachedUri = await getCachedUri(attachment.id, attachment.file_name);
           if (cachedUri) {
             uris[attachment.id] = cachedUri;
+          } else if (isOwnMessage && attachment.status === 'pending') {
+            // For pending own attachments, try to download
+            const downloaded = await downloadAttachment(attachment);
+            if (downloaded) {
+              uris[attachment.id] = downloaded;
+            }
           }
         }
       }
@@ -113,13 +131,18 @@ export default function AttachmentDisplay({
     };
 
     loadCachedImages();
-  }, [attachments, getCachedUri]);
+  }, [attachments, getCachedUri, isOwnMessage, downloadAttachment]);
 
   /**
    * Handle image tap - download if not cached
+   * Allow own pending messages to be viewed
    */
   const handleImageTap = async (attachment: ChatAttachment) => {
-    if (attachment.status !== 'accepted') {
+    // Block viewing for non-accepted attachments unless it's own pending message
+    const canView = attachment.status === 'accepted' ||
+      (isOwnMessage && attachment.status === 'pending');
+
+    if (!canView) {
       Alert.alert('Imagem Indisponível', 'Esta imagem ainda não foi aprovada.');
       return;
     }
@@ -136,6 +159,13 @@ export default function AttachmentDisplay({
         if (cached) {
           uri = (await getCachedUri(attachment.id, attachment.file_name))!;
           setImageUris((prev) => ({ ...prev, [attachment.id]: uri }));
+        } else {
+          // Try to download
+          const downloaded = await downloadAttachment(attachment);
+          if (downloaded) {
+            uri = downloaded;
+            setImageUris((prev) => ({ ...prev, [attachment.id]: uri }));
+          }
         }
       }
 
@@ -156,26 +186,33 @@ export default function AttachmentDisplay({
 
   /**
    * Handle PDF tap - download if not cached
+   * Allow own pending messages to be viewed
    */
   const handlePdfTap = async (attachment: ChatAttachment) => {
-    if (attachment.status !== 'accepted') {
+    // Block viewing for non-accepted attachments unless it's own pending message
+    const canView = attachment.status === 'accepted' ||
+      (isOwnMessage && attachment.status === 'pending');
+
+    if (!canView) {
       Alert.alert('PDF Indisponível', 'Este documento ainda não foi aprovado.');
       return;
     }
 
     try {
       const cached = await isCached(attachment.id, attachment.file_name);
-      const uri = cached
+      let uri = cached
         ? await getCachedUri(attachment.id, attachment.file_name)
         : null;
+
+      if (!uri) {
+        // Try to download
+        uri = await downloadAttachment(attachment);
+      }
 
       if (uri) {
         onPdfPress(attachment, uri);
       } else {
-        Alert.alert(
-          'Download Necessário',
-          'Este documento precisa ser baixado. Deseja baixar agora?'
-        );
+        Alert.alert('Erro', 'Não foi possível carregar o documento.');
       }
     } catch (error) {
       console.error('Error loading PDF:', error);
@@ -208,42 +245,66 @@ export default function AttachmentDisplay({
   const renderImageAttachment = (attachment: ChatAttachment) => {
     const imageUri = imageUris[attachment.id];
     const isLoading = loadingImages.has(attachment.id);
+    // Allow tap for accepted or own pending attachments
+    const canTap = attachment.status === 'accepted' ||
+      (isOwnMessage && attachment.status === 'pending');
+    // Show delete button for own pending attachments
+    const canDelete = isOwnMessage && attachment.status === 'pending' && onDelete;
 
     return (
-      <TouchableOpacity
-        key={attachment.id}
-        style={styles.imageContainer}
-        onPress={() => handleImageTap(attachment)}
-        disabled={attachment.status !== 'accepted' || isLoading}
-      >
-        {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.imageThumbnail} />
-        ) : (
-          <View style={styles.imagePlaceholder}>
-            <Ionicons name="image-outline" size={40} color="#9CA3AF" />
-          </View>
+      <View key={attachment.id} style={styles.attachmentWrapper}>
+        <TouchableOpacity
+          style={styles.imageContainer}
+          onPress={() => handleImageTap(attachment)}
+          disabled={!canTap || isLoading}
+        >
+          {imageUri ? (
+            <Image source={{ uri: imageUri }} style={styles.imageThumbnail} />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <Ionicons name="image-outline" size={40} color="#9CA3AF" />
+            </View>
+          )}
+
+          {isLoading && (
+            <View style={styles.imageLoading}>
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            </View>
+          )}
+
+          {attachment.status !== 'accepted' && (
+            <View style={styles.imageOverlay}>
+              {renderStatusBadge(attachment.status)}
+            </View>
+          )}
+
+          {attachment.status === 'rejected' && attachment.rejected_reason && (
+            <View style={styles.rejectedReason}>
+              <Text style={styles.rejectedReasonText} numberOfLines={2}>
+                {attachment.rejected_reason}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
+
+        {/* Delete button for own pending attachments */}
+        {canDelete && (
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => onDelete(attachment)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="close-circle" size={24} color="#EF4444" />
+          </TouchableOpacity>
         )}
 
-        {isLoading && (
-          <View style={styles.imageLoading}>
-            <ActivityIndicator size="small" color="#FFFFFF" />
+        {/* Approved checkmark for own accepted attachments */}
+        {isOwnMessage && attachment.status === 'accepted' && (
+          <View style={styles.approvedBadge}>
+            <Ionicons name="checkmark-circle" size={24} color="#10B981" />
           </View>
         )}
-
-        {attachment.status !== 'accepted' && (
-          <View style={styles.imageOverlay}>
-            {renderStatusBadge(attachment.status)}
-          </View>
-        )}
-
-        {attachment.status === 'rejected' && attachment.rejected_reason && (
-          <View style={styles.rejectedReason}>
-            <Text style={styles.rejectedReasonText} numberOfLines={2}>
-              {attachment.rejected_reason}
-            </Text>
-          </View>
-        )}
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -251,39 +312,67 @@ export default function AttachmentDisplay({
    * Render PDF attachment
    */
   const renderPdfAttachment = (attachment: ChatAttachment) => {
+    // Allow tap for accepted or own pending attachments
+    const canTap = attachment.status === 'accepted' ||
+      (isOwnMessage && attachment.status === 'pending');
+    // Show delete button for own pending attachments
+    const canDelete = isOwnMessage && attachment.status === 'pending' && onDelete;
+    // Only show as disabled for rejected or non-own pending
+    const isDisabled = attachment.status === 'rejected' ||
+      (attachment.status === 'pending' && !isOwnMessage);
+
     return (
-      <TouchableOpacity
-        key={attachment.id}
-        style={[
-          styles.pdfContainer,
-          attachment.status !== 'accepted' && styles.pdfContainerDisabled,
-        ]}
-        onPress={() => handlePdfTap(attachment)}
-        disabled={attachment.status !== 'accepted'}
-      >
-        <View style={styles.pdfIcon}>
-          <Ionicons name="document-text" size={32} color="#DC2626" />
-        </View>
+      <View key={attachment.id} style={styles.attachmentWrapper}>
+        <TouchableOpacity
+          style={[
+            styles.pdfContainer,
+            isDisabled && styles.pdfContainerDisabled,
+          ]}
+          onPress={() => handlePdfTap(attachment)}
+          disabled={!canTap}
+        >
+          <View style={styles.pdfIcon}>
+            <Ionicons name="document-text" size={32} color="#DC2626" />
+          </View>
 
-        <View style={styles.pdfInfo}>
-          <Text style={styles.pdfFileName} numberOfLines={1}>
-            {attachment.file_name}
-          </Text>
-          <Text style={styles.pdfFileSize}>
-            {formatFileSize(attachment.file_size)}
-          </Text>
-        </View>
-
-        {attachment.status !== 'accepted' && renderStatusBadge(attachment.status)}
-
-        {attachment.status === 'rejected' && attachment.rejected_reason && (
-          <View style={styles.pdfRejectedReason}>
-            <Text style={styles.rejectedReasonText} numberOfLines={2}>
-              {attachment.rejected_reason}
+          <View style={styles.pdfInfo}>
+            <Text style={styles.pdfFileName} numberOfLines={1}>
+              {attachment.file_name}
+            </Text>
+            <Text style={styles.pdfFileSize}>
+              {formatFileSize(attachment.file_size)}
             </Text>
           </View>
+
+          {attachment.status !== 'accepted' && renderStatusBadge(attachment.status)}
+
+          {attachment.status === 'rejected' && attachment.rejected_reason && (
+            <View style={styles.pdfRejectedReason}>
+              <Text style={styles.rejectedReasonText} numberOfLines={2}>
+                {attachment.rejected_reason}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
+
+        {/* Delete button for own pending attachments */}
+        {canDelete && (
+          <TouchableOpacity
+            style={styles.deleteButtonPdf}
+            onPress={() => onDelete(attachment)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="close-circle" size={24} color="#EF4444" />
+          </TouchableOpacity>
         )}
-      </TouchableOpacity>
+
+        {/* Approved checkmark for own accepted attachments */}
+        {isOwnMessage && attachment.status === 'accepted' && (
+          <View style={styles.approvedBadgePdf}>
+            <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+          </View>
+        )}
+      </View>
     );
   };
 
@@ -310,6 +399,51 @@ const styles = StyleSheet.create({
   container: {
     gap: 8,
     marginTop: 4,
+  },
+
+  // Wrapper for attachment with delete button
+  attachmentWrapper: {
+    position: 'relative',
+  },
+
+  // Delete button for images (positioned at top-right corner)
+  deleteButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    zIndex: 10,
+  },
+
+  // Delete button for PDFs (positioned at top-right corner)
+  deleteButtonPdf: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    zIndex: 10,
+  },
+
+  // Approved badge for images (positioned at top-right corner)
+  approvedBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    zIndex: 10,
+  },
+
+  // Approved badge for PDFs (positioned at top-right corner)
+  approvedBadgePdf: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    zIndex: 10,
   },
 
   // Image Attachment Styles

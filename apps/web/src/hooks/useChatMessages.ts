@@ -31,6 +31,7 @@ export interface UseChatMessagesResult {
   addMessage: (message: EnrichedMessage) => void;
   removeMessage: (messageId: string) => void;
   updateMessageAttachment: (attachmentId: string, updatedAttachment: ChatAttachment) => void;
+  removeMessageAttachment: (attachmentId: string) => void;
 }
 
 /**
@@ -47,17 +48,27 @@ function associateAttachmentsToMessages(
       (a) => a.message_id === msg.id && !assignedAttachmentIds.has(a.id)
     );
 
-    // Fallback: associate by time proximity for "Anexo enviado" messages
-    if (msgAttachments.length === 0 && msg.content?.includes('Anexo enviado')) {
-      const msgTime = new Date(msg.created_at).getTime();
-      msgAttachments = attachmentsData.filter((a) => {
-        if (assignedAttachmentIds.has(a.id)) return false;
-        if (a.message_id !== null) return false;
-        const attTime = new Date(a.created_at).getTime();
-        const timeDiff = Math.abs(attTime - msgTime);
-        const senderMatch = a.sender_id === msg.sender_id;
-        return senderMatch && timeDiff < 10000;
-      });
+    // Fallback: associate by time proximity for messages without linked attachments
+    // This handles both old "Anexo enviado" messages and new empty/short messages with attachments
+    if (msgAttachments.length === 0) {
+      const msgContent = msg.content?.trim() || '';
+      // Check if message is likely an attachment-only message (empty, short, or contains "Anexo enviado")
+      const isLikelyAttachmentMessage =
+        msgContent === '' ||
+        msgContent.length < 30 ||
+        msgContent.includes('Anexo enviado');
+
+      if (isLikelyAttachmentMessage) {
+        const msgTime = new Date(msg.created_at).getTime();
+        msgAttachments = attachmentsData.filter((a) => {
+          if (assignedAttachmentIds.has(a.id)) return false;
+          if (a.message_id !== null) return false;
+          const attTime = new Date(a.created_at).getTime();
+          const timeDiff = Math.abs(attTime - msgTime);
+          const senderMatch = a.sender_id === msg.sender_id;
+          return senderMatch && timeDiff < 10000;
+        });
+      }
     }
 
     msgAttachments.forEach((a) => assignedAttachmentIds.add(a.id));
@@ -188,6 +199,25 @@ export function useChatMessages(
     [queryClient, queryKey]
   );
 
+  // Remove attachment from message (for realtime DELETE events)
+  const removeMessageAttachment = useCallback(
+    (attachmentId: string) => {
+      queryClient.setQueryData<EnrichedMessage[]>(queryKey, (old) => {
+        if (!old) return old;
+        return old.map((msg) => {
+          if (!msg.attachments?.length) return msg;
+          const hasAttachment = msg.attachments.some((att) => att.id === attachmentId);
+          if (!hasAttachment) return msg;
+          return {
+            ...msg,
+            attachments: msg.attachments.filter((att) => att.id !== attachmentId),
+          };
+        });
+      });
+    },
+    [queryClient, queryKey]
+  );
+
   return {
     messages: data || [],
     isLoading,
@@ -196,5 +226,6 @@ export function useChatMessages(
     addMessage,
     removeMessage,
     updateMessageAttachment,
+    removeMessageAttachment,
   };
 }

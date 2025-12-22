@@ -8,6 +8,7 @@ export {
 export type {
   SendMessageMutationParams,
   CreateConversationMutationParams,
+  MarkAsReadParams,
 } from './useChatMutations';
 
 // Attachment Mutations

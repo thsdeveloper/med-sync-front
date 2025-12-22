@@ -510,14 +510,27 @@ export async function markConversationAsRead(
   conversationId: string,
   userId: string
 ): Promise<void> {
-  const { error } = await supabase
+  const timestamp = new Date().toISOString();
+  console.log('[markConversationAsRead] START - conversationId:', conversationId, 'userId:', userId, 'timestamp:', timestamp);
+
+  const { data, error, count } = await supabase
     .from('chat_participants')
-    .update({ last_read_at: new Date().toISOString() })
+    .update({ last_read_at: timestamp })
     .eq('conversation_id', conversationId)
-    .eq('staff_id', userId);
+    .eq('staff_id', userId)
+    .select();
+
+  console.log('[markConversationAsRead] Result - data:', data, 'error:', error, 'rowsAffected:', data?.length ?? 0);
 
   if (error) {
+    console.error('[markConversationAsRead] ERROR:', error);
     throw new Error(`Failed to mark as read: ${error.message}`);
+  }
+
+  if (!data || data.length === 0) {
+    console.warn('[markConversationAsRead] WARNING: No rows updated! Check if staff_id exists in chat_participants for this conversation');
+  } else {
+    console.log('[markConversationAsRead] SUCCESS - Updated last_read_at to:', data[0]?.last_read_at);
   }
 }
 

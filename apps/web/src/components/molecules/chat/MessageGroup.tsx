@@ -88,17 +88,20 @@ export const MessageGroup = memo(function MessageGroup({
               )}
 
               <div className="flex flex-col gap-1">
-                <MessageBubble
-                  ref={(el) => {
-                    if (el) messageRefs.current.set(msg.id, el);
-                  }}
-                  content={msg.content}
-                  timestamp={msg.created_at}
-                  isOwn={isOwn}
-                  senderName={isFirst && !isOwn ? senderName : undefined}
-                  readStatus={isOwn ? readStatus : undefined}
-                  isHighlighted={isHighlighted}
-                />
+                {/* Only show message bubble if there's actual content */}
+                {msg.content && msg.content.trim() !== '' && (
+                  <MessageBubble
+                    ref={(el) => {
+                      if (el) messageRefs.current.set(msg.id, el);
+                    }}
+                    content={msg.content}
+                    timestamp={msg.created_at}
+                    isOwn={isOwn}
+                    senderName={isFirst && !isOwn ? senderName : undefined}
+                    readStatus={isOwn ? readStatus : undefined}
+                    isHighlighted={isHighlighted}
+                  />
+                )}
 
                 {/* Attachments */}
                 {msg.attachments && msg.attachments.length > 0 && (

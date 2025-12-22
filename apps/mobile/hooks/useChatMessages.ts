@@ -9,12 +9,14 @@ import { useEffect, useCallback, useState, useRef } from 'react';
 import { Alert } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/auth-provider';
+import { useUnreadCount } from '@/providers/unread-count-provider';
 import {
   useMessages,
   useSendMessage,
   useDeleteMessage,
   useMarkAsRead,
   useAttachmentRealtime,
+  useInvalidateChatQueries,
 } from '@medsync/shared/hooks';
 import type { MessageWithSender, ChatAttachment } from '@medsync/shared';
 
@@ -110,6 +112,8 @@ export function useChatMessages({
   enabled = true,
 }: UseChatMessagesOptions): UseChatMessagesReturn {
   const { staff } = useAuth();
+  const { refreshUnreadCount } = useUnreadCount();
+  const { invalidateMessages } = useInvalidateChatQueries();
   const [localMessages, setLocalMessages] = useState<EnrichedMessage[]>([]);
   const adminCacheRef = useRef<Map<string, AdminInfo>>(new Map());
 
@@ -119,14 +123,40 @@ export function useChatMessages({
     isLoading,
     error: queryError,
     refetch,
+    dataUpdatedAt,
   } = useMessages(supabase, conversationId, {
     enabled: enabled && !!conversationId,
     limit: 100,
+    staleTime: 0,
   });
 
-  // Sync query data to local state with admin message enrichment
+  // Force invalidation and refetch when conversation changes to always get fresh data
   useEffect(() => {
-    if (!messagesData || !Array.isArray(messagesData)) return;
+    if (conversationId && enabled) {
+      console.log('[useChatMessages] Invalidating and refetching for conversation:', conversationId);
+      // Clear local messages to avoid showing stale data
+      setLocalMessages([]);
+      // Clear admin cache for fresh data
+      adminCacheRef.current.clear();
+      // Invalidate to clear cached data
+      invalidateMessages(conversationId);
+      // Then refetch to get fresh data
+      refetch();
+    }
+  }, [conversationId, enabled, invalidateMessages, refetch]);
+
+  // Log query results for debugging
+  useEffect(() => {
+    console.log('[useChatMessages] Query state - isLoading:', isLoading, 'messagesData length:', messagesData?.length ?? 0, 'error:', queryError, 'dataUpdatedAt:', dataUpdatedAt);
+  }, [isLoading, messagesData, queryError, dataUpdatedAt]);
+
+  // Sync query data to local state with admin message enrichment and attachment association
+  useEffect(() => {
+    console.log('[useChatMessages] Syncing messages - messagesData:', messagesData?.length ?? 0, 'items');
+    if (!messagesData || !Array.isArray(messagesData)) {
+      console.log('[useChatMessages] No messagesData to sync');
+      return;
+    }
 
     const processMessages = async () => {
       // Find unique admin IDs that need to be fetched
@@ -148,27 +178,105 @@ export function useChatMessages({
         await Promise.all(fetchPromises);
       }
 
+      // Fetch ALL attachments for this conversation to handle unlinked ones
+      const { data: allAttachments } = await supabase
+        .from('chat_attachments')
+        .select(`
+          id, conversation_id, message_id, sender_id, file_name, file_type,
+          file_path, file_size, status, rejected_reason, created_at
+        `)
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
+
+      // Associate unlinked attachments to messages by time proximity
+      const assignedAttachmentIds = new Set<string>();
+      const messagesWithAttachments = messagesData.map((msg: any) => {
+        // First, keep any attachments already linked via message_id
+        let msgAttachments = (allAttachments || []).filter(
+          (a: any) => a.message_id === msg.id && !assignedAttachmentIds.has(a.id)
+        );
+
+        // Mark these as assigned
+        msgAttachments.forEach((a: any) => assignedAttachmentIds.add(a.id));
+
+        // Fallback: associate by time proximity for messages without linked attachments
+        if (msgAttachments.length === 0) {
+          const msgContent = msg.content?.trim() || '';
+          const isLikelyAttachmentMessage =
+            msgContent === '' ||
+            msgContent.length < 30 ||
+            msgContent.includes('Anexo enviado');
+
+          if (isLikelyAttachmentMessage) {
+            const msgTime = new Date(msg.created_at).getTime();
+            msgAttachments = (allAttachments || []).filter((a: any) => {
+              if (assignedAttachmentIds.has(a.id)) return false;
+              if (a.message_id !== null) return false;
+              const attTime = new Date(a.created_at).getTime();
+              const timeDiff = Math.abs(attTime - msgTime);
+              const senderMatch = a.sender_id === msg.sender_id;
+              return senderMatch && timeDiff < 10000; // 10 seconds window
+            });
+            msgAttachments.forEach((a: any) => assignedAttachmentIds.add(a.id));
+          }
+        }
+
+        return { ...msg, attachments: msgAttachments };
+      });
+
       // Enrich messages with admin sender info and is_own flag
-      const enrichedMessages = messagesData.map((msg: any) =>
+      const enrichedMessages = messagesWithAttachments.map((msg: any) =>
         enrichMessageWithAdminSender(msg, staff?.id || null, adminCacheRef.current)
       );
       setLocalMessages(enrichedMessages);
     };
 
     processMessages();
-  }, [messagesData, staff?.id]);
+  }, [messagesData, staff?.id, conversationId]);
 
   // Use shared mutation hooks
   const sendMutation = useSendMessage(supabase, staff?.id || '', staff?.organization_id ?? undefined);
   const deleteMutation = useDeleteMessage(supabase, staff?.id || '');
-  const markAsReadMutation = useMarkAsRead(supabase, staff?.id || '');
+  // Use the hook without defaultUserId to avoid closure issues
+  const markAsReadMutation = useMarkAsRead(supabase);
 
-  // Mark conversation as read when opened
+  // Track if we've already marked this conversation as read
+  const hasMarkedAsReadRef = useRef<string | null>(null);
+
+  // Mark conversation as read when opened (only once per conversation)
   useEffect(() => {
-    if (conversationId && staff?.id) {
-      markAsReadMutation.mutate(conversationId);
+    console.log('[useChatMessages] useEffect triggered - conversationId:', conversationId, 'staff?.id:', staff?.id, 'hasMarkedAsRead:', hasMarkedAsReadRef.current);
+
+    // Skip if already marked this conversation as read
+    if (hasMarkedAsReadRef.current === conversationId) {
+      console.log('[useChatMessages] Already marked as read, skipping');
+      return;
     }
-  }, [conversationId, staff?.id]);
+
+    if (conversationId && staff?.id) {
+      console.log('[useChatMessages] Calling markAsReadMutation.mutate with:', { conversationId, userId: staff.id });
+      hasMarkedAsReadRef.current = conversationId;
+
+      // Pass userId directly in the mutation params to avoid stale closure issues
+      markAsReadMutation.mutate(
+        { conversationId, userId: staff.id },
+        {
+          onSuccess: () => {
+            console.log('[useChatMessages] markAsReadMutation.onSuccess - calling refreshUnreadCount()');
+            // Refresh the unread count badge after marking as read
+            refreshUnreadCount();
+          },
+          onError: (error) => {
+            console.error('[useChatMessages] markAsReadMutation.onError:', error);
+            // Reset so it can retry
+            hasMarkedAsReadRef.current = null;
+          },
+        }
+      );
+    } else {
+      console.log('[useChatMessages] Skipping markAsRead - missing conversationId or staff.id');
+    }
+  }, [conversationId, staff?.id, refreshUnreadCount, markAsReadMutation]);
 
   // Handle realtime attachment status changes
   const handleAttachmentStatusChange = useCallback(
@@ -215,6 +323,18 @@ export function useChatMessages({
   // Subscribe to attachment status changes
   useAttachmentRealtime(supabase, conversationId, handleAttachmentStatusChange);
 
+  // Store refs for functions used in realtime callbacks to avoid stale closures
+  const markAsReadRef = useRef(markAsReadMutation.mutate);
+  const refreshUnreadCountRef = useRef(refreshUnreadCount);
+  const staffIdRef = useRef(staff?.id);
+
+  // Keep refs updated
+  useEffect(() => {
+    markAsReadRef.current = markAsReadMutation.mutate;
+    refreshUnreadCountRef.current = refreshUnreadCount;
+    staffIdRef.current = staff?.id;
+  });
+
   // Subscribe to new messages via Realtime
   useEffect(() => {
     if (!conversationId) return;
@@ -259,8 +379,42 @@ export function useChatMessages({
               }
             }
 
+            // Check if message might have attachments but they weren't loaded (message_id not yet linked)
+            // This handles the race condition where attachments are uploaded before message_id is linked
+            let messageAttachments = newMsg.attachments || [];
+            const msgContent = newMsg.content?.trim() || '';
+            const isLikelyAttachmentMessage =
+              msgContent === '' ||
+              msgContent.length < 30 ||
+              msgContent.includes('Anexo enviado');
+
+            if (messageAttachments.length === 0 && isLikelyAttachmentMessage && newMsg.sender_id) {
+              const msgTime = new Date(newMsg.created_at).getTime();
+              const { data: attachmentsData } = await supabase
+                .from('chat_attachments')
+                .select(`
+                  id, conversation_id, message_id, sender_id, file_name, file_type,
+                  file_path, file_size, status, rejected_reason, created_at
+                `)
+                .eq('conversation_id', conversationId)
+                .eq('sender_id', newMsg.sender_id)
+                .is('message_id', null)
+                .gte('created_at', new Date(msgTime - 10000).toISOString())
+                .lte('created_at', new Date(msgTime + 10000).toISOString());
+
+              if (attachmentsData?.length) {
+                messageAttachments = attachmentsData;
+              }
+            }
+
+            // Get current staffId from ref
+            const currentStaffId = staffIdRef.current;
+
             // Enrich message with admin sender info if applicable
-            const enrichedMsg = enrichMessageWithAdminSender(newMsg, staff?.id || null, adminCacheRef.current);
+            const enrichedMsg = {
+              ...enrichMessageWithAdminSender(newMsg, currentStaffId || null, adminCacheRef.current),
+              attachments: messageAttachments,
+            };
 
             setLocalMessages((prev) => {
               // Avoid duplicates (from optimistic updates)
@@ -272,9 +426,16 @@ export function useChatMessages({
               return [...prev, enrichedMsg];
             });
 
-            // Mark as read
-            if (staff?.id) {
-              markAsReadMutation.mutate(conversationId);
+            // Mark as read and refresh unread count using refs
+            if (currentStaffId) {
+              markAsReadRef.current(
+                { conversationId, userId: currentStaffId },
+                {
+                  onSuccess: () => {
+                    refreshUnreadCountRef.current();
+                  },
+                }
+              );
             }
           }
         }
@@ -299,17 +460,18 @@ export function useChatMessages({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversationId, staff?.id]);
+  }, [conversationId]);
 
   // Send message handler
+  // Note: Empty content is allowed for attachment-only messages
   const sendMessage = useCallback(
     async (content: string) => {
-      if (!content.trim() || !conversationId || !staff?.id) return;
+      if (!conversationId || !staff?.id) return;
 
       try {
         await sendMutation.mutateAsync({
           conversationId,
-          content: content.trim(),
+          content: content,
         });
       } catch (error) {
         console.error('Error sending message:', error);

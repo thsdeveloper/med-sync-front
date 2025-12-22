@@ -59,8 +59,8 @@ export default function RequestsScreen() {
         .from('shift_swap_requests')
         .select(`
           *,
-          requester:medical_staff!requester_id (id, name, color, specialty, avatar_url),
-          target_staff:medical_staff!target_staff_id (id, name, color, specialty, avatar_url),
+          requester:medical_staff!requester_id (id, name, color, avatar_url, especialidade:especialidades(nome)),
+          target_staff:medical_staff!target_staff_id (id, name, color, avatar_url, especialidade:especialidades(nome)),
           original_shift:shifts!original_shift_id (
             id, start_time, end_time, status,
             sectors (name, color)
@@ -139,7 +139,7 @@ export default function RequestsScreen() {
                 {otherPerson?.name || 'Não definido'}
               </Text>
               <Text style={styles.requestSpecialty}>
-                {otherPerson?.specialty || 'Médico(a)'}
+                {otherPerson?.especialidade?.nome || 'Médico(a)'}
               </Text>
             </View>
             <View

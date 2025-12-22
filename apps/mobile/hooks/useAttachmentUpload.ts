@@ -324,3 +324,57 @@ export async function linkAttachmentsToMessage(
     return false;
   }
 }
+
+/**
+ * Helper function to delete a pending attachment
+ * Only works for attachments with status 'pending'
+ */
+export async function deleteAttachment(
+  attachmentId: string,
+  filePath: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // First, verify the attachment exists and is pending
+    const { data: attachment, error: fetchError } = await supabase
+      .from('chat_attachments')
+      .select('id, status, sender_id')
+      .eq('id', attachmentId)
+      .single();
+
+    if (fetchError) {
+      throw new Error('Anexo não encontrado');
+    }
+
+    if (attachment.status !== 'pending') {
+      throw new Error('Apenas anexos pendentes podem ser excluídos');
+    }
+
+    // Delete from storage
+    const { error: storageError } = await supabase.storage
+      .from('chat-documents')
+      .remove([filePath]);
+
+    if (storageError) {
+      console.error('Error deleting from storage:', storageError);
+      // Continue even if storage delete fails - the DB record is more important
+    }
+
+    // Delete the attachment record
+    const { error: deleteError } = await supabase
+      .from('chat_attachments')
+      .delete()
+      .eq('id', attachmentId);
+
+    if (deleteError) {
+      throw deleteError;
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting attachment:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Erro ao excluir anexo',
+    };
+  }
+}

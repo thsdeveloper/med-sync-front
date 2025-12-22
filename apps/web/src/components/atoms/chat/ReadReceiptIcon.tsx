@@ -1,7 +1,7 @@
 'use client';
 
 import { memo } from 'react';
-import { Check, CheckCheck } from 'lucide-react';
+import { Check, CheckCheck, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type ReadStatus = 'sent' | 'delivered' | 'read';
@@ -15,7 +15,7 @@ interface ReadReceiptIconProps {
  * ReadReceiptIcon - Shows message delivery/read status
  * - sent: Single gray check
  * - delivered: Double gray checks
- * - read: Double blue checks
+ * - read: Eye icon (blue)
  */
 export const ReadReceiptIcon = memo(function ReadReceiptIcon({
   status,
@@ -40,7 +40,7 @@ export const ReadReceiptIcon = memo(function ReadReceiptIcon({
       );
     case 'read':
       return (
-        <CheckCheck
+        <Eye
           className={cn(baseClassName, 'text-primary')}
           aria-label="Mensagem lida"
         />

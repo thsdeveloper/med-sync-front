@@ -47,8 +47,8 @@ export default function SwapDetailScreen() {
         .from('shift_swap_requests')
         .select(`
           *,
-          requester:medical_staff!shift_swap_requests_requester_id_fkey (id, name, color, specialty, avatar_url),
-          target_staff:medical_staff!shift_swap_requests_target_staff_id_fkey (id, name, color, specialty, avatar_url),
+          requester:medical_staff!shift_swap_requests_requester_id_fkey (id, name, color, avatar_url, especialidade:especialidades(nome)),
+          target_staff:medical_staff!shift_swap_requests_target_staff_id_fkey (id, name, color, avatar_url, especialidade:especialidades(nome)),
           original_shift:shifts!shift_swap_requests_original_shift_id_fkey (
             id, start_time, end_time, status,
             sectors (name, color)
@@ -357,7 +357,7 @@ export default function SwapDetailScreen() {
             <View style={styles.personInfo}>
               <Text style={styles.personName}>{request.requester?.name}</Text>
               <Text style={styles.personSpecialty}>
-                {request.requester?.specialty || 'Médico(a)'}
+                {request.requester?.especialidade?.nome || 'Médico(a)'}
               </Text>
             </View>
             {isRequester && (
@@ -382,7 +382,7 @@ export default function SwapDetailScreen() {
               <View style={styles.personInfo}>
                 <Text style={styles.personName}>{request.target_staff.name}</Text>
                 <Text style={styles.personSpecialty}>
-                  {request.target_staff.specialty || 'Médico(a)'}
+                  {request.target_staff?.especialidade?.nome || 'Médico(a)'}
                 </Text>
               </View>
               {isTargetStaff && (

@@ -25,7 +25,9 @@ import AttachmentPicker from '@/components/molecules/AttachmentPicker';
 import AttachmentPreview from '@/components/molecules/AttachmentPreview';
 import AttachmentDisplay from '@/components/molecules/AttachmentDisplay';
 import ImageViewer from '@/components/organisms/ImageViewer';
-import { useAttachmentUpload, linkAttachmentsToMessage } from '@/hooks/useAttachmentUpload';
+import { ReadReceiptIcon } from '@/components/atoms/ReadReceiptIcon';
+import { useReadReceipts } from '@/hooks/useReadReceipts';
+import { useAttachmentUpload, linkAttachmentsToMessage, deleteAttachment } from '@/hooks/useAttachmentUpload';
 import { useAttachmentDownload } from '@/hooks/useAttachmentDownload';
 import { useChatMessages } from '@/hooks/useChatMessages';
 import * as Sharing from 'expo-sharing';
@@ -43,8 +45,14 @@ export default function ChatConversationScreen() {
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<{ uri: string; attachment: ChatAttachment } | null>(null);
   const [conversationLoading, setConversationLoading] = useState(true);
+  const [otherParticipantLastReadAt, setOtherParticipantLastReadAt] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const inputRef = useRef<TextInput>(null);
+
+  // Hook to determine read status for messages
+  const { getReadStatus } = useReadReceipts({
+    participantLastReadAt: otherParticipantLastReadAt,
+  });
 
   // Use shared chat messages hook
   const {
@@ -82,7 +90,7 @@ export default function ChatConversationScreen() {
 
   // Load conversation details only (messages handled by hook)
   const loadConversation = useCallback(async () => {
-    if (!id) return;
+    if (!id || !staff?.id) return;
 
     try {
       // Load conversation details with organization for support chats
@@ -92,7 +100,12 @@ export default function ChatConversationScreen() {
           *,
           participants:chat_participants (
             staff_id,
+            last_read_at,
             staff:medical_staff (id, name, color, avatar_url)
+          ),
+          admin_participants:chat_admin_participants (
+            user_id,
+            last_read_at
           ),
           organization:organizations (id, name, logo_url)
         `)
@@ -101,17 +114,89 @@ export default function ChatConversationScreen() {
 
       if (convData) {
         setConversation(convData);
+
+        // For support conversations, check admin's last_read_at
+        // For staff conversations, check other staff's last_read_at
+        const isSupport = convData.conversation_type === 'support';
+
+        if (isSupport && convData.admin_participants?.length > 0) {
+          // Get the most recent admin read time
+          const adminReadTimes = convData.admin_participants
+            .filter((ap: any) => ap.last_read_at)
+            .map((ap: any) => new Date(ap.last_read_at).getTime());
+
+          if (adminReadTimes.length > 0) {
+            const mostRecentRead = new Date(Math.max(...adminReadTimes)).toISOString();
+            setOtherParticipantLastReadAt(mostRecentRead);
+          }
+        } else {
+          // Find the other staff participant's last_read_at
+          const otherParticipant = convData.participants?.find(
+            (p: any) => p.staff_id !== staff.id
+          );
+          if (otherParticipant?.last_read_at) {
+            setOtherParticipantLastReadAt(otherParticipant.last_read_at);
+          }
+        }
       }
     } catch (error) {
       console.error('Error loading conversation:', error);
     } finally {
       setConversationLoading(false);
     }
-  }, [id]);
+  }, [id, staff?.id]);
 
   useEffect(() => {
     loadConversation();
   }, [loadConversation]);
+
+  // Subscribe to read receipt changes (both staff and admin participants)
+  useEffect(() => {
+    if (!id || !staff?.id) return;
+
+    const channel = supabase
+      .channel(`read-receipts-${id}`)
+      // Listen for staff participant updates
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_participants',
+          filter: `conversation_id=eq.${id}`,
+        },
+        (payload) => {
+          // Only update if it's the other participant (not current user)
+          const updated = payload.new as { staff_id: string; last_read_at: string | null };
+          if (updated.staff_id !== staff.id && updated.last_read_at) {
+            console.log('[ReadReceipts] Staff participant read at:', updated.last_read_at);
+            setOtherParticipantLastReadAt(updated.last_read_at);
+          }
+        }
+      )
+      // Listen for admin participant updates (for support conversations)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT or UPDATE
+          schema: 'public',
+          table: 'chat_admin_participants',
+          filter: `conversation_id=eq.${id}`,
+        },
+        (payload) => {
+          const updated = payload.new as { user_id: string; last_read_at: string | null };
+          if (updated.last_read_at) {
+            console.log('[ReadReceipts] Admin read at:', updated.last_read_at);
+            setOtherParticipantLastReadAt(updated.last_read_at);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, staff?.id]);
 
   // NOTE: Real-time message and attachment status subscriptions are now handled by useChatMessages hook
 
@@ -165,6 +250,38 @@ export default function ChatConversationScreen() {
     setSelectedImage(null);
   }, []);
 
+  /**
+   * Handle delete attachment - only for pending attachments
+   */
+  const handleDeleteAttachment = useCallback(
+    async (attachment: ChatAttachment) => {
+      Alert.alert(
+        'Excluir Anexo',
+        `Deseja excluir "${attachment.file_name}"? Esta ação não pode ser desfeita.`,
+        [
+          {
+            text: 'Cancelar',
+            style: 'cancel',
+          },
+          {
+            text: 'Excluir',
+            style: 'destructive',
+            onPress: async () => {
+              const result = await deleteAttachment(attachment.id, attachment.file_path);
+              if (result.success) {
+                // Refetch messages to update the UI
+                refetchMessages();
+              } else {
+                Alert.alert('Erro', result.error || 'Não foi possível excluir o anexo.');
+              }
+            },
+          },
+        ]
+      );
+    },
+    [refetchMessages]
+  );
+
   const sendMessage = async () => {
     if ((!newMessage.trim() && selectedFiles.length === 0) || !id || !staff?.id || isSending || isUploading) {
       return;
@@ -212,8 +329,8 @@ export default function ChatConversationScreen() {
       }
 
       // Send message using shared hook mutation
-      const messageToSend = messageContent || '📎 Anexo enviado';
-      await sendMessageMutation(messageToSend);
+      // If only attachments (no text), send empty string - attachments will be displayed visually
+      await sendMessageMutation(messageContent);
 
       // Link attachments to message after it's created
       // Note: The message ID is handled internally by realtime - attachments will be linked
@@ -314,9 +431,12 @@ export default function ChatConversationScreen() {
             {!isOwn && conversation?.type === 'group' && (
               <Text style={styles.senderName}>{item.sender?.name}</Text>
             )}
-            <Text style={[styles.messageText, isOwn && styles.ownMessageText]}>
-              {item.content}
-            </Text>
+            {/* Only show text if message has content (not just attachments) */}
+            {item.content && item.content.trim() !== '' && (
+              <Text style={[styles.messageText, isOwn && styles.ownMessageText]}>
+                {item.content}
+              </Text>
+            )}
 
             {/* Display attachments if present */}
             {item.attachments && item.attachments.length > 0 && (
@@ -325,12 +445,21 @@ export default function ChatConversationScreen() {
                 onImagePress={handleImagePress}
                 onPdfPress={handlePdfPress}
                 isOwnMessage={isOwn}
+                onDelete={handleDeleteAttachment}
               />
             )}
 
-            <Text style={[styles.messageTime, isOwn && styles.ownMessageTime]}>
-              {format(parseISO(item.created_at), 'HH:mm')}
-            </Text>
+            <View style={styles.messageFooter}>
+              <Text style={[styles.messageTime, isOwn && styles.ownMessageTime]}>
+                {format(parseISO(item.created_at), 'HH:mm')}
+              </Text>
+              {isOwn && (
+                <ReadReceiptIcon
+                  status={getReadStatus(item.created_at)}
+                  size={14}
+                />
+              )}
+            </View>
           </View>
         </View>
       </>
@@ -542,11 +671,16 @@ const styles = StyleSheet.create({
   ownMessageText: {
     color: '#FFFFFF',
   },
+  messageFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: 4,
+    gap: 4,
+  },
   messageTime: {
     fontSize: 10,
     color: '#9CA3AF',
-    alignSelf: 'flex-end',
-    marginTop: 4,
   },
   ownMessageTime: {
     color: 'rgba(255, 255, 255, 0.7)',

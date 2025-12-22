@@ -37,7 +37,7 @@ import {
   StatusBar,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -83,6 +83,7 @@ export default function ImageViewer({
   attachment,
   onClose,
 }: ImageViewerProps) {
+  const insets = useSafeAreaInsets();
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [showInfo, setShowInfo] = useState(true);
@@ -132,20 +133,28 @@ export default function ImageViewer({
     >
       <StatusBar barStyle="light-content" backgroundColor="rgba(0, 0, 0, 0.95)" />
       <View style={styles.container}>
-        {/* Header */}
-        <SafeAreaView edges={['top']} style={styles.header}>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+        {/* Header with safe area padding */}
+        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={onClose}
+            hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+          >
             <Ionicons name="close" size={28} color="#FFFFFF" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.infoButton} onPress={toggleInfo}>
+          <TouchableOpacity
+            style={styles.infoButton}
+            onPress={toggleInfo}
+            hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+          >
             <Ionicons
               name={showInfo ? 'information-circle' : 'information-circle-outline'}
               size={28}
               color="#FFFFFF"
             />
           </TouchableOpacity>
-        </SafeAreaView>
+        </View>
 
         {/* Image Content */}
         <View style={styles.imageContainer}>
@@ -177,7 +186,7 @@ export default function ImageViewer({
 
         {/* Image Info Footer */}
         {showInfo && !hasError && (
-          <SafeAreaView edges={['bottom']} style={styles.footer}>
+          <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
             <View style={styles.infoContainer}>
               <View style={styles.infoRow}>
                 <Ionicons name="document-text-outline" size={16} color="#D1D5DB" />
@@ -201,7 +210,7 @@ export default function ImageViewer({
                 <Text style={styles.infoText}>{formatDate(attachment.created_at)}</Text>
               </View>
             </View>
-          </SafeAreaView>
+          </View>
         )}
       </View>
     </Modal>
