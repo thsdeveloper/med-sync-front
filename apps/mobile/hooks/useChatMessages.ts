@@ -11,7 +11,7 @@
  * - Debounces markAsRead calls to prevent excessive DB writes
  */
 
-import { useEffect, useCallback, useRef, useMemo } from 'react';
+import { useEffect, useCallback, useRef, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -166,17 +166,78 @@ export function useChatMessages({
     staleTime: queryConfig.realtime.staleTime, // Fase 6: Use 30s instead of 0
   });
 
-  // Process and enrich messages from query data
+  // Fetch all attachments for this conversation (including orphans with message_id = NULL)
+  const [allAttachments, setAllAttachments] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!conversationId || !enabled) return;
+
+    const fetchAttachments = async () => {
+      const { data } = await supabase
+        .from('chat_attachments')
+        .select(`
+          id, conversation_id, message_id, sender_id, file_name, file_type,
+          file_path, file_size, status, rejected_reason, created_at
+        `)
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
+
+      if (data) {
+        setAllAttachments(data);
+      }
+    };
+
+    fetchAttachments();
+  }, [conversationId, enabled, dataUpdatedAt]); // Re-fetch when messages update
+
+  // Process and enrich messages from query data with attachment association
   const messages = useMemo<EnrichedMessage[]>(() => {
     if (!messagesData || !Array.isArray(messagesData)) {
       return [];
     }
 
+    // Associate attachments to messages (similar to web implementation)
+    const assignedAttachmentIds = new Set<string>();
+
+    const messagesWithAttachments = messagesData.map((msg: any) => {
+      // First, keep any attachments already linked via message_id
+      let msgAttachments = allAttachments.filter(
+        (a) => a.message_id === msg.id && !assignedAttachmentIds.has(a.id)
+      );
+
+      // Mark these as assigned
+      msgAttachments.forEach((a) => assignedAttachmentIds.add(a.id));
+
+      // Fallback: associate by time proximity for messages without linked attachments
+      if (msgAttachments.length === 0) {
+        const msgContent = msg.content?.trim() || '';
+        const isLikelyAttachmentMessage =
+          msgContent === '' ||
+          msgContent.length < 30 ||
+          msgContent.includes('Anexo enviado');
+
+        if (isLikelyAttachmentMessage) {
+          const msgTime = new Date(msg.created_at).getTime();
+          msgAttachments = allAttachments.filter((a) => {
+            if (assignedAttachmentIds.has(a.id)) return false;
+            if (a.message_id !== null) return false;
+            const attTime = new Date(a.created_at).getTime();
+            const timeDiff = Math.abs(attTime - msgTime);
+            const senderMatch = a.sender_id === msg.sender_id;
+            return senderMatch && timeDiff < 10000; // 10 seconds window
+          });
+          msgAttachments.forEach((a) => assignedAttachmentIds.add(a.id));
+        }
+      }
+
+      return { ...msg, attachments: msgAttachments };
+    });
+
     // Enrich messages with is_own flag and admin sender info
-    return messagesData.map((msg: any) =>
+    return messagesWithAttachments.map((msg: any) =>
       enrichMessageWithAdminSender(msg, staff?.id || null, adminCacheRef.current)
     );
-  }, [messagesData, staff?.id]);
+  }, [messagesData, staff?.id, allAttachments]);
 
   // Handle conversation transition with proper async/await (Fase 1: fix race condition)
   useEffect(() => {
@@ -378,6 +439,7 @@ export function useChatMessages({
               sender:medical_staff (id, name, color, avatar_url),
               attachments:chat_attachments (
                 id,
+                sender_id,
                 file_name,
                 file_type,
                 file_path,

@@ -250,6 +250,7 @@ export async function getMessages(
       ),
       attachments:chat_attachments (
         id,
+        sender_id,
         file_name,
         file_type,
         file_path,
