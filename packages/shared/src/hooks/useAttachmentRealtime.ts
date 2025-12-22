@@ -26,7 +26,7 @@
  * ```
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import type { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
 import type { ChatAttachment } from '../schemas/chat.schema';
 
@@ -67,14 +67,15 @@ export function useAttachmentRealtime(
   const { enabled = true, onDelete } = options;
   const channelRef = useRef<RealtimeChannel | null>(null);
   const lastUpdateRef = useRef<{ id: string; status: string; timestamp: number } | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMountedRef = useRef(true);
 
-  useEffect(() => {
-    // Don't subscribe if disabled, no conversation ID, or no callbacks
-    if (!enabled || !conversationId || (!onStatusChange && !onDelete)) {
-      return;
+  // Function to create and subscribe to channel
+  const createChannel = useCallback(() => {
+    if (!conversationId || (!onStatusChange && !onDelete)) {
+      return null;
     }
 
-    // Create channel with unique name for this conversation
     const channelName = `chat_attachments:${conversationId}`;
 
     // Build channel with event subscriptions
@@ -94,7 +95,6 @@ export function useAttachmentRealtime(
           const updatedAttachment = payload.new as ChatAttachment;
 
           // Deduplicate events: prevent processing same status change twice
-          // This can happen if both trigger notification and realtime fire
           const now = Date.now();
           const lastUpdate = lastUpdateRef.current;
           if (
@@ -103,7 +103,6 @@ export function useAttachmentRealtime(
             lastUpdate.status === updatedAttachment.status &&
             now - lastUpdate.timestamp < 1000 // Within 1 second
           ) {
-            // Skip duplicate event
             return;
           }
 
@@ -140,32 +139,91 @@ export function useAttachmentRealtime(
       );
     }
 
-    // Subscribe to the channel
-    channel.subscribe((status) => {
-        // Log subscription status for debugging
-        if (status === 'SUBSCRIBED') {
-          console.log(`[useAttachmentRealtime] Subscribed to ${channelName}`);
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error(`[useAttachmentRealtime] Channel error for ${channelName}`);
-        } else if (status === 'TIMED_OUT') {
-          console.warn(`[useAttachmentRealtime] Subscription timed out for ${channelName}`);
-        } else if (status === 'CLOSED') {
-          console.log(`[useAttachmentRealtime] Channel closed for ${channelName}`);
-        }
-      });
+    return channel;
+  }, [supabase, conversationId, onStatusChange, onDelete]);
 
-    // Store channel ref for cleanup
-    channelRef.current = channel;
+  // Function to handle reconnection
+  const reconnect = useCallback(() => {
+    if (!isMountedRef.current || !enabled) return;
 
-    // Cleanup function: unsubscribe and remove channel
-    return () => {
-      if (channelRef.current) {
-        console.log(`[useAttachmentRealtime] Unsubscribing from ${channelName}`);
+    // Clear any pending reconnect timeout
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+
+    // Remove existing channel if any
+    if (channelRef.current) {
+      try {
         supabase.removeChannel(channelRef.current);
+      } catch (e) {
+        // Ignore errors when removing channel
+      }
+      channelRef.current = null;
+    }
+
+    // Create new channel
+    const channel = createChannel();
+    if (!channel) return;
+
+    const channelName = `chat_attachments:${conversationId}`;
+
+    // Subscribe with status handling
+    channel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log(`[useAttachmentRealtime] Subscribed to ${channelName}`);
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        // Log as warning instead of error (this is expected when coming back from background)
+        console.warn(`[useAttachmentRealtime] Channel ${status.toLowerCase()} for ${channelName}, will reconnect...`);
+
+        // Schedule reconnection after a delay
+        if (isMountedRef.current) {
+          reconnectTimeoutRef.current = setTimeout(() => {
+            reconnect();
+          }, 2000); // Wait 2 seconds before reconnecting
+        }
+      } else if (status === 'CLOSED') {
+        console.log(`[useAttachmentRealtime] Channel closed for ${channelName}`);
+      }
+    });
+
+    channelRef.current = channel;
+  }, [supabase, conversationId, enabled, createChannel]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    // Don't subscribe if disabled, no conversation ID, or no callbacks
+    if (!enabled || !conversationId || (!onStatusChange && !onDelete)) {
+      return;
+    }
+
+    // Initial subscription
+    reconnect();
+
+    // Cleanup function
+    return () => {
+      isMountedRef.current = false;
+
+      // Clear any pending reconnect timeout
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+
+      // Remove channel
+      if (channelRef.current) {
+        const channelName = `chat_attachments:${conversationId}`;
+        console.log(`[useAttachmentRealtime] Unsubscribing from ${channelName}`);
+        try {
+          supabase.removeChannel(channelRef.current);
+        } catch (e) {
+          // Ignore errors during cleanup
+        }
         channelRef.current = null;
       }
     };
-  }, [supabase, conversationId, onStatusChange, onDelete, enabled]);
+  }, [enabled, conversationId, onStatusChange, onDelete, reconnect, supabase]);
 
   // Return nothing - this is a side-effect only hook
   return null;

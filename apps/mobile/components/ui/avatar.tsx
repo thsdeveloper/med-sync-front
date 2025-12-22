@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { Image } from 'expo-image';
 
@@ -13,6 +13,11 @@ interface AvatarProps {
 export function Avatar({ name, color = '#0066CC', size = 'md', style, imageUrl }: AvatarProps) {
   const [imageError, setImageError] = useState(false);
   const initials = getInitials(name);
+
+  // Reset error state when imageUrl changes
+  useEffect(() => {
+    setImageError(false);
+  }, [imageUrl]);
 
   // Show image if URL is provided and no error occurred
   const shouldShowImage = imageUrl && !imageError;

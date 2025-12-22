@@ -37,6 +37,15 @@ export function UnreadCountProvider({ children }: { children: React.ReactNode })
       return;
     }
 
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(staff.id)) {
+      console.error('[UnreadCount] Invalid staff ID format:', staff.id);
+      setTotalUnreadCount(0);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       console.log('[UnreadCount] Fetching unread count for staff:', staff.id);
 
@@ -45,7 +54,21 @@ export function UnreadCountProvider({ children }: { children: React.ReactNode })
       });
 
       if (error) {
-        console.error('[UnreadCount] Error fetching unread count:', error);
+        // Only log as error if it's not a known transient issue
+        const isTransientError = error.message?.includes('Failed to fetch') ||
+                                 error.message?.includes('network') ||
+                                 error.code === 'PGRST301'; // JWT expired
+
+        if (isTransientError) {
+          console.warn('[UnreadCount] Transient error (will retry):', error.message);
+        } else {
+          console.error('[UnreadCount] Error fetching unread count:', {
+            message: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+          });
+        }
         return;
       }
 

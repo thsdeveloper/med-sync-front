@@ -152,9 +152,8 @@ export function useChatMessages({
 
   // Sync query data to local state with admin message enrichment and attachment association
   useEffect(() => {
-    console.log('[useChatMessages] Syncing messages - messagesData:', messagesData?.length ?? 0, 'items');
+    console.log('[useChatMessages] Syncing messages - count:', messagesData?.length ?? 0);
     if (!messagesData || !Array.isArray(messagesData)) {
-      console.log('[useChatMessages] No messagesData to sync');
       return;
     }
 

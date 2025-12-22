@@ -272,7 +272,7 @@ export default function AttachmentDisplay({
             </View>
           )}
 
-          {attachment.status !== 'accepted' && (
+          {attachment.status === 'pending' && (
             <View style={styles.imageOverlay}>
               {renderStatusBadge(attachment.status)}
             </View>
@@ -294,7 +294,9 @@ export default function AttachmentDisplay({
             onPress={() => onDelete(attachment)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Ionicons name="close-circle" size={24} color="#EF4444" />
+            <View style={styles.trashIconContainer}>
+              <Ionicons name="trash-outline" size={14} color="#FFFFFF" />
+            </View>
           </TouchableOpacity>
         )}
 
@@ -302,6 +304,13 @@ export default function AttachmentDisplay({
         {isOwnMessage && attachment.status === 'accepted' && (
           <View style={styles.approvedBadge}>
             <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+          </View>
+        )}
+
+        {/* Rejected X mark for rejected attachments (same style as approved) */}
+        {attachment.status === 'rejected' && (
+          <View style={styles.rejectedBadge}>
+            <Ionicons name="close-circle" size={24} color="#EF4444" />
           </View>
         )}
       </View>
@@ -344,15 +353,7 @@ export default function AttachmentDisplay({
             </Text>
           </View>
 
-          {attachment.status !== 'accepted' && renderStatusBadge(attachment.status)}
-
-          {attachment.status === 'rejected' && attachment.rejected_reason && (
-            <View style={styles.pdfRejectedReason}>
-              <Text style={styles.rejectedReasonText} numberOfLines={2}>
-                {attachment.rejected_reason}
-              </Text>
-            </View>
-          )}
+          {attachment.status === 'pending' && renderStatusBadge(attachment.status)}
         </TouchableOpacity>
 
         {/* Delete button for own pending attachments */}
@@ -362,7 +363,9 @@ export default function AttachmentDisplay({
             onPress={() => onDelete(attachment)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Ionicons name="close-circle" size={24} color="#EF4444" />
+            <View style={styles.trashIconContainer}>
+              <Ionicons name="trash-outline" size={14} color="#FFFFFF" />
+            </View>
           </TouchableOpacity>
         )}
 
@@ -370,6 +373,13 @@ export default function AttachmentDisplay({
         {isOwnMessage && attachment.status === 'accepted' && (
           <View style={styles.approvedBadgePdf}>
             <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+          </View>
+        )}
+
+        {/* Rejected X mark for rejected attachments (same style as approved) */}
+        {attachment.status === 'rejected' && (
+          <View style={styles.rejectedBadgePdf}>
+            <Ionicons name="close-circle" size={24} color="#EF4444" />
           </View>
         )}
       </View>
@@ -444,6 +454,36 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     zIndex: 10,
+  },
+
+  // Rejected badge for images (same style as approved, positioned at top-right corner)
+  rejectedBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    zIndex: 10,
+  },
+
+  // Rejected badge for PDFs (same style as approved, positioned at top-right corner)
+  rejectedBadgePdf: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    zIndex: 10,
+  },
+
+  // Trash icon container (red circle with white trash icon)
+  trashIconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   // Image Attachment Styles
