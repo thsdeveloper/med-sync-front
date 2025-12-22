@@ -128,6 +128,7 @@ export function UnreadCountProvider({ children }: { children: React.ReactNode })
     console.log('[UnreadCount] Setting up subscriptions for staff:', staffId);
 
     // Subscribe to new messages in chat_messages table
+    // Fase 3: Use incremental update instead of full refetch
     const messagesChannel = supabase
       .channel(`unread-messages-${staffId}`)
       .on(
@@ -140,11 +141,14 @@ export function UnreadCountProvider({ children }: { children: React.ReactNode })
         (payload) => {
           console.log('[UnreadCount] New message received:', payload);
 
-          // Only refetch if the message sender is not the current user
+          // Only increment if the message sender is not the current user
           const newRecord = payload.new as { sender_id?: string; admin_sender_id?: string };
           if (newRecord.sender_id !== staffId) {
-            console.log('[UnreadCount] Message from another user, refreshing count...');
-            fetchUnreadCount();
+            console.log('[UnreadCount] Message from another user, incrementing count...');
+            // Fase 3: Increment count locally instead of full refetch
+            if (isMountedRef.current) {
+              setTotalUnreadCount((prev) => prev + 1);
+            }
           }
         }
       )

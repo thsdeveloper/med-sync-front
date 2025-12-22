@@ -142,7 +142,7 @@ export function useAttachmentRealtime(
     return channel;
   }, [supabase, conversationId, onStatusChange, onDelete]);
 
-  // Function to handle reconnection
+  // Function to handle reconnection (Fase 5: simplified to prevent memory leaks)
   const reconnect = useCallback(() => {
     if (!isMountedRef.current || !enabled) return;
 
@@ -152,15 +152,20 @@ export function useAttachmentRealtime(
       reconnectTimeoutRef.current = null;
     }
 
-    // Remove existing channel if any
-    if (channelRef.current) {
+    // Remove existing channel if any - store reference before nulling
+    const existingChannel = channelRef.current;
+    channelRef.current = null;
+
+    if (existingChannel) {
       try {
-        supabase.removeChannel(channelRef.current);
+        supabase.removeChannel(existingChannel);
       } catch (e) {
         // Ignore errors when removing channel
       }
-      channelRef.current = null;
     }
+
+    // Double check we're still mounted after async operations
+    if (!isMountedRef.current) return;
 
     // Create new channel
     const channel = createChannel();
@@ -168,26 +173,33 @@ export function useAttachmentRealtime(
 
     const channelName = `chat_attachments:${conversationId}`;
 
+    // Store reference immediately to prevent orphan channels
+    channelRef.current = channel;
+
     // Subscribe with status handling
     channel.subscribe((status) => {
+      // Only process if this is still the current channel
+      if (channelRef.current !== channel) {
+        console.log(`[useAttachmentRealtime] Ignoring status for stale channel`);
+        return;
+      }
+
       if (status === 'SUBSCRIBED') {
         console.log(`[useAttachmentRealtime] Subscribed to ${channelName}`);
       } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        // Log as warning instead of error (this is expected when coming back from background)
-        console.warn(`[useAttachmentRealtime] Channel ${status.toLowerCase()} for ${channelName}, will reconnect...`);
+        console.warn(`[useAttachmentRealtime] Channel ${status.toLowerCase()} for ${channelName}`);
 
-        // Schedule reconnection after a delay
-        if (isMountedRef.current) {
+        // Only schedule reconnection if mounted and no pending timeout
+        if (isMountedRef.current && !reconnectTimeoutRef.current) {
           reconnectTimeoutRef.current = setTimeout(() => {
+            reconnectTimeoutRef.current = null;
             reconnect();
-          }, 2000); // Wait 2 seconds before reconnecting
+          }, 2000);
         }
       } else if (status === 'CLOSED') {
         console.log(`[useAttachmentRealtime] Channel closed for ${channelName}`);
       }
     });
-
-    channelRef.current = channel;
   }, [supabase, conversationId, enabled, createChannel]);
 
   useEffect(() => {

@@ -3,10 +3,17 @@
  *
  * Combines React Query with Supabase Realtime for optimal chat experience.
  * Uses shared hooks for mutations while maintaining realtime updates.
+ *
+ * ARCHITECTURE:
+ * - Uses React Query as single source of truth (no duplicate useState)
+ * - Updates cache directly via queryClient.setQueryData
+ * - Handles conversation transitions with isTransitioning state
+ * - Debounces markAsRead calls to prevent excessive DB writes
  */
 
-import { useEffect, useCallback, useState, useRef } from 'react';
+import { useEffect, useCallback, useRef, useMemo } from 'react';
 import { Alert } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/auth-provider';
 import { useUnreadCount } from '@/providers/unread-count-provider';
@@ -18,6 +25,7 @@ import {
   useAttachmentRealtime,
   useInvalidateChatQueries,
 } from '@medsync/shared/hooks';
+import { queryKeys, queryConfig } from '@medsync/shared/query';
 import type { MessageWithSender, ChatAttachment } from '@medsync/shared';
 
 // Extended message type that includes admin_sender_id from database
@@ -36,6 +44,9 @@ interface UseChatMessagesOptions {
   conversationId: string;
   enabled?: boolean;
 }
+
+// Debounce delay for markAsRead calls (Fase 4)
+const MARK_AS_READ_DEBOUNCE_MS = 500;
 
 /**
  * Fetches admin user info from database
@@ -106,6 +117,11 @@ interface UseChatMessagesReturn {
 /**
  * Hook that combines shared React Query hooks with Realtime subscriptions
  * for a seamless chat experience on mobile.
+ *
+ * Key improvements:
+ * - Uses React Query as single source of truth (no duplicate useState)
+ * - Handles conversation transitions with isTransitioning ref
+ * - Debounces markAsRead calls
  */
 export function useChatMessages({
   conversationId,
@@ -114,10 +130,20 @@ export function useChatMessages({
   const { staff } = useAuth();
   const { refreshUnreadCount } = useUnreadCount();
   const { invalidateMessages } = useInvalidateChatQueries();
-  const [localMessages, setLocalMessages] = useState<EnrichedMessage[]>([]);
+  const queryClient = useQueryClient();
   const adminCacheRef = useRef<Map<string, AdminInfo>>(new Map());
 
-  // Use shared query hook for initial data
+  // Transition state ref to prevent race conditions during conversation switches
+  const isTransitioningRef = useRef(false);
+  const currentConversationRef = useRef<string | null>(null);
+
+  // Query key for this conversation's messages
+  const queryKey = useMemo(
+    () => queryKeys.chat.messages.list(conversationId, {}),
+    [conversationId]
+  );
+
+  // Use shared query hook for initial data (Fase 6: use queryConfig.realtime.staleTime)
   const {
     data: messagesData,
     isLoading,
@@ -125,163 +151,144 @@ export function useChatMessages({
     refetch,
     dataUpdatedAt,
   } = useMessages(supabase, conversationId, {
-    enabled: enabled && !!conversationId,
+    enabled: enabled && !!conversationId && !isTransitioningRef.current,
     limit: 100,
-    staleTime: 0,
+    staleTime: queryConfig.realtime.staleTime, // Fase 6: Use 30s instead of 0
   });
 
-  // Force invalidation and refetch when conversation changes to always get fresh data
-  useEffect(() => {
-    if (conversationId && enabled) {
-      console.log('[useChatMessages] Invalidating and refetching for conversation:', conversationId);
-      // Clear local messages to avoid showing stale data
-      setLocalMessages([]);
-      // Clear admin cache for fresh data
-      adminCacheRef.current.clear();
-      // Invalidate to clear cached data
-      invalidateMessages(conversationId);
-      // Then refetch to get fresh data
-      refetch();
+  // Process and enrich messages from query data
+  const messages = useMemo<EnrichedMessage[]>(() => {
+    if (!messagesData || !Array.isArray(messagesData)) {
+      return [];
     }
+
+    // Enrich messages with is_own flag and admin sender info
+    return messagesData.map((msg: any) =>
+      enrichMessageWithAdminSender(msg, staff?.id || null, adminCacheRef.current)
+    );
+  }, [messagesData, staff?.id]);
+
+  // Handle conversation transition with proper async/await (Fase 1: fix race condition)
+  useEffect(() => {
+    if (!conversationId || !enabled) return;
+
+    // Skip if same conversation
+    if (currentConversationRef.current === conversationId) return;
+
+    const switchConversation = async () => {
+      console.log('[useChatMessages] Switching to conversation:', conversationId);
+
+      // 1. Mark as transitioning to block realtime events
+      isTransitioningRef.current = true;
+
+      // 2. Clear admin cache for fresh data
+      adminCacheRef.current.clear();
+
+      // 3. Invalidate cache and wait for completion
+      await invalidateMessages(conversationId);
+
+      // 4. Refetch and wait for new data
+      await refetch();
+
+      // 5. Update current conversation ref
+      currentConversationRef.current = conversationId;
+
+      // 6. Re-enable realtime processing
+      isTransitioningRef.current = false;
+
+      console.log('[useChatMessages] Transition complete for:', conversationId);
+    };
+
+    switchConversation();
   }, [conversationId, enabled, invalidateMessages, refetch]);
 
   // Log query results for debugging
   useEffect(() => {
-    console.log('[useChatMessages] Query state - isLoading:', isLoading, 'messagesData length:', messagesData?.length ?? 0, 'error:', queryError, 'dataUpdatedAt:', dataUpdatedAt);
-  }, [isLoading, messagesData, queryError, dataUpdatedAt]);
-
-  // Sync query data to local state with admin message enrichment and attachment association
-  useEffect(() => {
-    console.log('[useChatMessages] Syncing messages - count:', messagesData?.length ?? 0);
-    if (!messagesData || !Array.isArray(messagesData)) {
-      return;
-    }
-
-    const processMessages = async () => {
-      // Find unique admin IDs that need to be fetched
-      const adminIds = new Set<string>();
-      messagesData.forEach((msg: any) => {
-        if (msg.admin_sender_id && !msg.sender_id && !adminCacheRef.current.has(msg.admin_sender_id)) {
-          adminIds.add(msg.admin_sender_id);
-        }
-      });
-
-      // Fetch admin info for unknown admins
-      if (adminIds.size > 0) {
-        const fetchPromises = Array.from(adminIds).map(async (adminId) => {
-          const info = await fetchAdminInfo(adminId);
-          if (info) {
-            adminCacheRef.current.set(adminId, info);
-          }
-        });
-        await Promise.all(fetchPromises);
-      }
-
-      // Fetch ALL attachments for this conversation to handle unlinked ones
-      const { data: allAttachments } = await supabase
-        .from('chat_attachments')
-        .select(`
-          id, conversation_id, message_id, sender_id, file_name, file_type,
-          file_path, file_size, status, rejected_reason, created_at
-        `)
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true });
-
-      // Associate unlinked attachments to messages by time proximity
-      const assignedAttachmentIds = new Set<string>();
-      const messagesWithAttachments = messagesData.map((msg: any) => {
-        // First, keep any attachments already linked via message_id
-        let msgAttachments = (allAttachments || []).filter(
-          (a: any) => a.message_id === msg.id && !assignedAttachmentIds.has(a.id)
-        );
-
-        // Mark these as assigned
-        msgAttachments.forEach((a: any) => assignedAttachmentIds.add(a.id));
-
-        // Fallback: associate by time proximity for messages without linked attachments
-        if (msgAttachments.length === 0) {
-          const msgContent = msg.content?.trim() || '';
-          const isLikelyAttachmentMessage =
-            msgContent === '' ||
-            msgContent.length < 30 ||
-            msgContent.includes('Anexo enviado');
-
-          if (isLikelyAttachmentMessage) {
-            const msgTime = new Date(msg.created_at).getTime();
-            msgAttachments = (allAttachments || []).filter((a: any) => {
-              if (assignedAttachmentIds.has(a.id)) return false;
-              if (a.message_id !== null) return false;
-              const attTime = new Date(a.created_at).getTime();
-              const timeDiff = Math.abs(attTime - msgTime);
-              const senderMatch = a.sender_id === msg.sender_id;
-              return senderMatch && timeDiff < 10000; // 10 seconds window
-            });
-            msgAttachments.forEach((a: any) => assignedAttachmentIds.add(a.id));
-          }
-        }
-
-        return { ...msg, attachments: msgAttachments };
-      });
-
-      // Enrich messages with admin sender info and is_own flag
-      const enrichedMessages = messagesWithAttachments.map((msg: any) =>
-        enrichMessageWithAdminSender(msg, staff?.id || null, adminCacheRef.current)
-      );
-      setLocalMessages(enrichedMessages);
-    };
-
-    processMessages();
-  }, [messagesData, staff?.id, conversationId]);
+    console.log('[useChatMessages] Query state - isLoading:', isLoading, 'messages length:', messages.length, 'error:', queryError, 'dataUpdatedAt:', dataUpdatedAt);
+  }, [isLoading, messages.length, queryError, dataUpdatedAt]);
 
   // Use shared mutation hooks
   const sendMutation = useSendMessage(supabase, staff?.id || '', staff?.organization_id ?? undefined);
   const deleteMutation = useDeleteMessage(supabase, staff?.id || '');
-  // Use the hook without defaultUserId to avoid closure issues
   const markAsReadMutation = useMarkAsRead(supabase);
 
   // Track if we've already marked this conversation as read
   const hasMarkedAsReadRef = useRef<string | null>(null);
+  // Debounce timer ref for markAsRead (Fase 4)
+  const markAsReadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Debounced markAsRead function (Fase 4: prevent excessive DB calls)
+  const debouncedMarkAsRead = useCallback(
+    (convId: string, userId: string) => {
+      // Clear any pending timeout
+      if (markAsReadTimeoutRef.current) {
+        clearTimeout(markAsReadTimeoutRef.current);
+      }
+
+      // Schedule the markAsRead call
+      markAsReadTimeoutRef.current = setTimeout(() => {
+        markAsReadMutation.mutate(
+          { conversationId: convId, userId },
+          {
+            onSuccess: () => {
+              console.log('[useChatMessages] markAsRead success (debounced)');
+              refreshUnreadCount();
+            },
+            onError: (error) => {
+              console.error('[useChatMessages] markAsRead error:', error);
+            },
+          }
+        );
+      }, MARK_AS_READ_DEBOUNCE_MS);
+    },
+    [markAsReadMutation, refreshUnreadCount]
+  );
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (markAsReadTimeoutRef.current) {
+        clearTimeout(markAsReadTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Mark conversation as read when opened (only once per conversation)
   useEffect(() => {
-    console.log('[useChatMessages] useEffect triggered - conversationId:', conversationId, 'staff?.id:', staff?.id, 'hasMarkedAsRead:', hasMarkedAsReadRef.current);
-
     // Skip if already marked this conversation as read
     if (hasMarkedAsReadRef.current === conversationId) {
-      console.log('[useChatMessages] Already marked as read, skipping');
       return;
     }
 
     if (conversationId && staff?.id) {
-      console.log('[useChatMessages] Calling markAsReadMutation.mutate with:', { conversationId, userId: staff.id });
+      console.log('[useChatMessages] Marking conversation as read:', conversationId);
       hasMarkedAsReadRef.current = conversationId;
 
-      // Pass userId directly in the mutation params to avoid stale closure issues
+      // Use immediate call for initial open (not debounced)
       markAsReadMutation.mutate(
         { conversationId, userId: staff.id },
         {
           onSuccess: () => {
-            console.log('[useChatMessages] markAsReadMutation.onSuccess - calling refreshUnreadCount()');
-            // Refresh the unread count badge after marking as read
+            console.log('[useChatMessages] Initial markAsRead success');
             refreshUnreadCount();
           },
           onError: (error) => {
-            console.error('[useChatMessages] markAsReadMutation.onError:', error);
-            // Reset so it can retry
+            console.error('[useChatMessages] Initial markAsRead error:', error);
             hasMarkedAsReadRef.current = null;
           },
         }
       );
-    } else {
-      console.log('[useChatMessages] Skipping markAsRead - missing conversationId or staff.id');
     }
   }, [conversationId, staff?.id, refreshUnreadCount, markAsReadMutation]);
 
-  // Handle realtime attachment status changes
+  // Handle realtime attachment status changes (Fase 2: use queryClient.setQueryData)
   const handleAttachmentStatusChange = useCallback(
     (updatedAttachment: ChatAttachment) => {
-      setLocalMessages((prevMessages) =>
-        prevMessages.map((msg) => {
+      // Update cache directly using queryClient.setQueryData
+      queryClient.setQueryData<EnrichedMessage[]>(queryKey, (oldMessages) => {
+        if (!oldMessages) return oldMessages;
+
+        return oldMessages.map((msg) => {
           if (!msg.attachments || msg.attachments.length === 0) return msg;
 
           const hasAttachment = msg.attachments.some(
@@ -296,8 +303,8 @@ export function useChatMessages({
               att.id === updatedAttachment.id ? updatedAttachment : att
             ),
           };
-        })
-      );
+        });
+      });
 
       // Show alert for own attachments
       if (updatedAttachment.sender_id === staff?.id) {
@@ -316,25 +323,23 @@ export function useChatMessages({
         }
       }
     },
-    [staff?.id]
+    [queryClient, queryKey, staff?.id]
   );
 
   // Subscribe to attachment status changes
   useAttachmentRealtime(supabase, conversationId, handleAttachmentStatusChange);
 
   // Store refs for functions used in realtime callbacks to avoid stale closures
-  const markAsReadRef = useRef(markAsReadMutation.mutate);
-  const refreshUnreadCountRef = useRef(refreshUnreadCount);
   const staffIdRef = useRef(staff?.id);
+  const debouncedMarkAsReadRef = useRef(debouncedMarkAsRead);
 
   // Keep refs updated
   useEffect(() => {
-    markAsReadRef.current = markAsReadMutation.mutate;
-    refreshUnreadCountRef.current = refreshUnreadCount;
     staffIdRef.current = staff?.id;
+    debouncedMarkAsReadRef.current = debouncedMarkAsRead;
   });
 
-  // Subscribe to new messages via Realtime
+  // Subscribe to new messages via Realtime (Fase 2: use queryClient.setQueryData)
   useEffect(() => {
     if (!conversationId) return;
 
@@ -349,6 +354,12 @@ export function useChatMessages({
           filter: `conversation_id=eq.${conversationId}`,
         },
         async (payload) => {
+          // Skip if transitioning between conversations (Fase 1: prevent race condition)
+          if (isTransitioningRef.current) {
+            console.log('[useChatMessages] Skipping INSERT during transition');
+            return;
+          }
+
           // Fetch the full message with sender info and attachments
           const { data: newMsg } = await supabase
             .from('chat_messages')
@@ -378,8 +389,7 @@ export function useChatMessages({
               }
             }
 
-            // Check if message might have attachments but they weren't loaded (message_id not yet linked)
-            // This handles the race condition where attachments are uploaded before message_id is linked
+            // Check if message might have attachments but they weren't loaded
             let messageAttachments = newMsg.attachments || [];
             const msgContent = newMsg.content?.trim() || '';
             const isLikelyAttachmentMessage =
@@ -415,26 +425,22 @@ export function useChatMessages({
               attachments: messageAttachments,
             };
 
-            setLocalMessages((prev) => {
+            // Update React Query cache directly (Fase 2: single source of truth)
+            queryClient.setQueryData<EnrichedMessage[]>(queryKey, (oldMessages) => {
+              if (!oldMessages) return [enrichedMsg];
+
               // Avoid duplicates (from optimistic updates)
-              if (prev.some((m) => m.id === enrichedMsg.id)) {
-                return prev.map((m) =>
+              if (oldMessages.some((m) => m.id === enrichedMsg.id)) {
+                return oldMessages.map((m) =>
                   m.id === enrichedMsg.id ? enrichedMsg : m
                 );
               }
-              return [...prev, enrichedMsg];
+              return [...oldMessages, enrichedMsg];
             });
 
-            // Mark as read and refresh unread count using refs
+            // Mark as read using debounced function (Fase 4)
             if (currentStaffId) {
-              markAsReadRef.current(
-                { conversationId, userId: currentStaffId },
-                {
-                  onSuccess: () => {
-                    refreshUnreadCountRef.current();
-                  },
-                }
-              );
+              debouncedMarkAsReadRef.current(conversationId, currentStaffId);
             }
           }
         }
@@ -448,9 +454,19 @@ export function useChatMessages({
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
+          // Skip if transitioning between conversations
+          if (isTransitioningRef.current) {
+            console.log('[useChatMessages] Skipping DELETE during transition');
+            return;
+          }
+
           const deletedId = payload.old?.id;
           if (deletedId) {
-            setLocalMessages((prev) => prev.filter((m) => m.id !== deletedId));
+            // Update React Query cache directly (Fase 2)
+            queryClient.setQueryData<EnrichedMessage[]>(queryKey, (oldMessages) => {
+              if (!oldMessages) return oldMessages;
+              return oldMessages.filter((m) => m.id !== deletedId);
+            });
           }
         }
       )
@@ -459,7 +475,7 @@ export function useChatMessages({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversationId]);
+  }, [conversationId, queryClient, queryKey]);
 
   // Send message handler
   // Note: Empty content is allowed for attachment-only messages
@@ -505,7 +521,7 @@ export function useChatMessages({
   );
 
   return {
-    messages: localMessages,
+    messages, // Now using React Query cache directly (Fase 2)
     isLoading,
     isSending: sendMutation.isPending,
     isDeleting: deleteMutation.isPending,
