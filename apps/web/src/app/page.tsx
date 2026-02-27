@@ -1,34 +1,29 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { Header } from '../components/organisms/Header';
-import { Hero } from '../components/organisms/Hero';
-import { MobileApp } from '../components/organisms/MobileApp';
-import { AIDemo } from '../components/organisms/AIDemo';
-import { Benefits } from '../components/organisms/Benefits';
-import { SocialProof } from '../components/organisms/SocialProof';
-import { CTA } from '../components/organisms/CTA';
-import { Footer } from '../components/organisms/Footer';
-
-import { PlatformFeatures } from '../components/organisms/PlatformFeatures';
+import { HeaderLanding } from '../components/organisms/landing/HeaderLanding';
+import { HeroLanding } from '../components/organisms/landing/HeroLanding';
+import { PainPoints } from '../components/organisms/landing/PainPoints';
+import { SolutionSection } from '../components/organisms/landing/SolutionSection';
+import { ROISection } from '../components/organisms/landing/ROISection';
+import { TestimonialsLanding } from '../components/organisms/landing/TestimonialsLanding';
+import { FAQ } from '../components/organisms/landing/FAQ';
+import { CTAFinal } from '../components/organisms/landing/CTAFinal';
+import { FooterLanding } from '../components/organisms/landing/FooterLanding';
 
 export default function Home() {
-  // Intersection Observer for Fade In
   useEffect(() => {
-    const observerOptions = {
-      root: null,
-      rootMargin: '0px',
-      threshold: 0.1
-    };
-
-    const observer = new IntersectionObserver((entries, observer) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('is-visible');
-          observer.unobserve(entry.target);
-        }
-      });
-    }, observerOptions);
+    const observer = new IntersectionObserver(
+      (entries, obs) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            obs.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
 
     document.querySelectorAll('.fade-in-section').forEach(section => {
       observer.observe(section);
@@ -39,15 +34,21 @@ export default function Home() {
 
   return (
     <main className="overflow-x-hidden">
-      <Header />
-      <Hero />
-      <AIDemo />
-      <Benefits />
-      <MobileApp />
-      <PlatformFeatures />
-      <SocialProof />
-      <CTA />
-      <Footer />
+      <HeaderLanding />
+      <HeroLanding />
+      <section id="problema">
+        <PainPoints />
+      </section>
+      <section id="solucao">
+        <SolutionSection />
+      </section>
+      <section id="resultados">
+        <ROISection />
+      </section>
+      <TestimonialsLanding />
+      <FAQ />
+      <CTAFinal />
+      <FooterLanding />
     </main>
   );
 }
