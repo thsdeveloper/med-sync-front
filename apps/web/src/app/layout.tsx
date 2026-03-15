@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
-import { Inter, Montserrat } from "next/font/google";
+import { Noto_Sans, Figtree } from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "./providers";
 import { Analytics } from '@vercel/analytics/next';
 
-const inter = Inter({
+const notoSans = Noto_Sans({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-noto-sans",
   display: "swap",
 });
 
-const montserrat = Montserrat({
+const figtree = Figtree({
   subsets: ["latin"],
-  variable: "--font-montserrat",
+  variable: "--font-figtree",
   display: "swap",
 });
 
@@ -29,12 +29,12 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className="scroll-smooth">
       <body
-        className={`${inter.variable} ${montserrat.variable} antialiased bg-slate-50 text-slate-900`}
+        className={`${notoSans.variable} ${figtree.variable} antialiased bg-teal-50 text-teal-900`}
       >
         <AppProviders>
           {children}
           <Analytics />
-          </AppProviders>
+        </AppProviders>
       </body>
     </html>
   );

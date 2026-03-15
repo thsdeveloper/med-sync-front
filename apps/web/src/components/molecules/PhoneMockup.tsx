@@ -2,13 +2,13 @@ import React from 'react';
 
 export const PhoneMockup: React.FC = () => {
     return (
-        <div className="relative mx-auto border-gray-800 bg-gray-800 border-[14px] rounded-[2.5rem] h-[600px] w-[300px] shadow-2xl animate-float">
-            <div className="h-[32px] w-[3px] bg-gray-800 absolute -left-[17px] top-[72px] rounded-l-lg"></div>
-            <div className="h-[46px] w-[3px] bg-gray-800 absolute -left-[17px] top-[124px] rounded-l-lg"></div>
-            <div className="h-[64px] w-[3px] bg-gray-800 absolute -right-[17px] top-[142px] rounded-r-lg"></div>
+        <div className="relative mx-auto border-teal-900 bg-teal-900 border-[14px] rounded-[2.5rem] h-[600px] w-[300px] shadow-2xl animate-float">
+            <div className="h-[32px] w-[3px] bg-teal-900 absolute -left-[17px] top-[72px] rounded-l-lg"></div>
+            <div className="h-[46px] w-[3px] bg-teal-900 absolute -left-[17px] top-[124px] rounded-l-lg"></div>
+            <div className="h-[64px] w-[3px] bg-teal-900 absolute -right-[17px] top-[142px] rounded-r-lg"></div>
             <div className="rounded-[2rem] overflow-hidden w-full h-full bg-white relative">
                 {/* App Header */}
-                <div className="bg-blue-600 p-6 pb-12 rounded-b-[2rem]">
+                <div className="bg-cyan-600 p-6 pb-12 rounded-b-[2rem]">
                     <div className="flex justify-between items-center text-white mb-4">
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                         <span className="font-heading font-bold">MedSync</span>
@@ -28,32 +28,30 @@ export const PhoneMockup: React.FC = () => {
 
                 {/* App Content */}
                 <div className="px-4 -mt-6 relative z-10">
-                    {/* Card 1 */}
-                    <div className="bg-white p-4 rounded-xl shadow-lg mb-4 border border-slate-100">
+                    <div className="bg-white p-4 rounded-xl shadow-lg mb-4 border border-teal-100">
                         <div className="flex justify-between items-start mb-2">
-                            <h4 className="font-bold text-slate-800">Passagem de Plantão</h4>
-                            <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full font-medium">Pendente</span>
+                            <h4 className="font-bold text-teal-900">Passagem de Plantão</h4>
+                            <span className="text-xs text-cyan-600 bg-cyan-50 px-2 py-1 rounded-full font-medium">Pendente</span>
                         </div>
-                        <p className="text-xs text-slate-500 mb-3">UTI Geral - Leito 04</p>
+                        <p className="text-xs text-teal-600 mb-3">UTI Geral - Leito 04</p>
                         <div className="flex -space-x-2 mb-3">
-                            <div className="w-6 h-6 rounded-full bg-slate-200 border border-white"></div>
-                            <div className="w-6 h-6 rounded-full bg-slate-300 border border-white"></div>
+                            <div className="w-6 h-6 rounded-full bg-teal-100 border border-white"></div>
+                            <div className="w-6 h-6 rounded-full bg-teal-200 border border-white"></div>
                         </div>
-                        <button className="w-full py-2 bg-slate-900 text-white text-xs rounded-lg font-medium">Iniciar Relatório IA</button>
+                        <button className="w-full py-2 bg-teal-900 text-white text-xs rounded-lg font-medium cursor-pointer">Iniciar Relatório IA</button>
                     </div>
 
-                    {/* Card 2 */}
-                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-4 opacity-60">
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-teal-100 mb-4 opacity-60">
                         <div className="flex justify-between items-start mb-2">
-                            <h4 className="font-bold text-slate-800">Troca Solicitada</h4>
-                            <span className="text-xs text-slate-500">10 min atrás</span>
+                            <h4 className="font-bold text-teal-900">Troca Solicitada</h4>
+                            <span className="text-xs text-teal-600">10 min atrás</span>
                         </div>
-                        <p className="text-xs text-slate-500">Dra. Ana solicitou troca para 24/11</p>
+                        <p className="text-xs text-teal-600">Dra. Ana solicitou troca para 24/11</p>
                     </div>
                 </div>
 
                 {/* Floating Action Button */}
-                <div className="absolute bottom-6 right-6 w-12 h-12 bg-teal-400 rounded-full shadow-lg flex items-center justify-center text-white">
+                <div className="absolute bottom-6 right-6 w-12 h-12 bg-cyan-400 rounded-full shadow-lg flex items-center justify-center text-white">
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
                 </div>
             </div>

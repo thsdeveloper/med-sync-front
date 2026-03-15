@@ -6,12 +6,12 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --color-primary: #2563EB;
-  --color-secondary: #2DD4BF;
+  --color-primary: #0891B2;
+  --color-secondary: #22D3EE;
   --color-slate-850: #1e293b;
 
-  --font-heading: var(--font-montserrat), sans-serif;
-  --font-sans: var(--font-inter), sans-serif;
+  --font-heading: var(--font-figtree), sans-serif;
+  --font-sans: var(--font-noto-sans), sans-serif;
 
   --animate-blob: blob 7s infinite;
   --animate-float: float 6s ease-in-out infinite;
@@ -67,10 +67,41 @@
 }
 
 .glass-effect {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(240, 253, 250, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.skip-to-content {
+  position: absolute;
+  top: -100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  padding: 0.75rem 1.5rem;
+  background: #134E4A;
+  color: white;
+  border-radius: 0 0 0.5rem 0.5rem;
+  font-weight: 600;
+  transition: top 0.2s ease;
+}
+
+.skip-to-content:focus {
+  top: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in-section {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .animate-blob,
+  .animate-float,
+  .animate-pulse-slow {
+    animation: none;
+  }
 }
 
 .fade-in-section {

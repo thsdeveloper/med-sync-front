@@ -4,20 +4,21 @@ import { FeatureCard } from '../molecules/FeatureCard';
 
 export const Benefits: React.FC = () => {
     return (
-        <section id="features" className="py-20 bg-slate-50">
+        <section id="features" className="py-24 bg-white">
             <div className="container mx-auto px-6">
                 <SectionTitle
+                    tag="Funcionalidades"
                     title="Eficiência operacional para sua gestão"
                     subtitle="Uma plataforma completa para modernizar a gestão médica do seu hospital ou clínica."
                 />
 
-                <div className="grid md:grid-cols-3 gap-8">
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                     <FeatureCard
                         icon={<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>}
                         title="Automação de Escalas"
                         description="Reduza em 80% o tempo gasto montando escalas. O algoritmo sugere a melhor distribuição baseada em regras."
-                        iconBgColor="bg-blue-50"
-                        iconColor="text-blue-600"
+                        iconBgColor="bg-cyan-50"
+                        iconColor="text-cyan-600"
                     />
 
                     <FeatureCard
@@ -30,12 +31,12 @@ export const Benefits: React.FC = () => {
                     />
 
                     <FeatureCard
-                        icon={<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>}
+                        icon={<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>}
                         title="Check-in Facial"
                         description="Elimine fraudes e garanta a presença do profissional. Validação por geolocalização e biometria facial."
                         delay="delay-200"
-                        iconBgColor="bg-purple-50"
-                        iconColor="text-purple-600"
+                        iconBgColor="bg-teal-50"
+                        iconColor="text-teal-600"
                     />
 
                     <FeatureCard
@@ -43,8 +44,8 @@ export const Benefits: React.FC = () => {
                         title="Gestão de Trocas"
                         description="Os próprios médicos gerenciam suas trocas. O sistema valida regras e atualiza a escala automaticamente."
                         delay="delay-300"
-                        iconBgColor="bg-teal-50"
-                        iconColor="text-teal-400"
+                        iconBgColor="bg-cyan-50"
+                        iconColor="text-cyan-600"
                     />
 
                     <FeatureCard
@@ -61,8 +62,8 @@ export const Benefits: React.FC = () => {
                         title="Chat Integrado"
                         description="Centralize a comunicação. Elimine grupos de WhatsApp e tenha histórico auditável de todas as tratativas."
                         delay="delay-500"
-                        iconBgColor="bg-orange-50"
-                        iconColor="text-orange-600"
+                        iconBgColor="bg-amber-50"
+                        iconColor="text-amber-600"
                     />
                 </div>
             </div>

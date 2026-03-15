@@ -97,7 +97,6 @@ export default function ShiftDetailScreen() {
             facilities (
               name,
               type,
-              address,
               facility_addresses (
                 id,
                 street,
@@ -388,22 +387,6 @@ export default function ShiftDetailScreen() {
               <AddressDetailsCollapsible address={shift.fixed_schedules.facilities.facility_addresses} />
               <FacilityLocationActions
                 facilityAddress={shift.fixed_schedules.facilities.facility_addresses}
-                facilityName={shift.fixed_schedules.facilities.name}
-              />
-            </>
-          ) : shift.fixed_schedules?.facilities?.address ? (
-            <>
-              <View style={[styles.row, { marginTop: 12 }]}>
-                <View style={[styles.iconCircle, { backgroundColor: '#F3F4F6' }]}>
-                  <Ionicons name="location" size={20} color="#4B5563" />
-                </View>
-                <View style={styles.infoTextContainer}>
-                  <Text style={styles.infoLabel}>Endereço</Text>
-                  <Text style={styles.infoValueAddress}>{shift.fixed_schedules.facilities.address}</Text>
-                </View>
-              </View>
-              <FacilityLocationActions
-                fallbackAddress={shift.fixed_schedules.facilities.address}
                 facilityName={shift.fixed_schedules.facilities.name}
               />
             </>

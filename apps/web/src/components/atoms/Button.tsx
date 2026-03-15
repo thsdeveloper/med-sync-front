@@ -4,7 +4,7 @@ import { Slot } from '@radix-ui/react-slot';
 import { cn } from '@/lib/utils';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'white' | 'destructive' | 'link';
+    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'white' | 'destructive' | 'link' | 'cta';
     size?: 'sm' | 'md' | 'lg' | 'icon';
     fullWidth?: boolean;
     asChild?: boolean;
@@ -12,16 +12,17 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const baseStyles =
-    'inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold rounded-full transition-all transform hover:scale-[1.02] active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-200';
+    'inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold rounded-full transition-all transform hover:scale-[1.02] active:scale-95 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-cyan-300';
 
 const variants: Record<NonNullable<ButtonProps['variant']>, string> = {
-    primary: 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/30',
-    secondary: 'bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100',
-    outline: 'bg-transparent border-2 border-blue-600 text-blue-600 hover:bg-blue-50',
-    ghost: 'bg-transparent text-slate-600 hover:text-blue-600 hover:bg-blue-50/50',
-    white: 'bg-white text-blue-600 shadow-xl hover:shadow-2xl',
+    primary: 'bg-cyan-600 hover:bg-cyan-700 text-white shadow-lg shadow-cyan-600/25',
+    secondary: 'bg-cyan-50 text-cyan-700 border border-cyan-200 hover:bg-cyan-100',
+    outline: 'bg-transparent border-2 border-cyan-600 text-cyan-600 hover:bg-cyan-50',
+    ghost: 'bg-transparent text-teal-700 hover:text-cyan-600 hover:bg-cyan-50/50',
+    white: 'bg-white text-cyan-600 shadow-xl hover:shadow-2xl',
     destructive: 'bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-500/30',
-    link: 'bg-transparent text-blue-600 underline-offset-4 hover:underline px-0 py-0 font-medium',
+    link: 'bg-transparent text-cyan-600 underline-offset-4 hover:underline px-0 py-0 font-medium',
+    cta: 'bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/25',
 };
 
 const sizes: Record<NonNullable<ButtonProps['size']>, string> = {

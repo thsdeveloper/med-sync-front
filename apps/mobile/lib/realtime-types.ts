@@ -59,7 +59,6 @@ export type ShiftWithRelations = Omit<Shift, 'sectors' | 'medical_staff'> & {
     facilities?: {
       name?: string;
       type?: string;
-      address?: string;
     };
   };
   medical_staff?: {
